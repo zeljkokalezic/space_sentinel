@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw } from 'lucide-react';
+import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target } from 'lucide-react';
 import * as THREE from 'three';
 
 const UPGRADE_DATA = {
+  autoAim: { name: 'Targeting AI', icon: Target, desc: 'Automatically locks weapons onto the nearest enemy.', baseCost: 150, costMult: 1, maxLevel: 1 },
   autocannon: { name: 'Twin Autocannon', icon: Crosshair, desc: 'Increases basic attack fire rate & damage.', baseCost: 30, costMult: 1.5, maxLevel: 20 },
   plasma: { name: 'Plasma Piercer', icon: Zap, desc: 'Slow, heavy shots that pierce multiple enemies.', baseCost: 80, costMult: 1.6, maxLevel: 10 },
   missiles: { name: 'Seeker Swarm', icon: Rocket, desc: 'Launches homing missiles that track targets.', baseCost: 120, costMult: 1.7, maxLevel: 10 },
@@ -47,7 +48,7 @@ export default function App() {
         z: -Math.random() * 500,
         size: Math.random() * 2 + 1, speed: Math.random() * 80 + 20
       })),
-      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 0, thrusters: 1, magnet: 1, pointDefense: 0 },
+      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 0, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 0 },
       cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
       keys: {}, mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false },
       lastTime: performance.now()
@@ -141,33 +142,43 @@ export default function App() {
     g.player.x = Math.max(g.player.radius, Math.min(window.innerWidth - g.player.radius, g.player.x));
     g.player.y = Math.max(g.player.radius, Math.min(window.innerHeight - g.player.radius, g.player.y));
 
+    // Track physical aiming logic with Slerp interpolation
+    let adx = g.mouse.x - g.player.x, ady = g.mouse.y - g.player.y;
+    if (g.levels.autoAim > 0) {
+      let ne = getNearestEnemy(g.player.x, g.player.y, g.enemies);
+      if (ne) { adx = ne.x - g.player.x; ady = ne.y - g.player.y; }
+      else if (g.player.vx !== 0 || g.player.vy !== 0) { adx = g.player.vx; ady = g.player.vy; }
+    }
+    let targetAim = Math.atan2(ady, adx);
+    if (g.player.aimAngle === undefined) g.player.aimAngle = targetAim;
+    let adiff = targetAim - g.player.aimAngle;
+    while (adiff > Math.PI) adiff -= Math.PI * 2;
+    while (adiff < -Math.PI) adiff += Math.PI * 2;
+    g.player.aimAngle += adiff * 15 * dt;
+
     for (let k in g.cooldowns) g.cooldowns[k] -= dt;
 
-    if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0) {
-      let target = getNearestEnemy(g.player.x, g.player.y, g.enemies);
-      if (target) {
-        let angle = Math.atan2(target.y - g.player.y, target.x - g.player.x);
-        let dmg = 10 + g.levels.autocannon * 5;
+    let hasTarget = g.levels.autoAim > 0 ? (getNearestEnemy(g.player.x, g.player.y, g.enemies) !== null) : true;
+
+    if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0 && hasTarget) {
+      let angle = g.player.aimAngle;
+      let dmg = 10 + g.levels.autocannon * 5;
         let shots = 1 + Math.floor(g.levels.autocannon / 3);
         for (let i = 0; i < shots; i++) {
           let spread = (i - (shots - 1) / 2) * 0.1;
           fireProjectile(g, g.player.x, g.player.y, angle + spread, 700 + (Math.random() * 50), dmg, 'autocannon', false);
         }
         g.cooldowns.autocannon = Math.max(0.08, 0.4 - g.levels.autocannon * 0.025);
-      }
     }
 
-    if (g.levels.plasma > 0 && g.cooldowns.plasma <= 0) {
-      let target = getNearestEnemy(g.player.x, g.player.y, g.enemies);
-      if (target) {
-        let angle = Math.atan2(target.y - g.player.y, target.x - g.player.x);
-        let shots = 1 + Math.floor(g.levels.plasma / 3);
+    if (g.levels.plasma > 0 && g.cooldowns.plasma <= 0 && hasTarget) {
+      let angle = g.player.aimAngle;
+      let shots = 1 + Math.floor(g.levels.plasma / 3);
         for (let i = 0; i < shots; i++) {
           let spread = (i - (shots - 1) / 2) * 0.15;
           fireProjectile(g, g.player.x, g.player.y, angle + spread, 350, 30 + g.levels.plasma * 15, 'plasma', 1 + Math.floor(g.levels.plasma / 2));
         }
         g.cooldowns.plasma = Math.max(0.5, 2.0 - g.levels.plasma * 0.1);
-      }
     }
 
     if (g.levels.missiles > 0 && g.cooldowns.missiles <= 0) {
@@ -296,6 +307,16 @@ export default function App() {
       }
     }
 
+    for (let s of g.stars) {
+      let pFactor = 0.15 * (1 + s.z / 600); 
+      s.x -= g.player.vx * pFactor * dt;
+      s.y -= g.player.vy * pFactor * dt;
+      if (s.x < -50) s.x += window.innerWidth + 100;
+      if (s.x > window.innerWidth + 50) s.x -= window.innerWidth + 100;
+      if (s.y < -50) s.y += window.innerHeight + 100;
+      if (s.y > window.innerHeight + 50) s.y -= window.innerHeight + 100;
+    }
+
     if (g.totalTime % 5 < dt) {
       g.enemies = g.enemies.filter(e => e.active);
       g.projectiles = g.projectiles.filter(p => p.active);
@@ -338,9 +359,10 @@ export default function App() {
 
     const mats = {
       player: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true }),
+      weapon: new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true }),
       shield: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true, transparent: true, opacity: 0.3 }),
-      pickup: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true }),
-      laser: new THREE.LineBasicMaterial({ color: 0x39ff14, transparent: true, opacity: 0.8 })
+      pickup: new THREE.MeshBasicMaterial({ color: 0xfacc15, wireframe: true }),
+      laser: new THREE.LineBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 })
     };
 
     threeRef.current = { scene, camera, renderer, g: geoms, m: mats, meshes: new Map() };
@@ -364,12 +386,8 @@ export default function App() {
 
     // Update Stars
     for (let s of g.stars) {
-      if (statusRef.current === 'playing') {
-        s.y += s.speed * ((performance.now() - g.lastTime) / 1000);
-        if (s.y > window.innerHeight) { s.y = 0; s.x = Math.random() * window.innerWidth; }
-      }
       const sm = getMesh(s, () => {
-        const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true, transparent: true, opacity: s.size / 3 }));
+        const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: 0x006400, wireframe: true, transparent: true, opacity: s.size / 3 }));
         m.scale.set(s.size, s.size, s.size);
         return m;
       });
@@ -407,10 +425,15 @@ export default function App() {
     });
 
     pm.position.set(g.player.x - cx, cy - g.player.y, 0);
-    // Bank ship based on velocity
-    pm.rotation.y = (g.player.vx / g.player.speed) * -0.5;
-    pm.rotation.z = Math.atan2(-g.player.vy, g.player.vx) - Math.PI / 2;
-
+    
+    if (Math.abs(g.player.vx) > 0.01 || Math.abs(g.player.vy) > 0.01) {
+      let targetRotZ = Math.atan2(-g.player.vy, g.player.vx) - Math.PI / 2;
+      let diff = targetRotZ - pm.rotation.z;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      pm.rotation.z += diff * 0.15;
+    }
+    
     // If shield active
     const shieldMesh = pm.children.find(c => c.name === "shield");
     if (shieldMesh) {
@@ -484,30 +507,11 @@ export default function App() {
         }
       }
 
-      // Rotate aiming turrets to nearest enemy
-      let nearestEnemy = null;
-      let minDist = Infinity;
-      for (let e of g.enemies) {
-        if (!e.active) continue;
-        let dist = Math.hypot(e.x - g.player.x, e.y - g.player.y);
-        if (dist < minDist) { minDist = dist; nearestEnemy = e; }
-      }
-
-      let shipRotZ = Math.atan2(-g.player.vy, g.player.vx) - Math.PI / 2;
+      let shipRotZ = pm.rotation.z;
+      let worldAimAngle = -(g.player.aimAngle || 0);
       turretsGroup.children.forEach(t => {
         if (t.userData.isAiming) {
-          let targetAngle = 0;
-          if (nearestEnemy) {
-            let dx = nearestEnemy.x - g.player.x;
-            let dy = g.player.y - nearestEnemy.y; // flip Y for 3D world space
-            let worldAngle = Math.atan2(dy, dx);
-            targetAngle = (worldAngle - Math.PI / 2) - shipRotZ;
-          }
-
-          let diff = targetAngle - t.rotation.z;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          t.rotation.z += diff * 0.15;
+            t.rotation.z = (worldAimAngle - Math.PI / 2) - shipRotZ;
         }
       });
     }
@@ -529,7 +533,7 @@ export default function App() {
     for (let p of g.projectiles) {
       if (!p.active) continue;
       const mesh = getMesh(p, () => {
-        const m = new THREE.Mesh(geoms.sphere, mats.player);
+        const m = new THREE.Mesh(geoms.sphere, mats.weapon);
         m.scale.set(p.radius, p.radius, p.radius);
         return m;
       });
@@ -576,7 +580,7 @@ export default function App() {
     for (let e of g.effects) {
       if (e.type === 'laser') {
         const mesh = getMesh(e, () => {
-          const mat = new THREE.LineBasicMaterial({ color: 0x39ff14, linewidth: 2, transparent: true });
+          const mat = mats.laser;
           const geometry = new THREE.BufferGeometry().setFromPoints([
             new THREE.Vector3(e.x1 - cx, cy - e.y1, 0),
             new THREE.Vector3(e.x2 - cx, cy - e.y2, 0)
@@ -751,8 +755,8 @@ export default function App() {
       <div
         ref={containerRef}
         className="absolute inset-0 cursor-crosshair touch-none"
-        onPointerDown={(e) => { if (statusRef.current === 'playing' && game.current) game.current.mouse = { x: e.clientX, y: e.clientY, active: true }; }}
-        onPointerMove={(e) => { if (statusRef.current === 'playing' && game.current && game.current.mouse.active) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; } }}
+        onPointerDown={(e) => { if (statusRef.current === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; } }}
+        onPointerMove={(e) => { if (statusRef.current === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; if(e.buttons > 0) game.current.mouse.active = true; } }}
         onPointerUp={() => { if (game.current) game.current.mouse.active = false; }}
         onPointerLeave={() => { if (game.current) game.current.mouse.active = false; }}
       />
