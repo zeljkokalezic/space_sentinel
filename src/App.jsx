@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw } from 'lucide-react';
+import * as THREE from 'three';
 
 const UPGRADE_DATA = {
   autocannon: { name: 'Twin Autocannon', icon: Crosshair, desc: 'Increases basic attack fire rate & damage.', baseCost: 30, costMult: 1.5, maxLevel: 20 },
@@ -17,8 +18,10 @@ export default function App() {
   const [uiScrap, setUiScrap] = useState(0);
   const [uiLevels, setUiLevels] = useState(null);
 
-  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const canvasRef = useRef(null); // Used for 2D UI overlay overlaying the 3D canvas
   const game = useRef(null);
+  const threeRef = useRef(null);
   const reqRef = useRef();
   const statusRef = useRef(gameState);
 
@@ -35,12 +38,13 @@ export default function App() {
         shield: 0, maxShield: 0,
         speed: 220, magnetRadius: 100,
       },
-      scrap: 9999999, totalScrapEarned: 0,
+      scrap: 9999999, totalScrapEarned: 0, // Dev scrap kept
       wave: 1, timeInWave: 0, totalTime: 0,
       spawnCooldown: 2,
       enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
-      stars: Array.from({ length: 150 }, () => ({
+      stars: Array.from({ length: 300 }, () => ({
         x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+        z: -Math.random() * 500,
         size: Math.random() * 2 + 1, speed: Math.random() * 80 + 20
       })),
       levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 0, thrusters: 1, magnet: 1, pointDefense: 0 },
@@ -68,7 +72,7 @@ export default function App() {
   const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount = 0) => {
     g.projectiles.push({
       x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      radius: type === 'plasma' ? 8 : (type === 'missile' ? 5 : 3),
+      radius: type === 'plasma' ? 12 : (type === 'missile' ? 8 : 5),
       damage, type, active: true, pierce: pierceCount, hitList: [], life: 0,
       target: type === 'missile' ? g.enemies.filter(e => e.active)[Math.floor(Math.random() * g.enemies.filter(e => e.active).length)] : null
     });
@@ -77,9 +81,10 @@ export default function App() {
   const createParticles = (g, x, y, color, count) => {
     for (let i = 0; i < count; i++) {
       let angle = Math.random() * Math.PI * 2;
-      let speed = Math.random() * 50 + 20;
+      let speed = Math.random() * 100 + 50;
       g.particles.push({
         x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        vz: (Math.random() - 0.5) * speed,
         life: 1.0, maxLife: 1.0, color, active: true
       });
     }
@@ -95,10 +100,10 @@ export default function App() {
 
     let diffMult = 1 + g.totalTime / 60;
     let typeRoll = Math.random();
-    let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 12, color = '#ef4444';
+    let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 15, color = 0xef4444;
 
-    if (typeRoll > 0.8) { type = 'heavy'; hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 22; color = '#a855f7'; }
-    else if (typeRoll > 0.6) { type = 'interceptor'; hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 10; color = '#f97316'; }
+    if (typeRoll > 0.8) { type = 'heavy'; hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xa855f7; }
+    else if (typeRoll > 0.6) { type = 'interceptor'; hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xf97316; }
 
     g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, speed, radius, color, type, active: true });
   };
@@ -106,7 +111,6 @@ export default function App() {
   const updatePhysics = (dt, g) => {
     g.totalTime += dt;
 
-    // --- Spawning ---
     g.spawnCooldown -= dt;
     let currentSpawnRate = Math.max(0.15, 2.0 - g.totalTime / 90);
     if (g.spawnCooldown <= 0) {
@@ -114,7 +118,6 @@ export default function App() {
       g.spawnCooldown = currentSpawnRate + Math.random() * 0.5;
     }
 
-    // --- Player Movement ---
     let dx = 0, dy = 0;
     if (g.keys['w'] || g.keys['arrowup']) dy -= 1;
     if (g.keys['s'] || g.keys['arrowdown']) dy += 1;
@@ -138,7 +141,6 @@ export default function App() {
     g.player.x = Math.max(g.player.radius, Math.min(window.innerWidth - g.player.radius, g.player.x));
     g.player.y = Math.max(g.player.radius, Math.min(window.innerHeight - g.player.radius, g.player.y));
 
-    // --- Weapons Cooldowns & Firing ---
     for (let k in g.cooldowns) g.cooldowns[k] -= dt;
 
     if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0) {
@@ -146,7 +148,7 @@ export default function App() {
       if (target) {
         let angle = Math.atan2(target.y - g.player.y, target.x - g.player.x);
         let dmg = 10 + g.levels.autocannon * 5;
-        let shots = 1 + Math.floor(g.levels.autocannon / 3); // More turrets = more simultaneous shots
+        let shots = 1 + Math.floor(g.levels.autocannon / 3);
         for (let i = 0; i < shots; i++) {
           let spread = (i - (shots - 1) / 2) * 0.1;
           fireProjectile(g, g.player.x, g.player.y, angle + spread, 700 + (Math.random() * 50), dmg, 'autocannon', false);
@@ -182,13 +184,14 @@ export default function App() {
       let dmg = 5 + g.levels.pointDefense * 3;
       let hit = false;
       let hits = 0;
-      let maxHits = 1 + Math.floor(g.levels.pointDefense / 2); // Targets multiple enemies
+      let maxHits = 1 + Math.floor(g.levels.pointDefense / 2);
       for (let e of g.enemies) {
         if (!e.active) continue;
         if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < range) {
           e.hp -= dmg; hit = true;
           g.effects.push({ type: 'laser', x1: g.player.x, y1: g.player.y, x2: e.x, y2: e.y, life: 0.1 });
-          createParticles(g, e.x, e.y, 'cyan', 3);
+          g.effects.push({ type: 'dmg', x: e.x, y: e.y, text: Math.ceil(dmg).toString(), life: 0.8 });
+          createParticles(g, e.x, e.y, 0x22d3ee, 3);
           hits++;
           if (hits >= maxHits) break;
         }
@@ -201,7 +204,6 @@ export default function App() {
       g.cooldowns.shieldRegen = 0.5;
     }
 
-    // --- Entities Update ---
     for (let p of g.projectiles) {
       if (!p.active) continue;
       p.life += dt;
@@ -215,18 +217,18 @@ export default function App() {
         while (diff < -Math.PI) diff += Math.PI * 2;
         let tSpeed = 5 * dt;
         let nAngle = cAngle + Math.max(-tSpeed, Math.min(tSpeed, diff));
-        let speed = Math.hypot(p.vx, p.vy) + 100 * dt; // accelerate
+        let speed = Math.hypot(p.vx, p.vy) + 100 * dt;
         p.vx = Math.cos(nAngle) * speed; p.vy = Math.sin(nAngle) * speed;
-        if (Math.random() < 0.3) createParticles(g, p.x, p.y, '#f97316', 1);
+        if (Math.random() < 0.3) createParticles(g, p.x, p.y, 0xf97316, 1);
       }
       p.x += p.vx * dt; p.y += p.vy * dt;
 
-      // Projectile vs Enemy collision
       for (let e of g.enemies) {
         if (!e.active || p.hitList.includes(e.id)) continue;
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
           e.hp -= p.damage;
-          createParticles(g, p.x, p.y, p.type === 'plasma' ? '#22d3ee' : '#fde047', 5);
+          g.effects.push({ type: 'dmg', x: e.x + (Math.random()-0.5)*10, y: e.y + (Math.random()-0.5)*10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+          createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
           else { p.active = false; }
           break;
@@ -237,11 +239,10 @@ export default function App() {
     for (let e of g.enemies) {
       if (!e.active) continue;
       let angle = Math.atan2(g.player.y - e.y, g.player.x - e.x);
-      if (e.type === 'interceptor') angle += Math.sin(g.totalTime * 4 + e.id) * 0.8; // Zig-zag
+      if (e.type === 'interceptor') angle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
       e.x += Math.cos(angle) * e.speed * dt;
       e.y += Math.sin(angle) * e.speed * dt;
 
-      // Enemy vs Player collision
       if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
         let dmg = e.type === 'heavy' ? 20 : 10;
         if (g.player.shield > 0) {
@@ -249,21 +250,20 @@ export default function App() {
           g.player.shield -= absorb; dmg -= absorb;
         }
         g.player.hp -= dmg;
-        e.hp -= 20; // Crash damage to enemy
+        e.hp -= 20;
+        g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: '20', life: 0.8 });
 
-        // Knockback
         e.x += Math.cos(angle + Math.PI) * 30; e.y += Math.sin(angle + Math.PI) * 30;
-        createParticles(g, g.player.x, g.player.y, '#ef4444', 10);
+        createParticles(g, g.player.x, g.player.y, 0xef4444, 10);
 
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
       }
 
-      // Death
       if (e.hp <= 0) {
         e.active = false;
         createParticles(g, e.x, e.y, e.color, 15);
         let val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
-        g.pickups.push({ x: e.x, y: e.y, value: val, active: true, radius: 4 });
+        g.pickups.push({ x: e.x, y: e.y, value: val, active: true, radius: 6 });
       }
     }
 
@@ -286,11 +286,16 @@ export default function App() {
       p.life -= dt;
       if (p.life <= 0) p.active = false;
       p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.vz) p.z = (p.z || 0) + p.vz * dt;
     }
 
-    for (let e of g.effects) e.life -= dt;
+    for (let e of g.effects) {
+      e.life -= dt;
+      if (e.type === 'dmg') {
+        e.y -= 40 * dt;
+      }
+    }
 
-    // Garbage collection
     if (g.totalTime % 5 < dt) {
       g.enemies = g.enemies.filter(e => e.active);
       g.projectiles = g.projectiles.filter(p => p.active);
@@ -300,282 +305,376 @@ export default function App() {
     }
   };
 
-  const draw = (ctx, g) => {
-    ctx.fillStyle = '#0a0a14'; // Very dark blue/black
-    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+  const initThree = () => {
+    if (threeRef.current) return;
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a14);
 
-    // Stars parallax
-    ctx.fillStyle = '#ffffff';
+    // Ambient and Directional Light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(100, -200, 300);
+    scene.add(dirLight);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 5000);
+    // Position camera so that 1 unit = 1 pixel at Z=0
+    camera.position.z = (window.innerHeight / 2) / Math.tan((50 * Math.PI / 180) / 2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Append to container
+    if (containerRef.current) containerRef.current.appendChild(renderer.domElement);
+
+    // Shared Geometries & Materials
+    const geoms = {
+      box: new THREE.BoxGeometry(1, 1, 1),
+      sphere: new THREE.SphereGeometry(1, 8, 8),
+      cone: new THREE.ConeGeometry(1, 2, 8),
+      tetra: new THREE.TetrahedronGeometry(1)
+    };
+
+    const mats = {
+      player: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true }),
+      shield: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true, transparent: true, opacity: 0.3 }),
+      pickup: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true }),
+      laser: new THREE.LineBasicMaterial({ color: 0x39ff14, transparent: true, opacity: 0.8 })
+    };
+
+    threeRef.current = { scene, camera, renderer, g: geoms, m: mats, meshes: new Map() };
+  };
+
+  const drawThree = (threeObj, g) => {
+    const { scene, camera, renderer, meshes, g: geoms, m: mats } = threeObj;
+    const activeKeys = new Set();
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+
+    const getMesh = (obj, createFn) => {
+      if (!meshes.has(obj)) {
+        const m = createFn();
+        scene.add(m);
+        meshes.set(obj, m);
+      }
+      activeKeys.add(obj);
+      return meshes.get(obj);
+    };
+
+    // Update Stars
     for (let s of g.stars) {
       if (statusRef.current === 'playing') {
         s.y += s.speed * ((performance.now() - g.lastTime) / 1000);
         if (s.y > window.innerHeight) { s.y = 0; s.x = Math.random() * window.innerWidth; }
       }
-      ctx.globalAlpha = s.size / 3;
-      ctx.fillRect(s.x, s.y, s.size, s.size);
+      const sm = getMesh(s, () => {
+        const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true, transparent: true, opacity: s.size / 3 }));
+        m.scale.set(s.size, s.size, s.size);
+        return m;
+      });
+      sm.position.set(s.x - cx, cy - s.y, s.z);
     }
-    ctx.globalAlpha = 1.0;
+
+    // Update Player
+    const pm = getMesh(g.player, () => {
+      const group = new THREE.Group();
+
+      // Main Hull
+      const body = new THREE.Mesh(new THREE.BoxGeometry(40, 60, 20), mats.player);
+      group.add(body);
+
+      // Wings
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(80, 20, 10), mats.player);
+      wing.position.set(0, -10, -5);
+      group.add(wing);
+
+      // Superstructure
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 10), mats.player);
+      bridge.position.set(0, 10, 10);
+      group.add(bridge);
+
+      // Shield
+      const shield = new THREE.Mesh(new THREE.SphereGeometry(60, 16, 16), mats.shield);
+      shield.name = "shield";
+      group.add(shield);
+
+      const turrets = new THREE.Group();
+      turrets.name = "turrets";
+      group.add(turrets);
+
+      return group;
+    });
+
+    pm.position.set(g.player.x - cx, cy - g.player.y, 0);
+    // Bank ship based on velocity
+    pm.rotation.y = (g.player.vx / g.player.speed) * -0.5;
+    pm.rotation.z = Math.atan2(-g.player.vy, g.player.vx) - Math.PI / 2;
+
+    // If shield active
+    const shieldMesh = pm.children.find(c => c.name === "shield");
+    if (shieldMesh) {
+      shieldMesh.visible = g.player.maxShield > 0;
+      shieldMesh.material.opacity = Math.max(0.1, 0.5 * (g.player.shield / g.player.maxShield));
+    }
+
+    // --- Dynamic Turrets Re-generation and Aiming ---
+    const turretsGroup = pm.children.find(c => c.name === "turrets");
+    if (turretsGroup) {
+      const currentLevelsHash = Object.values(g.levels).join('-');
+      if (pm.userData.levelsHash !== currentLevelsHash) {
+        pm.userData.levelsHash = currentLevelsHash;
+        turretsGroup.clear();
+
+        const addTurret = (x, y, color, isDouble) => {
+          const tg = new THREE.Group();
+          // Note: In local space, Y is mapping visually identical to 2D
+          tg.position.set(x, -y, 10);
+          const base = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 6, 12), mats.player);
+          base.rotation.x = Math.PI / 2;
+          tg.add(base);
+
+          if (isDouble) {
+            const b1 = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), mats.player);
+            b1.position.set(-3.5, 7.5, 0); tg.add(b1);
+            const b2 = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), mats.player);
+            b2.position.set(3.5, 7.5, 0); tg.add(b2);
+          } else {
+            const b = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), mats.player);
+            b.position.set(0, 7.5, 0); tg.add(b);
+          }
+          tg.userData.isAiming = true;
+          turretsGroup.add(tg);
+        };
+
+        const addStaticMissile = (x, y) => {
+          const mg = new THREE.Group();
+          mg.position.set(x, -y, 5);
+          const pod = new THREE.Mesh(new THREE.BoxGeometry(12, 18, 9), mats.player);
+          mg.add(pod);
+          turretsGroup.add(mg);
+        };
+
+        if (g.levels.autocannon > 0) {
+          const acSlots = [{ x: 0, y: -25 }, { x: 0, y: 15 }, { x: 0, y: -8 }, { x: -14, y: -15 }, { x: 14, y: -15 }, { x: -14, y: 5 }, { x: 14, y: 5 }, { x: -14, y: 22 }, { x: 14, y: 22 }];
+          let acCount = Math.min(acSlots.length, Math.ceil(g.levels.autocannon / 2));
+          for (let i = 0; i < acCount; i++) {
+            let double = g.levels.autocannon >= (i + 1) * 2;
+            if (i === 0 && g.levels.autocannon >= 2) double = true;
+            addTurret(acSlots[i].x, acSlots[i].y, 0xcbd5e1, double);
+          }
+        }
+
+        if (g.levels.plasma > 0) {
+          const plasmaSlots = [{ x: -22, y: 0 }, { x: 22, y: 0 }, { x: -22, y: 15 }, { x: 22, y: 15 }, { x: -22, y: 30 }, { x: 22, y: 30 }];
+          let plasmaCount = Math.min(plasmaSlots.length, Math.ceil(g.levels.plasma / 1.5));
+          for (let i = 0; i < plasmaCount; i++) addTurret(plasmaSlots[i].x, plasmaSlots[i].y, 0x22d3ee, false);
+        }
+
+        if (g.levels.pointDefense > 0) {
+          const pdSlots = [{ x: 0, y: -38 }, { x: -12, y: -28 }, { x: 12, y: -28 }, { x: -28, y: -10 }, { x: 28, y: -10 }, { x: -28, y: 10 }, { x: 28, y: 10 }, { x: -28, y: 30 }, { x: 28, y: 30 }];
+          let pdCount = Math.min(pdSlots.length, Math.ceil(g.levels.pointDefense));
+          for (let i = 0; i < pdCount; i++) addTurret(pdSlots[i].x, pdSlots[i].y, 0xfbbf24, false);
+        }
+
+        if (g.levels.missiles > 0) {
+          const missileSlots = [{ x: -25, y: -5 }, { x: 25, y: -5 }, { x: -25, y: 8 }, { x: 25, y: 8 }, { x: -25, y: 21 }, { x: 25, y: 21 }];
+          let missileCount = Math.min(missileSlots.length, Math.ceil(g.levels.missiles / 1.5));
+          for (let i = 0; i < missileCount; i++) addStaticMissile(missileSlots[i].x, missileSlots[i].y);
+        }
+      }
+
+      // Rotate aiming turrets to nearest enemy
+      let nearestEnemy = null;
+      let minDist = Infinity;
+      for (let e of g.enemies) {
+        if (!e.active) continue;
+        let dist = Math.hypot(e.x - g.player.x, e.y - g.player.y);
+        if (dist < minDist) { minDist = dist; nearestEnemy = e; }
+      }
+
+      let shipRotZ = Math.atan2(-g.player.vy, g.player.vx) - Math.PI / 2;
+      turretsGroup.children.forEach(t => {
+        if (t.userData.isAiming) {
+          let targetAngle = 0;
+          if (nearestEnemy) {
+            let dx = nearestEnemy.x - g.player.x;
+            let dy = g.player.y - nearestEnemy.y; // flip Y for 3D world space
+            let worldAngle = Math.atan2(dy, dx);
+            targetAngle = (worldAngle - Math.PI / 2) - shipRotZ;
+          }
+
+          let diff = targetAngle - t.rotation.z;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          t.rotation.z += diff * 0.15;
+        }
+      });
+    }
 
     // Pickups
     for (let p of g.pickups) {
       if (!p.active) continue;
-      ctx.fillStyle = '#facc15';
-      ctx.fillRect(p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
-      ctx.strokeStyle = '#ca8a04'; ctx.strokeRect(p.x - p.radius, p.y - p.radius, p.radius * 2, p.radius * 2);
-    }
-
-    // Effects (Point defense lines)
-    for (let e of g.effects) {
-      if (e.type === 'laser') {
-        ctx.beginPath(); ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2);
-        ctx.strokeStyle = `rgba(34, 211, 238, ${e.life * 10})`;
-        ctx.lineWidth = 2; ctx.stroke();
-      }
+      const mesh = getMesh(p, () => {
+        const m = new THREE.Mesh(geoms.tetra, mats.pickup);
+        m.scale.set(p.radius, p.radius, p.radius);
+        return m;
+      });
+      mesh.position.set(p.x - cx, cy - p.y, 0);
+      mesh.rotation.x += 0.05;
+      mesh.rotation.y += 0.05;
     }
 
     // Projectiles
     for (let p of g.projectiles) {
       if (!p.active) continue;
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(Math.atan2(p.vy, p.vx));
-      if (p.type === 'autocannon') { ctx.fillStyle = '#fde047'; ctx.fillRect(-6, -2, 12, 4); }
-      else if (p.type === 'plasma') {
-        ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(0, 0, p.radius, 0, Math.PI * 2); ctx.fill();
+      const mesh = getMesh(p, () => {
+        const m = new THREE.Mesh(geoms.sphere, mats.player);
+        m.scale.set(p.radius, p.radius, p.radius);
+        return m;
+      });
+      mesh.position.set(p.x - cx, cy - p.y, 0);
+
+      if (p.type === 'missile') {
+        mesh.scale.set(p.radius * 0.5, p.radius * 2, p.radius * 0.5);
+        mesh.rotation.z = Math.atan2(-p.vy, p.vx) - Math.PI / 2;
       }
-      else if (p.type === 'missile') {
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(-6, -3, 12, 6);
-        ctx.fillStyle = '#f97316'; ctx.fillRect(-10, -2, 4, 4);
-      }
-      ctx.restore();
     }
 
     // Enemies
     for (let e of g.enemies) {
       if (!e.active) continue;
-      ctx.save(); ctx.translate(e.x, e.y);
-      ctx.rotate(Math.atan2(g.player.y - e.y, g.player.x - e.x));
-      ctx.fillStyle = e.color;
-      ctx.beginPath();
-      if (e.type === 'heavy') {
-        ctx.rect(-e.radius, -e.radius, e.radius * 2, e.radius * 2);
-      } else {
-        ctx.moveTo(e.radius, 0); ctx.lineTo(-e.radius, e.radius);
-        ctx.lineTo(-e.radius / 2, 0); ctx.lineTo(-e.radius, -e.radius);
-      }
-      ctx.fill(); ctx.restore();
-
-      // Enemy HP Bar
-      ctx.fillStyle = 'rgba(255,0,0,0.5)'; ctx.fillRect(e.x - 10, e.y - e.radius - 8, 20, 3);
-      ctx.fillStyle = '#22c55e'; ctx.fillRect(e.x - 10, e.y - e.radius - 8, 20 * (e.hp / e.maxHp), 3);
+      const mesh = getMesh(e, () => {
+        const isHeavy = e.type === 'heavy';
+        const geo = isHeavy ? new THREE.BoxGeometry(1, 1, 1) : geoms.cone;
+        const mat = mats.player;
+        const m = new THREE.Mesh(geo, mat);
+        m.scale.set(e.radius * 2, e.radius * 2, isHeavy ? e.radius * 2 : e.radius);
+        m.rotation.x = Math.PI / 2; // Flat 
+        return m;
+      });
+      mesh.position.set(e.x - cx, cy - e.y, 0);
+      // Face player
+      let dx = g.player.x - e.x;
+      let dy = e.y - g.player.y; // flipped Y to math coordinates
+      mesh.rotation.z = Math.atan2(dy, dx) - Math.PI / 2;
     }
-
-    // Player
-    ctx.save();
-    ctx.translate(g.player.x, g.player.y);
-    let tilt = (g.player.vx / g.player.speed) * 0.4;
-    ctx.rotate(tilt); // Bank left/right slightly based on movement
-
-    // Shield visual
-    if (g.player.maxShield > 0) {
-      ctx.beginPath(); ctx.arc(0, 0, g.player.radius + 12, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(59, 130, 246, ${Math.max(0.2, g.player.shield / g.player.maxShield)})`;
-      ctx.lineWidth = 4; ctx.stroke();
-    }
-
-    // --- Battleship Hull ---
-    ctx.beginPath();
-    ctx.moveTo(0, -45); // Nose
-    ctx.lineTo(15, -20);
-    ctx.lineTo(30, -10); // Flare out wider for more hardpoints
-    ctx.lineTo(30, 30);  // Main body right
-    ctx.lineTo(10, 35);  // Back right
-    ctx.lineTo(-10, 35); // Back left
-    ctx.lineTo(-30, 30); // Main body left
-    ctx.lineTo(-30, -10);
-    ctx.lineTo(-15, -20);
-    ctx.closePath();
-
-    // Hull Fill & Stroke
-    ctx.fillStyle = '#1e293b';
-    ctx.fill();
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Bridge / Superstructure
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(-12, -5, 24, 18);
-    ctx.strokeStyle = '#60a5fa'; ctx.strokeRect(-12, -5, 24, 18);
-    ctx.fillStyle = '#60a5fa'; ctx.fillRect(-8, -2, 16, 4); // Bridge window glow
-
-    // --- Engine Glows ---
-    const drawEngine = (x, y) => {
-      ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.lineTo(x, y + 10 + Math.random() * 20); ctx.lineTo(x + 6, y);
-      ctx.fillStyle = '#38bdf8'; ctx.fill();
-    };
-    drawEngine(-18, 32);
-    drawEngine(0, 35);
-    drawEngine(18, 32);
-
-    // --- Dynamic Turrets ---
-    // Find nearest enemy to point turrets at
-    let nearestEnemy = null;
-    let minDist = Infinity;
-    for (let e of g.enemies) {
-      if (!e.active) continue;
-      let dist = Math.hypot(e.x - g.player.x, e.y - g.player.y);
-      if (dist < minDist) { minDist = dist; nearestEnemy = e; }
-    }
-
-    let targetAngle = -Math.PI / 2; // Default facing UP relative to the ship orientation
-    if (nearestEnemy) {
-      targetAngle = Math.atan2(nearestEnemy.y - g.player.y, nearestEnemy.x - g.player.x) - tilt;
-    }
-
-    const drawTurret = (tx, ty, size, barrelL, barrelW, color, doubleBarrel = false) => {
-      ctx.save();
-      ctx.translate(tx, ty);
-      ctx.rotate(targetAngle + Math.PI / 2);
-      ctx.fillStyle = '#94a3b8';
-      if (doubleBarrel) {
-        ctx.fillRect(-barrelW - 1, -barrelL, barrelW, barrelL);
-        ctx.fillRect(1, -barrelL, barrelW, barrelL);
-      } else {
-        ctx.fillRect(-barrelW / 2, -barrelL, barrelW, barrelL);
-      }
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.arc(0, 0, size, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1; ctx.stroke();
-      ctx.restore();
-    };
-
-    // 1. Autocannons (Main Guns - unlocks 1 turret per 2 levels)
-    if (g.levels.autocannon > 0) {
-      const acSlots = [
-        { x: 0, y: -25 }, { x: 0, y: 15 }, { x: 0, y: -8 },
-        { x: -14, y: -15 }, { x: 14, y: -15 },
-        { x: -14, y: 5 }, { x: 14, y: 5 },
-        { x: -14, y: 22 }, { x: 14, y: 22 }
-      ];
-      let acCount = Math.min(acSlots.length, Math.ceil(g.levels.autocannon / 2));
-      for (let i = 0; i < acCount; i++) {
-        let double = g.levels.autocannon >= (i + 1) * 2;
-        if (i === 0 && g.levels.autocannon >= 2) double = true; // First gun gets double barrel early
-        drawTurret(acSlots[i].x, acSlots[i].y, 6, 12, 3, '#cbd5e1', double);
-      }
-    }
-
-    // 2. Plasma Piercers (Side Batteries - unlocks 1 per 1.5 levels)
-    if (g.levels.plasma > 0) {
-      const plasmaSlots = [
-        { x: -22, y: 0 }, { x: 22, y: 0 },
-        { x: -22, y: 15 }, { x: 22, y: 15 },
-        { x: -22, y: 30 }, { x: 22, y: 30 }
-      ];
-      let plasmaCount = Math.min(plasmaSlots.length, Math.ceil(g.levels.plasma / 1.5));
-      for (let i = 0; i < plasmaCount; i++) {
-        drawTurret(plasmaSlots[i].x, plasmaSlots[i].y, 5, 10, 4, '#22d3ee', false);
-      }
-    }
-
-    // 3. Point Defense (Auto-lasers - fills edges as you level)
-    if (g.levels.pointDefense > 0) {
-      const pdSlots = [
-        { x: 0, y: -38 },
-        { x: -12, y: -28 }, { x: 12, y: -28 },
-        { x: -28, y: -10 }, { x: 28, y: -10 },
-        { x: -28, y: 10 }, { x: 28, y: 10 },
-        { x: -28, y: 30 }, { x: 28, y: 30 }
-      ];
-      let pdCount = Math.min(pdSlots.length, Math.ceil(g.levels.pointDefense));
-      for (let i = 0; i < pdCount; i++) {
-        drawTurret(pdSlots[i].x, pdSlots[i].y, 3, 6, 2, '#fbbf24', false);
-      }
-    }
-
-    // 4. Missile Pods (Static, built into outer wings)
-    if (g.levels.missiles > 0) {
-      const missileSlots = [
-        { x: -25, y: -5 }, { x: 25, y: -5 },
-        { x: -25, y: 8 }, { x: 25, y: 8 },
-        { x: -25, y: 21 }, { x: 25, y: 21 }
-      ];
-      let missileCount = Math.min(missileSlots.length, Math.ceil(g.levels.missiles / 1.5));
-      for (let i = 0; i < missileCount; i++) {
-        let mx = missileSlots[i].x;
-        let my = missileSlots[i].y;
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(mx - 4, my - 6, 8, 12);
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(mx - 2, my - 4, 4, 3);
-        ctx.fillRect(mx - 2, my + 1, 4, 3);
-      }
-    }
-
-    ctx.restore();
 
     // Particles
     for (let p of g.particles) {
       if (!p.active) continue;
-      ctx.globalAlpha = p.life / p.maxLife;
-      ctx.fillStyle = p.color;
-      ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+      const mesh = getMesh(p, () => {
+        const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true, transparent: true }));
+        m.scale.set(3, 3, 3);
+        return m;
+      });
+      mesh.position.set(p.x - cx, cy - p.y, p.z || 0);
+      mesh.material.opacity = p.life / p.maxLife;
     }
-    ctx.globalAlpha = 1.0;
 
-    // --- HUD Overlay on Canvas ---
-    if (statusRef.current === 'playing' || statusRef.current === 'shop') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; ctx.fillRect(0, 0, window.innerWidth, 60);
+    // Line effects (Point Defense lasers)
+    for (let e of g.effects) {
+      if (e.type === 'laser') {
+        const mesh = getMesh(e, () => {
+          const mat = new THREE.LineBasicMaterial({ color: 0x39ff14, linewidth: 2, transparent: true });
+          const geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(e.x1 - cx, cy - e.y1, 0),
+            new THREE.Vector3(e.x2 - cx, cy - e.y2, 0)
+          ]);
+          return new THREE.Line(geometry, mat);
+        });
+        mesh.material.opacity = e.life * 10;
+        // Update positions dynamically just in case
+        mesh.geometry.setFromPoints([
+          new THREE.Vector3(e.x1 - cx, cy - e.y1, 0),
+          new THREE.Vector3(e.x2 - cx, cy - e.y2, 0)
+        ]);
+      }
+    }
 
-      // HP Bar
-      ctx.fillStyle = '#ef4444'; ctx.fillRect(20, 15, 200, 12);
-      ctx.fillStyle = '#22c55e'; ctx.fillRect(20, 15, 200 * Math.max(0, g.player.hp / g.player.maxHp), 12);
+    // Cleanup dead objects
+    for (let [obj, mesh] of meshes.entries()) {
+      if (!activeKeys.has(obj)) {
+        scene.remove(mesh);
+        meshes.delete(obj);
+      }
+    }
 
-      // Shield Bar
+    renderer.render(scene, camera);
+
+    // --- HUD 2D Overlay ---
+    const ctx = canvasRef.current;
+    if (ctx && (statusRef.current === 'playing' || statusRef.current === 'shop')) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      ctx.width = w; ctx.height = h;
+      const c2d = ctx.getContext('2d');
+      c2d.clearRect(0, 0, w, h);
+
+      c2d.fillStyle = 'rgba(0, 0, 0, 0.4)'; c2d.fillRect(0, 0, w, 60);
+
+      c2d.fillStyle = '#ef4444'; c2d.fillRect(20, 15, 200, 12);
+      c2d.fillStyle = '#22c55e'; c2d.fillRect(20, 15, 200 * Math.max(0, g.player.hp / g.player.maxHp), 12);
+
       if (g.player.maxShield > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(20, 32, 200, 6);
-        ctx.fillStyle = '#3b82f6'; ctx.fillRect(20, 32, 200 * Math.max(0, g.player.shield / g.player.maxShield), 6);
+        c2d.fillStyle = 'rgba(255,255,255,0.2)'; c2d.fillRect(20, 32, 200, 6);
+        c2d.fillStyle = '#3b82f6'; c2d.fillRect(20, 32, 200 * Math.max(0, g.player.shield / g.player.maxShield), 6);
       }
 
-      // Text Details
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'left';
-      ctx.fillText(`HULL: ${Math.ceil(g.player.hp)} / ${g.player.maxHp}`, 230, 25);
+      c2d.fillStyle = '#ffffff'; c2d.font = 'bold 12px sans-serif'; c2d.textAlign = 'left';
+      c2d.fillText(`HULL: ${Math.ceil(g.player.hp)} / ${g.player.maxHp}`, 230, 25);
 
-      // Scrap
-      ctx.fillStyle = '#facc15'; ctx.font = 'bold 24px monospace'; ctx.textAlign = 'right';
-      ctx.fillText(`SCRAP: ${g.scrap}`, window.innerWidth - 20, 35);
+      c2d.fillStyle = '#facc15'; c2d.font = 'bold 24px monospace'; c2d.textAlign = 'right';
+      c2d.fillText(`SCRAP: ${g.scrap}`, w - 20, 35);
 
-      // Timer
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center';
+      c2d.fillStyle = '#ffffff'; c2d.font = 'bold 20px monospace'; c2d.textAlign = 'center';
       let mins = Math.floor(g.totalTime / 60); let secs = Math.floor(g.totalTime % 60).toString().padStart(2, '0');
-      ctx.fillText(`TIME: ${mins}:${secs}`, window.innerWidth / 2, 35);
+      c2d.fillText(`TIME: ${mins}:${secs}`, w / 2, 35);
 
-      // Upgrades Prompt
       if (statusRef.current === 'playing') {
-        ctx.fillStyle = g.totalTime % 1 > 0.5 ? '#60a5fa' : '#bfdbfe';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.fillText(`PRESS [SPACE] FOR UPGRADES`, window.innerWidth / 2, window.innerHeight - 30);
+        c2d.fillStyle = g.totalTime % 1 > 0.5 ? '#39ff14' : '#013220';
+        c2d.font = 'bold 18px sans-serif';
+        c2d.fillText(`PRESS [SPACE] FOR UPGRADES`, w / 2, h - 30);
+      }
+      
+      // Draw Enemy HP & Damage Indicators
+      for (let e of g.enemies) {
+        if (!e.active || e.hp >= e.maxHp) continue;
+        const barW = 30;
+        const hpRatio = Math.max(0, e.hp / e.maxHp);
+        c2d.fillStyle = 'rgba(57, 255, 20, 0.2)';
+        c2d.fillRect(e.x - barW/2, e.y - e.radius - 12, barW, 4);
+        c2d.fillStyle = '#39ff14';
+        c2d.fillRect(e.x - barW/2, e.y - e.radius - 12, barW * hpRatio, 4);
+      }
+
+      for (let e of g.effects) {
+        if (e.type === 'dmg') {
+          c2d.fillStyle = `rgba(57, 255, 20, ${Math.min(1, e.life * 2)})`;
+          c2d.font = 'bold 16px monospace';
+          c2d.textAlign = 'center';
+          c2d.fillText(e.text, e.x, e.y);
+        }
       }
     }
   };
 
   useEffect(() => {
-    resetGame(); // Ensure game is fully initialized before first render
+    resetGame();
+    initThree();
 
     const loop = (time) => {
       if (!game.current) return;
       let dt = (time - game.current.lastTime) / 1000;
       game.current.lastTime = time;
-      if (dt > 0.1) dt = 0.1; // Cap to prevent huge jumps
+      if (dt > 0.1) dt = 0.1;
 
       if (statusRef.current === 'playing') {
         updatePhysics(dt, game.current);
       }
 
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext('2d');
-        draw(ctx, game.current);
+      if (threeRef.current) {
+        drawThree(threeRef.current, game.current);
       }
 
       reqRef.current = requestAnimationFrame(loop);
@@ -600,8 +699,12 @@ export default function App() {
     const handleKeyUp = (e) => { if (game.current) game.current.keys[e.key.toLowerCase()] = false; };
 
     const handleResize = () => {
-      if (canvasRef.current) {
-        canvasRef.current.width = window.innerWidth; canvasRef.current.height = window.innerHeight;
+      if (threeRef.current) {
+        threeRef.current.camera.aspect = window.innerWidth / window.innerHeight;
+        // Adjust Z to keep 1unit = 1px at Z=0
+        threeRef.current.camera.position.z = (window.innerHeight / 2) / Math.tan((50 * Math.PI / 180) / 2);
+        threeRef.current.camera.updateProjectionMatrix();
+        threeRef.current.renderer.setSize(window.innerWidth, window.innerHeight);
       }
     };
 
@@ -617,6 +720,11 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResize);
+      if (threeRef.current && containerRef.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        containerRef.current.removeChild(threeRef.current.renderer.domElement);
+        threeRef.current.renderer.dispose();
+      }
     };
   }, []);
 
@@ -637,15 +745,20 @@ export default function App() {
   };
 
   return (
-    <div className="w-full h-screen bg-black overflow-hidden relative font-sans select-none">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 block cursor-crosshair touch-none"
+    <div className="w-full h-screen bg-[#0a0a14] overflow-hidden relative font-sans select-none">
+
+      {/* 3D Container */}
+      <div
+        ref={containerRef}
+        className="absolute inset-0 cursor-crosshair touch-none"
         onPointerDown={(e) => { if (statusRef.current === 'playing' && game.current) game.current.mouse = { x: e.clientX, y: e.clientY, active: true }; }}
         onPointerMove={(e) => { if (statusRef.current === 'playing' && game.current && game.current.mouse.active) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; } }}
         onPointerUp={() => { if (game.current) game.current.mouse.active = false; }}
         onPointerLeave={() => { if (game.current) game.current.mouse.active = false; }}
       />
+
+      {/* 2D HUD Canvas Overlay */}
+      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
 
       {/* Shop Overlay */}
       {gameState === 'shop' && (
