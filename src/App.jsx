@@ -71,11 +71,15 @@ export default function App() {
   };
 
   const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount = 0) => {
+    let target = null;
+    if (type === 'missile') target = g.enemies.filter(e => e.active)[Math.floor(Math.random() * g.enemies.filter(e => e.active).length)];
+    else if (type === 'enemy_missile') target = g.player;
+
     g.projectiles.push({
       x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      radius: type === 'plasma' ? 12 : (type === 'missile' ? 8 : 5),
+      radius: type === 'plasma' ? 12 : (type === 'missile' || type === 'enemy_missile' ? 8 : 5),
       damage, type, active: true, pierce: pierceCount, hitList: [], life: 0,
-      target: type === 'missile' ? g.enemies.filter(e => e.active)[Math.floor(Math.random() * g.enemies.filter(e => e.active).length)] : null
+      target, isEnemy: type.startsWith('enemy')
     });
   };
 
@@ -102,11 +106,15 @@ export default function App() {
     let diffMult = 1 + g.totalTime / 60;
     let typeRoll = Math.random();
     let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 15, color = 0xef4444;
+    let shield = 0, maxShield = 0, fireCooldown = 0;
 
-    if (typeRoll > 0.8) { type = 'heavy'; hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xa855f7; }
-    else if (typeRoll > 0.6) { type = 'interceptor'; hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xf97316; }
+    if (typeRoll > 0.95) { type = 'missile_boat'; hp = 60 * diffMult; speed = 30 + Math.random() * 20; radius = 22; color = 0xd946ef; fireCooldown = 3.0; }
+    else if (typeRoll > 0.85) { type = 'shielded'; hp = 40 * diffMult; speed = 50 + Math.random() * 30; radius = 18; color = 0x3b82f6; maxShield = 80 * diffMult; shield = maxShield; }
+    else if (typeRoll > 0.70) { type = 'shooter'; hp = 40 * diffMult; speed = 70 + Math.random() * 30; radius = 16; color = 0xa855f7; fireCooldown = 1.5; }
+    else if (typeRoll > 0.60) { type = 'heavy'; hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xf97316; }
+    else if (typeRoll > 0.40) { type = 'interceptor'; hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xeab308; }
 
-    g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, speed, radius, color, type, active: true });
+    g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type, active: true, fireCooldown });
   };
 
   const updatePhysics = (dt, g) => {
@@ -190,21 +198,38 @@ export default function App() {
       g.cooldowns.missiles = Math.max(1.0, 3.0 - g.levels.missiles * 0.15);
     }
 
+    // Point Defense
     if (g.levels.pointDefense > 0 && g.cooldowns.pointDefense <= 0) {
-      let range = 100 + g.levels.pointDefense * 15;
-      let dmg = 5 + g.levels.pointDefense * 3;
+      let range = 250 + g.levels.pointDefense * 10;
       let hit = false;
-      let hits = 0;
+      let dmg = 50 + g.levels.pointDefense * 20;
       let maxHits = 1 + Math.floor(g.levels.pointDefense / 2);
-      for (let e of g.enemies) {
-        if (!e.active) continue;
-        if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < range) {
-          e.hp -= dmg; hit = true;
-          g.effects.push({ type: 'laser', x1: g.player.x, y1: g.player.y, x2: e.x, y2: e.y, life: 0.1 });
-          g.effects.push({ type: 'dmg', x: e.x, y: e.y, text: Math.ceil(dmg).toString(), life: 0.8 });
-          createParticles(g, e.x, e.y, 0x22d3ee, 3);
+      let hits = 0;
+
+      // Target Enemy Missiles First
+      let enemyMissiles = g.projectiles.filter(p => p.active && p.isEnemy && p.type === 'enemy_missile');
+      for (let m of enemyMissiles) {
+        if (Math.hypot(m.x - g.player.x, m.y - g.player.y) < range) {
+          m.active = false; hit = true;
+          g.effects.push({ type: 'laser', source: g.player, target: m, life: 0.1 });
+          g.effects.push({ type: 'dmg', x: m.x, y: m.y, text: 'CRIT', life: 0.5 });
+          createParticles(g, m.x, m.y, 0xd946ef, 3);
           hits++;
           if (hits >= maxHits) break;
+        }
+      }
+
+      if (hits < maxHits) {
+        for (let e of g.enemies) {
+          if (!e.active) continue;
+          if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < range) {
+            let ad = dmg; if(e.shield>0){let ab=Math.min(e.shield,ad);e.shield-=ab;ad-=ab;} e.hp -= ad; hit = true;
+            g.effects.push({ type: 'laser', source: g.player, target: e, life: 0.1 });
+            g.effects.push({ type: 'dmg', x: e.x, y: e.y, text: Math.ceil(dmg).toString(), life: 0.8 });
+            createParticles(g, e.x, e.y, 0x22d3ee, 3);
+            hits++;
+            if (hits >= maxHits) break;
+          }
         }
       }
       if (hit) g.cooldowns.pointDefense = Math.max(0.2, 0.5 - g.levels.pointDefense * 0.03);
@@ -234,25 +259,81 @@ export default function App() {
       }
       p.x += p.vx * dt; p.y += p.vy * dt;
 
-      for (let e of g.enemies) {
-        if (!e.active || p.hitList.includes(e.id)) continue;
-        if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
-          e.hp -= p.damage;
-          g.effects.push({ type: 'dmg', x: e.x + (Math.random()-0.5)*10, y: e.y + (Math.random()-0.5)*10, text: Math.ceil(p.damage).toString(), life: 0.8 });
-          createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
-          if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
-          else { p.active = false; }
-          break;
+      if (p.isEnemy) {
+        if (p.type === 'enemy_missile' && p.target && g.player.hp > 0) {
+           let angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
+           let cAngle = Math.atan2(p.vy, p.vx);
+           let diff = angle - cAngle;
+           while (diff > Math.PI) diff -= Math.PI * 2;
+           while (diff < -Math.PI) diff += Math.PI * 2;
+           let nAngle = cAngle + Math.max(-2*dt, Math.min(2*dt, diff));
+           let currentSpeed = Math.hypot(p.vx, p.vy) + 50 * dt;
+           p.vx = Math.cos(nAngle) * currentSpeed; p.vy = Math.sin(nAngle) * currentSpeed;
+           if (Math.random() < 0.3) createParticles(g, p.x, p.y, 0xd946ef, 1);
+        }
+
+        if (Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.radius + p.radius) {
+           let dmg = p.damage;
+           if (g.player.shield > 0) {
+             let absorb = Math.min(g.player.shield, dmg);
+             g.player.shield -= absorb; dmg -= absorb;
+           }
+           g.player.hp -= dmg;
+           createParticles(g, p.x, p.y, 0xef4444, 5);
+           p.active = false;
+           g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+           if (g.player.hp <= 0) { setGameState('gameover'); return; }
+        }
+      } else {
+        for (let e of g.enemies) {
+          if (!e.active || p.hitList.includes(e.id)) continue;
+          if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
+            let actualDmg = p.damage;
+            if (e.shield > 0) { let absorb = Math.min(e.shield, actualDmg); e.shield -= absorb; actualDmg -= absorb; }
+            e.hp -= actualDmg;
+            g.effects.push({ type: 'dmg', x: e.x + (Math.random()-0.5)*10, y: e.y + (Math.random()-0.5)*10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+            createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
+            if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
+            else { p.active = false; }
+            break;
+          }
         }
       }
     }
 
     for (let e of g.enemies) {
       if (!e.active) continue;
+      
+      let distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
       let angle = Math.atan2(g.player.y - e.y, g.player.x - e.x);
-      if (e.type === 'interceptor') angle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
-      e.x += Math.cos(angle) * e.speed * dt;
-      e.y += Math.sin(angle) * e.speed * dt;
+      let moveAngle = angle;
+      if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
+      
+      let moveSpeed = e.speed;
+      if (e.type === 'shooter') {
+         if (distToPlayer < 300) moveSpeed = e.speed * -0.5;
+         else if (distToPlayer < 400) moveSpeed = 0; 
+      } else if (e.type === 'missile_boat') {
+         if (distToPlayer < 500) moveSpeed = e.speed * -1;
+         else if (distToPlayer < 700) moveSpeed = 0; 
+      }
+
+      e.x += Math.cos(moveAngle) * moveSpeed * dt;
+      e.y += Math.sin(moveAngle) * moveSpeed * dt;
+
+      if (e.fireCooldown !== undefined) {
+         e.fireCooldown -= dt;
+         if (e.fireCooldown <= 0) {
+            if (e.type === 'shooter' && distToPlayer < 600) {
+               fireProjectile(g, e.x, e.y, angle, 250, 15 * (1 + g.totalTime/120), 'enemy_bullet');
+               e.fireCooldown = 1.8 + Math.random();
+            } else if (e.type === 'missile_boat' && distToPlayer < 800) {
+               fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * (1 + g.totalTime/120), 'enemy_missile');
+               fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * (1 + g.totalTime/120), 'enemy_missile');
+               e.fireCooldown = 4.0;
+            }
+         }
+      }
 
       if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
         let dmg = e.type === 'heavy' ? 20 : 10;
@@ -261,7 +342,9 @@ export default function App() {
           g.player.shield -= absorb; dmg -= absorb;
         }
         g.player.hp -= dmg;
-        e.hp -= 20;
+        let eDamage = 20;
+        if (e.shield > 0) { let absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
+        e.hp -= eDamage;
         g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: '20', life: 0.8 });
 
         e.x += Math.cos(angle + Math.PI) * 30; e.y += Math.sin(angle + Math.PI) * 30;
@@ -533,13 +616,14 @@ export default function App() {
     for (let p of g.projectiles) {
       if (!p.active) continue;
       const mesh = getMesh(p, () => {
-        const m = new THREE.Mesh(geoms.sphere, mats.weapon);
+        let color = p.isEnemy ? 0xd946ef : 0xff0000;
+        const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color, wireframe: true }));
         m.scale.set(p.radius, p.radius, p.radius);
         return m;
       });
       mesh.position.set(p.x - cx, cy - p.y, 0);
 
-      if (p.type === 'missile') {
+      if (p.type === 'missile' || p.type === 'enemy_missile') {
         mesh.scale.set(p.radius * 0.5, p.radius * 2, p.radius * 0.5);
         mesh.rotation.z = Math.atan2(-p.vy, p.vx) - Math.PI / 2;
       }
@@ -550,11 +634,15 @@ export default function App() {
       if (!e.active) continue;
       const mesh = getMesh(e, () => {
         const isHeavy = e.type === 'heavy';
-        const geo = isHeavy ? new THREE.BoxGeometry(1, 1, 1) : geoms.cone;
-        const mat = mats.player;
-        const m = new THREE.Mesh(geo, mat);
-        m.scale.set(e.radius * 2, e.radius * 2, isHeavy ? e.radius * 2 : e.radius);
-        m.rotation.x = Math.PI / 2; // Flat 
+        let geo = isHeavy ? new THREE.BoxGeometry(1, 1, 1) : geoms.cone;
+        if (e.type === 'shooter') geo = new THREE.BoxGeometry(1, 0.5, 1);
+        else if (e.type === 'missile_boat') geo = new THREE.BoxGeometry(1.5, 0.5, 1.5);
+        else if (e.type === 'shielded') geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
+        
+        const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: e.color, wireframe: true }));
+        if (isHeavy) m.scale.set(e.radius * 2, e.radius * 2, e.radius * 2);
+        else m.scale.set(e.radius * 2, e.radius * 2, e.radius);
+        
         return m;
       });
       mesh.position.set(e.x - cx, cy - e.y, 0);
@@ -581,18 +669,15 @@ export default function App() {
       if (e.type === 'laser') {
         const mesh = getMesh(e, () => {
           const mat = mats.laser;
-          const geometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(e.x1 - cx, cy - e.y1, 0),
-            new THREE.Vector3(e.x2 - cx, cy - e.y2, 0)
-          ]);
-          return new THREE.Line(geometry, mat);
+          return new THREE.Line(new THREE.BufferGeometry(), mat);
         });
+        if (e.source && e.target) {
+            mesh.geometry.setFromPoints([
+                new THREE.Vector3(e.source.x - cx, cy - e.source.y, 0),
+                new THREE.Vector3(e.target.x - cx, cy - e.target.y, 0)
+            ]);
+        }
         mesh.material.opacity = e.life * 10;
-        // Update positions dynamically just in case
-        mesh.geometry.setFromPoints([
-          new THREE.Vector3(e.x1 - cx, cy - e.y1, 0),
-          new THREE.Vector3(e.x2 - cx, cy - e.y2, 0)
-        ]);
       }
     }
 
