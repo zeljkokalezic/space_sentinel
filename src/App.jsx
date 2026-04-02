@@ -39,8 +39,8 @@ export default function App() {
         shield: 0, maxShield: 0,
         speed: 220, magnetRadius: 100,
       },
-      scrap: 9999999, totalScrapEarned: 0, // Dev scrap kept
-      wave: 1, timeInWave: 0, totalTime: 0,
+      scrap: 200, totalScrapEarned: 0, // Dev scrap kept
+      wave: 1, totalTime: 0, level: 1, mission: generateMission(1),
       spawnCooldown: 2,
       enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
       stars: Array.from({ length: 300 }, () => ({
@@ -95,6 +95,37 @@ export default function App() {
     }
   };
 
+  const generateMission = (level) => {
+    const types = ['kill', 'survive', 'collect'];
+    let t = types[Math.floor(Math.random() * types.length)];
+    if (level === 1) t = 'kill';
+    if (level === 2) t = 'collect';
+
+    let target, title, reward;
+    if (t === 'kill') {
+      target = 10 + level * 5;
+      title = `Destroy ${target} Enemies`;
+      reward = 50 + level * 20;
+    } else if (t === 'collect') {
+      target = 30 + level * 10;
+      title = `Collect ${target} Scrap`;
+      reward = 50 + level * 20;
+    } else {
+      target = 20 + level * 10;
+      title = `Survive for ${target} Seconds`;
+      reward = 80 + level * 15;
+    }
+
+    if (level > 4 && Math.random() > 0.6) {
+      t = 'kill_elite';
+      target = 2 + Math.floor(level / 3);
+      title = `Destroy ${target} Elite Enemies`;
+      reward = 100 + level * 30;
+    }
+
+    return { type: t, target, current: 0, title, reward };
+  };
+
   const spawnEnemy = (g) => {
     let side = Math.floor(Math.random() * 4);
     let x, y, margin = 50;
@@ -103,7 +134,7 @@ export default function App() {
     else if (side === 2) { x = Math.random() * window.innerWidth; y = window.innerHeight + margin; }
     else { x = -margin; y = Math.random() * window.innerHeight; }
 
-    let diffMult = 1 + g.totalTime / 60;
+    let diffMult = 1 + g.level * 0.2 + g.totalTime / 120;
     let typeRoll = Math.random();
     let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 15, color = 0xef4444;
     let shield = 0, maxShield = 0, fireCooldown = 0;
@@ -118,9 +149,21 @@ export default function App() {
   };
 
   const updatePhysics = (dt, g) => {
-    g.totalTime += dt;
+    const completeMission = () => {
+      g.scrap += g.mission.reward;
+      g.effects.push({ type: 'mission_complete', x: window.innerWidth / 2, y: Math.max(100, window.innerHeight / 4), text: `LEVEL ${g.level} COMPLETE! +${g.mission.reward} SCRAP`, life: 4.0 });
+      g.level++;
+      g.mission = generateMission(g.level);
+    };
 
+    if (g.mission.type === 'survive') {
+      g.mission.current += dt;
+      if (g.mission.current >= g.mission.target) completeMission();
+    }
+
+    g.totalTime += dt;
     g.spawnCooldown -= dt;
+
     let currentSpawnRate = Math.max(0.15, 2.0 - g.totalTime / 90);
     if (g.spawnCooldown <= 0) {
       spawnEnemy(g);
@@ -355,6 +398,15 @@ export default function App() {
 
       if (e.hp <= 0) {
         e.active = false;
+        
+        if (g.mission.type === 'kill') {
+          g.mission.current++;
+          if (g.mission.current >= g.mission.target) completeMission();
+        } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
+          g.mission.current++;
+          if (g.mission.current >= g.mission.target) completeMission();
+        }
+
         createParticles(g, e.x, e.y, e.color, 15);
         let val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
         g.pickups.push({ x: e.x, y: e.y, value: val, active: true, radius: 6 });
@@ -371,6 +423,10 @@ export default function App() {
         if (Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.radius + p.radius) {
           g.scrap += p.value; g.totalScrapEarned += p.value;
           p.active = false;
+          if (g.mission.type === 'collect') {
+             g.mission.current += p.value;
+             if (g.mission.current >= g.mission.target) completeMission();
+          }
         }
       }
     }
@@ -718,7 +774,22 @@ export default function App() {
 
       c2d.fillStyle = '#ffffff'; c2d.font = 'bold 20px monospace'; c2d.textAlign = 'center';
       let mins = Math.floor(g.totalTime / 60); let secs = Math.floor(g.totalTime % 60).toString().padStart(2, '0');
-      c2d.fillText(`TIME: ${mins}:${secs}`, w / 2, 35);
+      c2d.fillText(`TIME: ${mins}:${secs}`, w / 2, 50);
+
+      const mBarW = 300;
+      let mProg = Math.max(0, Math.min(1, g.mission.current / g.mission.target));
+      c2d.fillStyle = 'rgba(0,0,0,0.5)';
+      c2d.fillRect(w/2 - mBarW/2, 10, mBarW, 10);
+      c2d.fillStyle = '#39ff14';
+      c2d.fillRect(w/2 - mBarW/2, 10, mBarW * mProg, 10);
+      c2d.fillStyle = '#fff';
+      c2d.font = 'bold 16px sans-serif';
+      c2d.textAlign = 'center';
+      
+      let missionText = g.mission.type === 'survive' 
+         ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+         : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
+      c2d.fillText(missionText, w/2, 18);
 
       if (statusRef.current === 'playing') {
         c2d.fillStyle = g.totalTime % 1 > 0.5 ? '#39ff14' : '#013220';
@@ -743,6 +814,13 @@ export default function App() {
           c2d.font = 'bold 16px monospace';
           c2d.textAlign = 'center';
           c2d.fillText(e.text, e.x, e.y);
+        } else if (e.type === 'mission_complete') {
+          let yOffset = Math.sin(e.life * Math.PI) * 10;
+          c2d.fillStyle = `rgba(250, 204, 21, ${Math.min(1, e.life)})`;
+          c2d.font = 'bold 36px monospace';
+          c2d.textAlign = 'center';
+          c2d.fillText(e.text, e.x, e.y + yOffset);
+          e.y -= 0.5;
         }
       }
     }
