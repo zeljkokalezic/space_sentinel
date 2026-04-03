@@ -2,18 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target, Skull, Map as MapIcon } from 'lucide-react';
 import * as THREE from 'three';
 
-const UPGRADE_DATA = {
-  autoAim: { name: 'Targeting AI', icon: Target, desc: 'Automatically locks weapons onto the nearest enemy.', baseCost: 150, costMult: 1, maxLevel: 1 },
-  autocannon: { name: 'Twin Autocannon', icon: Crosshair, desc: 'Increases basic attack fire rate & damage.', baseCost: 30, costMult: 1.5, maxLevel: 20 },
-  plasma: { name: 'Plasma Piercer', icon: Zap, desc: 'Slow, heavy shots that pierce multiple enemies.', baseCost: 80, costMult: 1.6, maxLevel: 10 },
-  missiles: { name: 'Seeker Swarm', icon: Rocket, desc: 'Launches homing missiles that track targets.', baseCost: 120, costMult: 1.7, maxLevel: 10 },
-  hull: { name: 'Reinforced Hull', icon: Heart, desc: 'Increases Max HP by 50 and repairs hull.', baseCost: 50, costMult: 1.4, maxLevel: 20 },
-  shield: { name: 'Energy Shield', icon: Shield, desc: 'Adds a regenerating protective forcefield.', baseCost: 100, costMult: 1.5, maxLevel: 10 },
-  thrusters: { name: 'Ion Thrusters', icon: Activity, desc: 'Increases ship movement speed & agility.', baseCost: 40, costMult: 1.3, maxLevel: 8 },
-  magnet: { name: 'Scrap Magnet', icon: Magnet, desc: 'Increases pickup radius for destroyed enemies.', baseCost: 30, costMult: 1.4, maxLevel: 10 },
-  pointDefense: { name: 'Point Defense', icon: Wrench, desc: 'Short-range auto-lasers shred nearby threats.', baseCost: 150, costMult: 1.6, maxLevel: 10 }
-};
-
+import { UPGRADE_DATA } from './constants/upgrades';
+import { generateMap } from './engine/mapGenerator';
+import ShopOverlay from './components/ShopOverlay';
+import StartScreen from './components/StartScreen';
+import GameOverScreen from './components/GameOverScreen';
+import VictoryScreen from './components/VictoryScreen';
 export default function App() {
   const [gameState, setGameState] = useState('start'); // start, map, playing, shop, gameover
   const [uiScrap, setUiScrap] = useState(0);
@@ -31,99 +25,6 @@ export default function App() {
     statusRef.current = gameState;
   }, [gameState]);
 
-  const generateMap = () => {
-    const rows = 15;
-    const cols = 5;
-    let nodeIdCounter = 0;
-    
-    let grid = Array.from({length: rows}, () => Array(cols).fill(null));
-    let edgesObj = {};
-
-    const numPaths = 4; 
-    let paths = []; 
-    // Starting coordinates spread across the bottom
-    let startCols = [0, 1, 3, 4];
-    for (let p = 0; p < numPaths; p++) {
-        paths.push([{row: 0, col: startCols[p]}]);
-    }
-
-    // Build independent paths upwards
-    for (let r = 0; r < rows - 2; r++) { 
-        for (let p = 0; p < numPaths; p++) {
-            let cx = paths[p][r].col;
-            let possibleNexts = [cx - 1, cx, cx + 1].filter(x => x >= 0 && x < cols);
-            let nx = possibleNexts[Math.floor(Math.random() * possibleNexts.length)];
-            paths[p].push({row: r + 1, col: nx});
-        }
-    }
-
-    // Connect all paths to the final boss node
-    for (let p = 0; p < numPaths; p++) {
-        paths[p].push({row: rows - 1, col: Math.floor(cols / 2)});
-    }
-
-    // Translate geometric paths into Node objects and Edge references
-    paths.forEach(path => {
-        for (let i = 0; i < path.length; i++) {
-            let info = path[i];
-            if (!grid[info.row][info.col]) {
-                let r = info.row;
-                let type = 'combat'; 
-                if (r === rows - 1) type = 'boss';
-                else if (r === rows - 2) type = 'repair';
-                else if (r > 0) {
-                     let rnum = Math.random();
-                     if (rnum > 0.8) type = 'elite';
-                     else if (rnum > 0.65) type = 'shop';
-                     else if (rnum > 0.55) type = 'repair';
-                }
-                grid[info.row][info.col] = {
-                   id: `node-${nodeIdCounter++}`,
-                   row: info.row,
-                   col: info.col,
-                   type: type,
-                   status: info.row === 0 ? 'available' : 'locked'
-                };
-            }
-            if (i > 0) {
-                let fromNode = grid[path[i-1].row][path[i-1].col].id;
-                let toNode = grid[info.row][info.col].id;
-                edgesObj[`${fromNode}_${toNode}`] = { from: fromNode, to: toNode };
-            }
-        }
-    });
-
-    // Weave additional cross-links so paths aren't purely isolated
-    for (let r = 0; r < rows - 2; r++) {
-       for (let c = 0; c < cols; c++) {
-          let node = grid[r][c];
-          if (node && Math.random() < 0.25) { 
-             let potentialTargets = [];
-             if (c > 0 && grid[r+1][c-1]) potentialTargets.push(grid[r+1][c-1]);
-             if (grid[r+1][c]) potentialTargets.push(grid[r+1][c]);
-             if (c < cols-1 && grid[r+1][c+1]) potentialTargets.push(grid[r+1][c+1]);
-             if (potentialTargets.length > 0) {
-                let t = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
-                edgesObj[`${node.id}_${t.id}`] = { from: node.id, to: t.id };
-             }
-          }
-       }
-    }
-
-    let nodes = [];
-    for (let r = 0; r < rows; r++) {
-         for (let c = 0; c < cols; c++) {
-              if (grid[r][c]) nodes.push(grid[r][c]);
-         }
-    }
-
-    return {
-      nodes, 
-      edges: Object.values(edgesObj),
-      currentRow: -1,
-      currentNodeId: null
-    };
-  };
 
   const resetGame = () => {
     game.current = {
@@ -1202,132 +1103,16 @@ export default function App() {
       {renderMap()}
 
       {/* Shop Overlay */}
-      {gameState === 'shop' && (
-        <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-40 backdrop-blur-sm">
-          <div className="bg-gray-900/95 border border-blue-500/50 rounded-xl p-6 w-full max-w-5xl shadow-2xl shadow-blue-900/30 overflow-y-auto max-h-screen">
-            <div className="flex flex-wrap justify-between items-center mb-8 gap-4 border-b border-gray-700 pb-4">
-              <div>
-                <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">SYSTEM UPGRADES</h2>
-                <p className="text-gray-400 mt-1">Upgrade your battleship systems to survive.</p>
-              </div>
-              <div className="text-3xl font-mono text-yellow-400 flex items-center gap-3 bg-black/50 px-6 py-3 rounded-lg border border-yellow-500/30">
-                <div className="w-4 h-4 bg-yellow-400 rounded-sm shadow-[0_0_10px_#facc15]"></div> {uiScrap}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(UPGRADE_DATA).map(([key, data]) => {
-                const currentLevel = uiLevels?.[key] || 0;
-                const cost = Math.floor(data.baseCost * Math.pow(data.costMult, currentLevel));
-                const isMax = currentLevel >= data.maxLevel;
-                const canAfford = uiScrap >= cost;
-
-                return (
-                  <div key={key}
-                    onClick={() => { if (!isMax && canAfford) buyUpgrade(key, cost); }}
-                    className={`relative p-5 rounded-xl border flex flex-col h-full transition-all duration-200 
-                                        ${isMax ? 'border-green-500/30 bg-green-900/10' :
-                        canAfford ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-800/40 hover:scale-[1.02] cursor-pointer' :
-                          'border-gray-700 bg-gray-800/40 opacity-75'}`}>
-                    <div className="flex justify-between items-start mb-3">
-                      <data.icon className={`w-10 h-10 ${isMax ? 'text-green-400' : 'text-blue-400'}`} />
-                      <div className="text-xs font-mono bg-black/60 px-2 py-1 rounded text-gray-300 border border-gray-700">
-                        LVL {currentLevel}/{data.maxLevel}
-                      </div>
-                    </div>
-                    <h3 className="font-bold text-lg mb-1 text-white">{data.name}</h3>
-                    <p className="text-sm text-gray-400 mb-6 flex-grow">{data.desc}</p>
-                    <div className="mt-auto pt-4 border-t border-gray-700/50">
-                      {isMax ? (
-                        <div className="text-green-400 font-bold text-center tracking-widest">MAXED OUT</div>
-                      ) : (
-                        <div className={`font-bold text-xl text-center flex items-center justify-center gap-2 ${canAfford ? 'text-yellow-400' : 'text-red-400'}`}>
-                          <div className="w-3 h-3 bg-current rounded-sm"></div> {cost}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-            <div className="mt-8 flex justify-center">
-              <button className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-transform hover:scale-105 flex items-center gap-3" onClick={() => setGameState('map')}>
-                <MapIcon className="w-6 h-6 stroke-current" /> RETURN TO MAP (SPACE)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {gameState === 'shop' && <ShopOverlay uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} />}
 
       {/* Start Screen */}
-      {gameState === 'start' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 text-white z-50 backdrop-blur-md">
-          <div className="relative mb-8">
-            <Rocket className="w-24 h-24 text-blue-500 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]" />
-            <h1 className="text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-cyan-200 drop-shadow-lg text-center">SPACE SENTINEL</h1>
-          </div>
-          <p className="text-xl text-gray-300 mb-12 max-w-lg text-center leading-relaxed">You are the core. Defend yourself against endless waves. Gather scrap from fallen enemies to dynamically upgrade your ship systems. Survive.</p>
-          <button className="px-10 py-5 bg-blue-600 hover:bg-blue-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.6)] hover:scale-105 flex items-center gap-3" onClick={startGame}>
-            <Play className="w-8 h-8 fill-current" /> INITIALIZE SEQUENCE (SPACE)
-          </button>
-          <div className="mt-12 text-gray-400 flex flex-wrap justify-center gap-8 font-mono bg-gray-900/50 p-4 rounded-xl border border-gray-800">
-            <div className="flex items-center gap-2"><span className="text-white border border-gray-600 px-2 rounded">W A S D</span> / <span className="text-white border border-gray-600 px-2 rounded">Drag</span> to Move</div>
-            <div className="flex items-center gap-2"><Crosshair className="w-4 h-4 text-yellow-400" /> Auto-Fire</div>
-            <div className="flex items-center gap-2"><span className="text-white border border-gray-600 px-2 py-1 rounded">SPACE</span> to Upgrade</div>
-          </div>
-        </div>
-      )}
+      {gameState === 'start' && <StartScreen startGame={startGame} />}
 
       {/* Game Over Screen */}
-      {gameState === 'gameover' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-950/90 text-white z-50 backdrop-blur-md">
-          <Heart className="w-24 h-24 text-red-500 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]" />
-          <h1 className="text-7xl font-black mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-red-400 to-red-600">HULL BREACHED</h1>
-          <p className="text-red-300 text-xl mb-10 tracking-widest font-mono">SYSTEMS OFFLINE</p>
-
-          <div className="bg-black/50 p-8 rounded-2xl border border-red-900/50 mb-10 min-w-[350px]">
-            <div className="flex justify-between items-center mb-4 text-2xl">
-              <span className="text-gray-400">SECTORS CLEARED:</span>
-              <span className="font-mono font-bold">{game.current?.level - 1 || 0}</span>
-            </div>
-            <div className="flex justify-between items-center text-2xl">
-              <span className="text-gray-400">TOTAL SCRAP:</span>
-              <span className="font-mono font-bold text-yellow-400 flex items-center gap-2">
-                <div className="w-3 h-3 bg-yellow-400 rounded-sm"></div> {game.current?.totalScrapEarned || 0}
-              </span>
-            </div>
-          </div>
-
-          <button className="px-10 py-5 bg-red-600 hover:bg-red-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:shadow-[0_0_50px_rgba(220,38,38,0.6)] hover:scale-105 flex items-center gap-3" onClick={startGame}>
-            <RotateCcw className="w-8 h-8" /> REDEPLOY (SPACE)
-          </button>
-        </div>
-      )}
+      {gameState === 'gameover' && <GameOverScreen gameRef={game} startGame={startGame} />}
 
       {/* Victory Screen */}
-      {gameState === 'victory' && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-cyan-950/90 text-white z-50 backdrop-blur-md">
-          <Shield className="w-24 h-24 text-cyan-400 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(34,211,238,0.8)]" />
-          <h1 className="text-7xl font-black mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-500">SECTOR SECURED</h1>
-          <p className="text-cyan-200 text-xl mb-10 tracking-widest font-mono">CORE DEFENDED SUCCESSFULLY</p>
-
-          <div className="bg-black/50 p-8 rounded-2xl border border-cyan-900/50 mb-10 min-w-[350px]">
-            <div className="flex justify-between items-center mb-4 text-2xl">
-              <span className="text-gray-400">TIME TAKEN:</span>
-              <span className="font-mono font-bold">{Math.floor(game.current?.totalTime || 0)}s</span>
-            </div>
-            <div className="flex justify-between items-center text-2xl">
-              <span className="text-gray-400">TOTAL SCRAP:</span>
-              <span className="font-mono font-bold text-yellow-400 flex items-center gap-2">
-                <div className="w-3 h-3 bg-yellow-400 rounded-sm"></div> {game.current?.totalScrapEarned || 0}
-              </span>
-            </div>
-          </div>
-
-          <button className="px-10 py-5 bg-cyan-600 hover:bg-cyan-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(8,145,178,0.4)] hover:shadow-[0_0_50px_rgba(8,145,178,0.6)] hover:scale-105 flex items-center gap-3" onClick={startGame}>
-            <RotateCcw className="w-8 h-8" /> RE-ENGAGE NEW SECTOR (SPACE)
-          </button>
-        </div>
-      )}
+      {gameState === 'victory' && <VictoryScreen gameRef={game} startGame={startGame} />}
     </div>
   );
 }

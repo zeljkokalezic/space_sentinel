@@ -1,16 +1,36 @@
-# React + Vite
+# 🌌 Space Sentinel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Space Sentinel** is a 3D isometric sci-fi roguelite survival game built right in the browser! Players control a central defensive core fighting off expanding waves of enemies while navigating a structured, node-based sector map inspired by *Slay the Spire*.
 
-Currently, two official plugins are available:
+## 🛸 Gameplay Loop
+- **Sector Map Navigation:** Traverse a branching graph of procedural encounters. Choose carefully between risky Elite combat, standard battles, repair stations, or systemic upgrade shops.
+- **Dynamic Combat:** Fully simulated 3D physics-based arena combat where you manually dodge homing missiles, attract scrap with magnets, and mow down incoming geometric threats.
+- **Deep Upgrades:** Gather glowing scrap dynamically from destroyed enemies to install robust permanent upgrades (like *Twin Autocannons, Scything Plasma, Point Defenses,* or *Energy Shields*).
+- **Core Defense:** Endure until you reach the climax of each 15-node sector map culminating in an intense Sector Boss fight!
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 💻 Technology Stack
+- **Engine:** `Three.js` (Vanilla 3D WebGL physics & rendering loop).
+- **UI & State:** `React 19` (overlayed interfaces, isolated components, seamless bridging).
+- **Styling:** `Tailwind CSS V4` (glass-morphism, neon outlines, glowing dropshadows).
+- **Icons:** `lucide-react` (clean vector iconography for overlays & maps).
+- **Bundler:** `Vite` (Lightning-fast HMR and optimized static assets).
 
-## React Compiler
+## 🚀 Running Locally
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Ensure you have **Node.js** installed on your machine.
 
-## Expanding the ESLint configuration
+1. Clone or download this repository.
+2. Install the necessary dependencies:
+    ```bash
+    npm install
+    ```
+3. Start the local Vite development server:
+    ```bash
+    npm run dev
+    ```
+4. Open the `http://localhost:5173/space_sentinel` link generated in your terminal!
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🌐 Deployment
+This game is optimized to act as a purely static frontend site with zero backend server necessities. It is automatically compiled and hosted securely out to GitHub Pages via the `"deploy": "gh-pages -d dist"` script in our `package.json`.
+
+**Play it live here:** [https://zeljkokalezic.github.io/space_sentinel/](https://zeljkokalezic.github.io/space_sentinel/)
