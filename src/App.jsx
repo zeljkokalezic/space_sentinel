@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target } from 'lucide-react';
+import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target, Skull, Map as MapIcon } from 'lucide-react';
 import * as THREE from 'three';
 
 const UPGRADE_DATA = {
@@ -15,9 +15,10 @@ const UPGRADE_DATA = {
 };
 
 export default function App() {
-  const [gameState, setGameState] = useState('start'); // start, playing, shop, gameover
+  const [gameState, setGameState] = useState('start'); // start, map, playing, shop, gameover
   const [uiScrap, setUiScrap] = useState(0);
   const [uiLevels, setUiLevels] = useState(null);
+  const [mapStateVersion, setMapStateVersion] = useState(0); // to force map re-renders
 
   const containerRef = useRef(null);
   const canvasRef = useRef(null); // Used for 2D UI overlay overlaying the 3D canvas
@@ -30,6 +31,100 @@ export default function App() {
     statusRef.current = gameState;
   }, [gameState]);
 
+  const generateMap = () => {
+    const rows = 15;
+    const cols = 5;
+    let nodeIdCounter = 0;
+    
+    let grid = Array.from({length: rows}, () => Array(cols).fill(null));
+    let edgesObj = {};
+
+    const numPaths = 4; 
+    let paths = []; 
+    // Starting coordinates spread across the bottom
+    let startCols = [0, 1, 3, 4];
+    for (let p = 0; p < numPaths; p++) {
+        paths.push([{row: 0, col: startCols[p]}]);
+    }
+
+    // Build independent paths upwards
+    for (let r = 0; r < rows - 2; r++) { 
+        for (let p = 0; p < numPaths; p++) {
+            let cx = paths[p][r].col;
+            let possibleNexts = [cx - 1, cx, cx + 1].filter(x => x >= 0 && x < cols);
+            let nx = possibleNexts[Math.floor(Math.random() * possibleNexts.length)];
+            paths[p].push({row: r + 1, col: nx});
+        }
+    }
+
+    // Connect all paths to the final boss node
+    for (let p = 0; p < numPaths; p++) {
+        paths[p].push({row: rows - 1, col: Math.floor(cols / 2)});
+    }
+
+    // Translate geometric paths into Node objects and Edge references
+    paths.forEach(path => {
+        for (let i = 0; i < path.length; i++) {
+            let info = path[i];
+            if (!grid[info.row][info.col]) {
+                let r = info.row;
+                let type = 'combat'; 
+                if (r === rows - 1) type = 'boss';
+                else if (r === rows - 2) type = 'repair';
+                else if (r > 0) {
+                     let rnum = Math.random();
+                     if (rnum > 0.8) type = 'elite';
+                     else if (rnum > 0.65) type = 'shop';
+                     else if (rnum > 0.55) type = 'repair';
+                }
+                grid[info.row][info.col] = {
+                   id: `node-${nodeIdCounter++}`,
+                   row: info.row,
+                   col: info.col,
+                   type: type,
+                   status: info.row === 0 ? 'available' : 'locked'
+                };
+            }
+            if (i > 0) {
+                let fromNode = grid[path[i-1].row][path[i-1].col].id;
+                let toNode = grid[info.row][info.col].id;
+                edgesObj[`${fromNode}_${toNode}`] = { from: fromNode, to: toNode };
+            }
+        }
+    });
+
+    // Weave additional cross-links so paths aren't purely isolated
+    for (let r = 0; r < rows - 2; r++) {
+       for (let c = 0; c < cols; c++) {
+          let node = grid[r][c];
+          if (node && Math.random() < 0.25) { 
+             let potentialTargets = [];
+             if (c > 0 && grid[r+1][c-1]) potentialTargets.push(grid[r+1][c-1]);
+             if (grid[r+1][c]) potentialTargets.push(grid[r+1][c]);
+             if (c < cols-1 && grid[r+1][c+1]) potentialTargets.push(grid[r+1][c+1]);
+             if (potentialTargets.length > 0) {
+                let t = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+                edgesObj[`${node.id}_${t.id}`] = { from: node.id, to: t.id };
+             }
+          }
+       }
+    }
+
+    let nodes = [];
+    for (let r = 0; r < rows; r++) {
+         for (let c = 0; c < cols; c++) {
+              if (grid[r][c]) nodes.push(grid[r][c]);
+         }
+    }
+
+    return {
+      nodes, 
+      edges: Object.values(edgesObj),
+      currentRow: -1,
+      currentNodeId: null
+    };
+  };
+
   const resetGame = () => {
     game.current = {
       player: {
@@ -39,12 +134,14 @@ export default function App() {
         shield: 0, maxShield: 0,
         speed: 220, magnetRadius: 100,
       },
-      scrap: 200, totalScrapEarned: 0, // Dev scrap kept
-      wave: 1, totalTime: 0, level: 1, mission: generateMission(1),
+      scrap: 200, totalScrapEarned: 0,
+      wave: 1, totalTime: 0, level: 1, mission: null,
+      map: generateMap(),
       spawnCooldown: 2,
       enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
-      stars: Array.from({ length: 300 }, () => ({
-        x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight,
+      stars: Array.from({ length: 600 }, () => ({
+        x: Math.random() * window.innerWidth * 3 - window.innerWidth, 
+        y: Math.random() * window.innerHeight * 3 - window.innerHeight,
         z: -Math.random() * 500,
         size: Math.random() * 2 + 1, speed: Math.random() * 80 + 20
       })),
@@ -57,7 +154,7 @@ export default function App() {
 
   const startGame = () => {
     resetGame();
-    setGameState('playing');
+    setGameState('map');
   };
 
   const getNearestEnemy = (x, y, enemies) => {
@@ -95,13 +192,31 @@ export default function App() {
     }
   };
 
-  const generateMission = (level) => {
+  const generateMission = (level, nodeType) => {
+    let t = 'kill';
+    let target, title, reward;
+
+    if (nodeType === 'boss') {
+       t = 'kill_boss';
+       target = 1; // e.g. 1 boss enemy
+       title = `Destroy the Sentinel Core`;
+       reward = 500;
+       return { type: t, target, current: 0, title, reward };
+    }
+
+    if (nodeType === 'elite') {
+       t = 'kill_elite';
+       target = 3 + Math.floor(level / 3);
+       title = `Destroy ${target} Elite Enemies`;
+       reward = 100 + level * 30;
+       return { type: t, target, current: 0, title, reward };
+    }
+
     const types = ['kill', 'survive', 'collect'];
-    let t = types[Math.floor(Math.random() * types.length)];
+    t = types[Math.floor(Math.random() * types.length)];
     if (level === 1) t = 'kill';
     if (level === 2) t = 'collect';
 
-    let target, title, reward;
     if (t === 'kill') {
       target = 10 + level * 5;
       title = `Destroy ${target} Enemies`;
@@ -114,13 +229,6 @@ export default function App() {
       target = 20 + level * 10;
       title = `Survive for ${target} Seconds`;
       reward = 80 + level * 15;
-    }
-
-    if (level > 4 && Math.random() > 0.6) {
-      t = 'kill_elite';
-      target = 2 + Math.floor(level / 3);
-      title = `Destroy ${target} Elite Enemies`;
-      reward = 100 + level * 30;
     }
 
     return { type: t, target, current: 0, title, reward };
@@ -149,16 +257,52 @@ export default function App() {
   };
 
   const updatePhysics = (dt, g) => {
+    if (g.transitionTimer !== undefined) {
+       g.transitionTimer -= dt;
+       if (g.transitionTimer <= 0) {
+          if (g.isVictory) {
+              setGameState('victory');
+          } else {
+              setGameState('map');
+              setMapStateVersion(v => v + 1);
+          }
+          g.transitionTimer = undefined;
+          g.enemies = []; g.projectiles = []; g.particles = []; g.pickups = []; g.effects = [];
+       }
+       return; 
+    }
+
     const completeMission = () => {
+      if (g.mission.completed) return;
       g.scrap += g.mission.reward;
-      g.effects.push({ type: 'mission_complete', x: window.innerWidth / 2, y: Math.max(100, window.innerHeight / 4), text: `LEVEL ${g.level} COMPLETE! +${g.mission.reward} SCRAP`, life: 4.0 });
+      g.totalScrapEarned += g.mission.reward;
+      g.effects.push({ type: 'mission_complete', x: window.innerWidth / 2, y: Math.max(100, window.innerHeight / 4), text: `AREA CLEARED! +${g.mission.reward} SCRAP`, life: 3.0 });
+      g.mission.completed = true;
+      g.transitionTimer = 3.0;
+      
+      if (g.mission.type === 'kill_boss') {
+          // Flag this so that the transition logic sets victory
+          g.isVictory = true;
+      }
+      
+      if (g.map.currentNodeId) {
+         let cur = g.map.nodes.find(n => n.id === g.map.currentNodeId);
+         if (cur) cur.status = 'cleared';
+         
+         let nextEdges = g.map.edges.filter(e => e.from === g.map.currentNodeId);
+         nextEdges.forEach(e => {
+            let n = g.map.nodes.find(node => node.id === e.to);
+            if (n) n.status = 'available';
+         });
+      }
       g.level++;
-      g.mission = generateMission(g.level);
     };
 
-    if (g.mission.type === 'survive') {
-      g.mission.current += dt;
-      if (g.mission.current >= g.mission.target) completeMission();
+    if (g.mission && !g.mission.completed) {
+      if (g.mission.type === 'survive') {
+        g.mission.current += dt;
+        if (g.mission.current >= g.mission.target) completeMission();
+      }
     }
 
     g.totalTime += dt;
@@ -303,7 +447,7 @@ export default function App() {
       p.x += p.vx * dt; p.y += p.vy * dt;
 
       if (p.isEnemy) {
-        if (p.type === 'enemy_missile' && p.target && g.player.hp > 0) {
+        if (p.type === 'enemy_missile' && p.target && g.player.hp > 0 && p.life < 1.5) {
            let angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
            let cAngle = Math.atan2(p.vy, p.vx);
            let diff = angle - cAngle;
@@ -450,10 +594,10 @@ export default function App() {
       let pFactor = 0.15 * (1 + s.z / 600); 
       s.x -= g.player.vx * pFactor * dt;
       s.y -= g.player.vy * pFactor * dt;
-      if (s.x < -50) s.x += window.innerWidth + 100;
-      if (s.x > window.innerWidth + 50) s.x -= window.innerWidth + 100;
-      if (s.y < -50) s.y += window.innerHeight + 100;
-      if (s.y > window.innerHeight + 50) s.y -= window.innerHeight + 100;
+      if (s.x < -window.innerWidth) s.x += window.innerWidth * 3;
+      if (s.x > window.innerWidth * 2) s.x -= window.innerWidth * 3;
+      if (s.y < -window.innerHeight) s.y += window.innerHeight * 3;
+      if (s.y > window.innerHeight * 2) s.y -= window.innerHeight * 3;
     }
 
     if (g.totalTime % 5 < dt) {
@@ -791,11 +935,7 @@ export default function App() {
          : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
       c2d.fillText(missionText, w/2, 18);
 
-      if (statusRef.current === 'playing') {
-        c2d.fillStyle = g.totalTime % 1 > 0.5 ? '#39ff14' : '#013220';
-        c2d.font = 'bold 18px sans-serif';
-        c2d.fillText(`PRESS [SPACE] FOR UPGRADES`, w / 2, h - 30);
-      }
+      // Space to upgrade removed
       
       // Draw Enemy HP & Damage Indicators
       for (let e of g.enemies) {
@@ -851,12 +991,8 @@ export default function App() {
       const key = e.key.toLowerCase();
       if (key === ' ' && !e.repeat) {
         setGameState(prev => {
-          if (prev === 'playing') {
-            setUiScrap(game.current.scrap);
-            setUiLevels({ ...game.current.levels });
-            return 'shop';
-          } else if (prev === 'shop') return 'playing';
-          else if (prev === 'start' || prev === 'gameover') { startGame(); return 'playing'; }
+          if (prev === 'shop') return 'map';
+          else if (prev === 'start' || prev === 'gameover') { setTimeout(startGame, 0); return prev; }
           return prev;
         });
       }
@@ -910,6 +1046,143 @@ export default function App() {
       });
     }
   };
+  const renderMap = () => {
+    if (!game.current || !game.current.map || gameState !== 'map') return null;
+    const { nodes, edges, currentNodeId } = game.current.map;
+
+    const rowHeight = window.innerHeight > 800 ? 70 : 55;
+    const colWidth = window.innerWidth > 1000 ? 120 : 80;
+    
+    // We scroll map vertically based on currentRow
+    const mapYOffset = game.current.map.currentRow > 5 ? (game.current.map.currentRow - 5) * rowHeight : 0;
+
+    const getNodePos = (row, col) => ({ 
+      x: window.innerWidth/2 + (col - 2) * colWidth, 
+      y: window.innerHeight - 150 - row * rowHeight + mapYOffset 
+    });
+
+    const getIconForType = (type) => {
+       if (type === 'boss') return <Skull className="w-8 h-8" />;
+       if (type === 'elite') return <Activity className="w-6 h-6" />;
+       if (type === 'shop') return <Wrench className="w-5 h-5" />;
+       if (type === 'repair') return <Heart className="w-5 h-5" />;
+       return <Target className="w-5 h-5" />;
+    };
+
+    const getColorForType = (type, status) => {
+       if (status === 'locked') return 'border-gray-700 text-gray-600 bg-gray-900 shadow-none hover:border-gray-500';
+       if (status === 'cleared') return 'border-green-600 text-green-500 bg-green-900/40 shadow-[0_0_10px_#16a34a]';
+       if (type === 'boss') return 'border-red-500 text-red-500 bg-red-900/60 shadow-[0_0_20px_#ef4444]';
+       if (type === 'elite') return 'border-purple-500 text-purple-400 bg-purple-900/60 shadow-[0_0_15px_#a855f7]';
+       if (type === 'shop') return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
+       if (type === 'repair') return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
+       return 'border-cyan-500 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#06b6d4]';
+    };
+
+    return (
+       <div className="absolute inset-0 bg-[#0a0a14]/95 flex flex-col items-center justify-center z-40 backdrop-blur-md overflow-hidden font-sans">
+          <div className="absolute inset-x-0 top-10 flex flex-col items-center pointer-events-none z-50">
+             <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 tracking-widest drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">SECTOR MAP</h2>
+             <div className="text-2xl font-mono text-yellow-400 mt-2 flex items-center gap-3 bg-black/80 px-6 py-2 rounded-full border border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+               <div className="w-4 h-4 bg-yellow-400 rounded-sm shadow-[0_0_10px_#facc15]"></div> {game.current?.scrap || 0}
+             </div>
+          </div>
+
+          {/* Map Legend */}
+          <div className="absolute bottom-8 left-4 md:left-8 bg-[#0a0a14]/90 border border-gray-700 rounded-xl p-5 font-sans text-sm flex flex-col gap-3 shadow-2xl z-50 backdrop-blur-md">
+             <div className="text-gray-400 font-black mb-1 border-b border-gray-700 pb-2 tracking-widest text-xs uppercase">Node Legend</div>
+             <div className="flex items-center gap-3"><Target className="w-5 h-5 text-cyan-400" /> <span className="text-gray-300 font-bold">Standard Combat</span></div>
+             <div className="flex items-center gap-3"><Activity className="w-5 h-5 text-purple-400" /> <span className="text-gray-300 font-bold">Elite Encounter</span></div>
+             <div className="flex items-center gap-3"><Wrench className="w-5 h-5 text-blue-400" /> <span className="text-gray-300 font-bold">Systems Shop</span></div>
+             <div className="flex items-center gap-3"><Heart className="w-5 h-5 text-pink-400" /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
+             <div className="flex items-center gap-3"><Skull className="w-5 h-5 text-red-500" /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
+          </div>
+          
+          <svg className="absolute inset-0 w-full h-full pointer-events-none fade-in">
+             {edges.map((e, i) => {
+               const n1 = nodes.find(n => n.id === e.from);
+               const n2 = nodes.find(n => n.id === e.to);
+               if (!n1 || !n2) return null;
+               const p1 = getNodePos(n1.row, n1.col);
+               const p2 = getNodePos(n2.row, n2.col);
+               
+               const isActive = n1.id === currentNodeId;
+               let stroke = '#1f2937';
+               let strokeWidth = 2;
+               if (isActive) { stroke = '#06b6d4'; strokeWidth = 4; }
+               else if (n1.status === 'cleared' && (n2.status === 'cleared' || n2.status === 'active')) { stroke = '#22c55e'; strokeWidth = 3; }
+               
+               return <line key={i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={stroke} strokeWidth={strokeWidth} style={{filter: isActive ? 'drop-shadow(0px 0px 8px #06b6d4)' : ''}} className="transition-all duration-300" />
+             })}
+          </svg>
+
+          {nodes.map(n => {
+             const pos = getNodePos(n.row, n.col);
+             const isAvailable = n.status === 'available';
+             const isHoverable = isAvailable ? 'cursor-pointer hover:scale-125 hover:z-20 transition-all duration-200' : 'transition-all duration-200';
+             const colorClass = getColorForType(n.type, n.status);
+             const isCurrent = n.id === currentNodeId;
+
+             return (
+               <div key={n.id} 
+                    className={`absolute flex items-center justify-center rounded-full border-2 ${colorClass} ${isHoverable}`}
+                    style={{ 
+                        left: pos.x - 24, top: pos.y - 24, width: 48, height: 48, 
+                        outline: isCurrent ? '4px solid rgba(34, 197, 94, 0.6)' : 'none',
+                        outlineOffset: '4px',
+                        transform: `translateY(${mapYOffset ? 0 : 0}px)` // Just to ensure style parsing
+                    }}
+                    onClick={() => {
+                        if (!isAvailable) return;
+                        
+                        game.current.map.currentNodeId = n.id;
+                        game.current.map.currentRow = n.row;
+
+                        if (n.type === 'shop') {
+                           n.status = 'cleared';
+                           let nextE = game.current.map.edges.filter(e => e.from === n.id);
+                           nextE.forEach(e => { let nd = game.current.map.nodes.find(x => x.id === e.to); if(nd) nd.status = 'available'; });
+                           setUiScrap(game.current.scrap);
+                           setUiLevels({ ...game.current.levels });
+                           setGameState('shop');
+                        } else if (n.type === 'repair') {
+                           n.status = 'cleared';
+                           let heal = Math.floor(game.current.player.maxHp * 0.3);
+                           game.current.player.hp = Math.min(game.current.player.maxHp, game.current.player.hp + heal);
+                           
+                           // Visual effect for repair
+                           let px = window.innerWidth/2; let py = window.innerHeight/2; // It'll just pop next time playing, wait we are in map!
+                           // We can't use 3D effects easily here, but the map updates immediately.
+                           
+                           let nextE = game.current.map.edges.filter(e => e.from === n.id);
+                           nextE.forEach(e => { let nd = game.current.map.nodes.find(x => x.id === e.to); if(nd) nd.status = 'available'; });
+                           setMapStateVersion(v => v + 1);
+                        } else {
+                           game.current.mission = generateMission(game.current.level, n.type);
+                           game.current.spawnCooldown = 2.0; 
+                           game.current.totalTime = 0; // reset level timer start
+                           // Ensure player is centered
+                           game.current.player.x = window.innerWidth / 2;
+                           game.current.player.y = window.innerHeight / 2;
+                           // Reset 3D effects
+                           game.current.enemies = []; game.current.projectiles = []; 
+                           game.current.particles = []; game.current.pickups = []; game.current.effects = [];
+                           setGameState('playing');
+                        }
+                    }}>
+                  <div className={`${n.status === 'locked' ? 'opacity-30' : 'opacity-100'}`}>
+                     {getIconForType(n.type)}
+                  </div>
+                  {isAvailable && n.type === 'repair' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-pink-400 bg-black/60 px-2 py-1 rounded">REPAIR +30%</div>}
+                  {isAvailable && n.type === 'shop' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-blue-400 bg-black/60 px-2 py-1 rounded">SYSTEM SHOP</div>}
+                  {isAvailable && n.type === 'boss' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
+                  {isAvailable && n.type === 'elite' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
+               </div>
+             )
+          })}
+       </div>
+    );
+  };
 
   return (
     <div className="w-full h-screen bg-[#0a0a14] overflow-hidden relative font-sans select-none">
@@ -917,15 +1190,16 @@ export default function App() {
       {/* 3D Container */}
       <div
         ref={containerRef}
-        className="absolute inset-0 cursor-crosshair touch-none"
-        onPointerDown={(e) => { if (statusRef.current === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; } }}
-        onPointerMove={(e) => { if (statusRef.current === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; if(e.buttons > 0) game.current.mouse.active = true; } }}
+        className={`absolute inset-0 cursor-crosshair touch-none ${gameState === 'playing' ? 'opacity-100 z-10' : 'opacity-20 z-0'} transition-opacity duration-500`}
+        onPointerDown={(e) => { if (gameState === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; } }}
+        onPointerMove={(e) => { if (gameState === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; if(e.buttons > 0) game.current.mouse.active = true; } }}
         onPointerUp={() => { if (game.current) game.current.mouse.active = false; }}
         onPointerLeave={() => { if (game.current) game.current.mouse.active = false; }}
       />
 
-      {/* 2D HUD Canvas Overlay */}
-      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
+      <canvas ref={canvasRef} className={`absolute inset-0 pointer-events-none z-20 ${gameState === 'playing' ? 'opacity-100' : 'opacity-0'}`} />
+
+      {renderMap()}
 
       {/* Shop Overlay */}
       {gameState === 'shop' && (
@@ -976,8 +1250,8 @@ export default function App() {
               })}
             </div>
             <div className="mt-8 flex justify-center">
-              <button className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-transform hover:scale-105 flex items-center gap-3" onClick={() => setGameState('playing')}>
-                <Play className="w-6 h-6 fill-current" /> RESUME COMBAT (SPACE)
+              <button className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-transform hover:scale-105 flex items-center gap-3" onClick={() => setGameState('map')}>
+                <MapIcon className="w-6 h-6 stroke-current" /> RETURN TO MAP (SPACE)
               </button>
             </div>
           </div>
@@ -1012,8 +1286,8 @@ export default function App() {
 
           <div className="bg-black/50 p-8 rounded-2xl border border-red-900/50 mb-10 min-w-[350px]">
             <div className="flex justify-between items-center mb-4 text-2xl">
-              <span className="text-gray-400">TIME SURVIVED:</span>
-              <span className="font-mono font-bold">{Math.floor(game.current?.totalTime || 0)}s</span>
+              <span className="text-gray-400">SECTORS CLEARED:</span>
+              <span className="font-mono font-bold">{game.current?.level - 1 || 0}</span>
             </div>
             <div className="flex justify-between items-center text-2xl">
               <span className="text-gray-400">TOTAL SCRAP:</span>
@@ -1025,6 +1299,32 @@ export default function App() {
 
           <button className="px-10 py-5 bg-red-600 hover:bg-red-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(220,38,38,0.4)] hover:shadow-[0_0_50px_rgba(220,38,38,0.6)] hover:scale-105 flex items-center gap-3" onClick={startGame}>
             <RotateCcw className="w-8 h-8" /> REDEPLOY (SPACE)
+          </button>
+        </div>
+      )}
+
+      {/* Victory Screen */}
+      {gameState === 'victory' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-cyan-950/90 text-white z-50 backdrop-blur-md">
+          <Shield className="w-24 h-24 text-cyan-400 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(34,211,238,0.8)]" />
+          <h1 className="text-7xl font-black mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-500">SECTOR SECURED</h1>
+          <p className="text-cyan-200 text-xl mb-10 tracking-widest font-mono">CORE DEFENDED SUCCESSFULLY</p>
+
+          <div className="bg-black/50 p-8 rounded-2xl border border-cyan-900/50 mb-10 min-w-[350px]">
+            <div className="flex justify-between items-center mb-4 text-2xl">
+              <span className="text-gray-400">TIME TAKEN:</span>
+              <span className="font-mono font-bold">{Math.floor(game.current?.totalTime || 0)}s</span>
+            </div>
+            <div className="flex justify-between items-center text-2xl">
+              <span className="text-gray-400">TOTAL SCRAP:</span>
+              <span className="font-mono font-bold text-yellow-400 flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-400 rounded-sm"></div> {game.current?.totalScrapEarned || 0}
+              </span>
+            </div>
+          </div>
+
+          <button className="px-10 py-5 bg-cyan-600 hover:bg-cyan-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(8,145,178,0.4)] hover:shadow-[0_0_50px_rgba(8,145,178,0.6)] hover:scale-105 flex items-center gap-3" onClick={startGame}>
+            <RotateCcw className="w-8 h-8" /> RE-ENGAGE NEW SECTOR (SPACE)
           </button>
         </div>
       )}
