@@ -348,7 +348,7 @@ export default function App() {
       p.x += p.vx * dt; p.y += p.vy * dt;
 
       if (p.isEnemy) {
-        if (p.type === 'enemy_missile' && p.target && g.player.hp > 0 && p.life < 1.5) {
+        if (p.type === 'enemy_missile' && p.target && g.player.hp > 0 && p.life < 4.0) {
            let angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
            let cAngle = Math.atan2(p.vy, p.vx);
            let diff = angle - cAngle;
