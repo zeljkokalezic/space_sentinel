@@ -40,9 +40,10 @@ export const generateMap = () => {
                 else if (r === rows - 2) type = 'repair';
                 else if (r > 0) {
                      let rnum = Math.random();
-                     if (rnum > 0.8) type = 'elite';
-                     else if (rnum > 0.65) type = 'shop';
-                     else if (rnum > 0.55) type = 'repair';
+                     if (rnum > 0.85) type = 'elite';
+                     else if (rnum > 0.65) type = 'event';
+                     else if (rnum > 0.50) type = 'shop';
+                     else if (rnum > 0.40) type = 'repair';
                 }
                 grid[info.row][info.col] = {
                    id: `node-${nodeIdCounter++}`,
