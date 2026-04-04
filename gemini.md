@@ -8,7 +8,7 @@
 
 ### `/src`
 The core directory containing the React-Three.js bridge.
-- `App.jsx`: The central loop. It manages absolute game state `[start, map, playing, shop, event, gameover, victory]`, contains the Three.js physics & rendering implementation (`updatePhysics`), and structurally integrates the overlay components.
+- `App.jsx`: The central loop. It manages absolute game state `[start, map, playing, shop, event, gameover, victory]`, contains the Three.js physics & rendering implementation (`updatePhysics`), structurally integrates the overlay components, and natively coordinates cross-platform input bridging (keyboard, mouse tracking, and mobile touch floating-joystick).
 - `main.jsx`: Standard Vite React DOM initialization.
 
 ### `/src/components`
