@@ -52,7 +52,7 @@ export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameStat
         </div>
         <div className="mt-8 flex justify-center">
           <button className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-transform hover:scale-105 flex items-center gap-3" onClick={() => setGameState('map')}>
-            <MapIcon className="w-6 h-6 stroke-current" /> RETURN TO MAP (SPACE)
+            <MapIcon className="w-6 h-6 stroke-current" /> RETURN TO MAP<span className="hidden md:inline">&nbsp;(SPACE)</span>
           </button>
         </div>
       </div>

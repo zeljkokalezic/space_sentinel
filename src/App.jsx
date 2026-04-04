@@ -50,6 +50,7 @@ export default function App() {
       levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 0, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 0 },
       cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
       keys: {}, mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false },
+      touchId: null, touchBase: null, touchCurrent: null,
       lastTime: performance.now()
     };
   };
@@ -222,7 +223,16 @@ export default function App() {
     if (g.keys['a'] || g.keys['arrowleft']) dx -= 1;
     if (g.keys['d'] || g.keys['arrowright']) dx += 1;
 
-    if (g.mouse.active) {
+    if (g.touchBase && g.touchCurrent) {
+      let tx = g.touchCurrent.x - g.touchBase.x;
+      let ty = g.touchCurrent.y - g.touchBase.y;
+      let dist = Math.hypot(tx, ty);
+      if (dist > 10) { dx = tx / dist; dy = ty / dist; }
+      if (dist > 60) {
+         g.touchBase.x = g.touchCurrent.x - dx * 60;
+         g.touchBase.y = g.touchCurrent.y - dy * 60;
+      }
+    } else if (g.mouse.active) {
       let mx = g.mouse.x - g.player.x, my = g.mouse.y - g.player.y;
       let dist = Math.hypot(mx, my);
       if (dist > 10) { dx = mx / dist; dy = my / dist; }
@@ -241,6 +251,10 @@ export default function App() {
 
     // Track physical aiming logic with Slerp interpolation
     let adx = g.mouse.x - g.player.x, ady = g.mouse.y - g.player.y;
+    if (g.touchBase && g.touchCurrent) {
+      if (dx !== 0 || dy !== 0) { adx = dx; ady = dy; }
+    }
+
     if (g.levels.autoAim > 0) {
       let ne = getNearestEnemy(g.player.x, g.player.y, g.enemies);
       if (ne) { adx = ne.x - g.player.x; ady = ne.y - g.player.y; }
@@ -837,6 +851,26 @@ export default function App() {
          : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
       c2d.fillText(missionText, w/2, 18);
 
+      if (g.touchBase && g.touchCurrent) {
+        c2d.beginPath();
+        c2d.arc(g.touchBase.x, g.touchBase.y, 60, 0, Math.PI * 2);
+        c2d.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        c2d.fill();
+        c2d.lineWidth = 2;
+        c2d.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        c2d.stroke();
+        
+        let tx = g.touchCurrent.x - g.touchBase.x;
+        let ty = g.touchCurrent.y - g.touchBase.y;
+        let dist = Math.hypot(tx, ty);
+        if (dist > 60) { tx = (tx/dist)*60; ty = (ty/dist)*60; }
+        
+        c2d.beginPath();
+        c2d.arc(g.touchBase.x + tx, g.touchBase.y + ty, 25, 0, Math.PI * 2);
+        c2d.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        c2d.fill();
+      }
+
       // Space to upgrade removed
       
       // Draw Enemy HP & Damage Indicators
@@ -1102,10 +1136,50 @@ export default function App() {
       <div
         ref={containerRef}
         className={`absolute inset-0 cursor-crosshair touch-none ${gameState === 'playing' ? 'opacity-100 z-10' : 'opacity-20 z-0'} transition-opacity duration-500`}
-        onPointerDown={(e) => { if (gameState === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; } }}
-        onPointerMove={(e) => { if (gameState === 'playing' && game.current) { game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; if(e.buttons > 0) game.current.mouse.active = true; } }}
-        onPointerUp={() => { if (game.current) game.current.mouse.active = false; }}
-        onPointerLeave={() => { if (game.current) game.current.mouse.active = false; }}
+        onPointerDown={(e) => { 
+          if (gameState === 'playing' && game.current) { 
+            if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+              if (game.current.touchId === null) {
+                game.current.touchId = e.pointerId;
+                game.current.touchBase = { x: e.clientX, y: e.clientY };
+                game.current.touchCurrent = { x: e.clientX, y: e.clientY };
+              }
+            } else {
+              game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; 
+            }
+          } 
+        }}
+        onPointerMove={(e) => { 
+          if (gameState === 'playing' && game.current) { 
+            if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.pointerId === game.current.touchId) {
+              game.current.touchCurrent = { x: e.clientX, y: e.clientY };
+            } else if (e.buttons > 0 && e.pointerType === 'mouse') {
+              game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; 
+            } else if (e.pointerType === 'mouse') {
+              game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY;
+            }
+          } 
+        }}
+        onPointerUp={(e) => { 
+          if (game.current) {
+            if (e.pointerId === game.current.touchId) {
+              game.current.touchId = null; game.current.touchBase = null; game.current.touchCurrent = null;
+            }
+            if (e.pointerType === 'mouse') {
+              game.current.mouse.active = false; 
+            }
+          }
+        }}
+        onPointerLeave={(e) => { 
+          if (game.current) {
+            if (e.pointerId === game.current.touchId) {
+              game.current.touchId = null; game.current.touchBase = null; game.current.touchCurrent = null;
+            }
+            if (e.pointerType === 'mouse') {
+              game.current.mouse.active = false; 
+            }
+          }
+        }}
       />
 
       <canvas ref={canvasRef} className={`absolute inset-0 pointer-events-none z-20 ${gameState === 'playing' ? 'opacity-100' : 'opacity-0'}`} />
