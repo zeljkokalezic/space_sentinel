@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target, Skull, Map as MapIcon } from 'lucide-react';
+import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target, Skull, Map as MapIcon, AlertTriangle } from 'lucide-react';
 import * as THREE from 'three';
 
 import { UPGRADE_DATA } from './constants/upgrades';
@@ -8,6 +8,7 @@ import ShopOverlay from './components/ShopOverlay';
 import StartScreen from './components/StartScreen';
 import GameOverScreen from './components/GameOverScreen';
 import VictoryScreen from './components/VictoryScreen';
+import EventScreen from './components/EventScreen';
 export default function App() {
   const [gameState, setGameState] = useState('start'); // start, map, playing, shop, gameover
   const [uiScrap, setUiScrap] = useState(0);
@@ -967,6 +968,7 @@ export default function App() {
        if (type === 'elite') return <Activity className="w-6 h-6" />;
        if (type === 'shop') return <Wrench className="w-5 h-5" />;
        if (type === 'repair') return <Heart className="w-5 h-5" />;
+       if (type === 'event') return <AlertTriangle className="w-5 h-5" />;
        return <Target className="w-5 h-5" />;
     };
 
@@ -977,6 +979,7 @@ export default function App() {
        if (type === 'elite') return 'border-purple-500 text-purple-400 bg-purple-900/60 shadow-[0_0_15px_#a855f7]';
        if (type === 'shop') return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
        if (type === 'repair') return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
+       if (type === 'event') return 'border-yellow-500 text-yellow-400 bg-yellow-900/60 shadow-[0_0_15px_#eab308]';
        return 'border-cyan-500 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#06b6d4]';
     };
 
@@ -994,6 +997,7 @@ export default function App() {
              <div className="text-gray-400 font-black mb-1 border-b border-gray-700 pb-2 tracking-widest text-xs uppercase">Node Legend</div>
              <div className="flex items-center gap-3"><Target className="w-5 h-5 text-cyan-400" /> <span className="text-gray-300 font-bold">Standard Combat</span></div>
              <div className="flex items-center gap-3"><Activity className="w-5 h-5 text-purple-400" /> <span className="text-gray-300 font-bold">Elite Encounter</span></div>
+             <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-yellow-400" /> <span className="text-gray-300 font-bold">Unknown Anomaly</span></div>
              <div className="flex items-center gap-3"><Wrench className="w-5 h-5 text-blue-400" /> <span className="text-gray-300 font-bold">Systems Shop</span></div>
              <div className="flex items-center gap-3"><Heart className="w-5 h-5 text-pink-400" /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
              <div className="flex items-center gap-3"><Skull className="w-5 h-5 text-red-500" /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
@@ -1058,6 +1062,11 @@ export default function App() {
                            let nextE = game.current.map.edges.filter(e => e.from === n.id);
                            nextE.forEach(e => { let nd = game.current.map.nodes.find(x => x.id === e.to); if(nd) nd.status = 'available'; });
                            setMapStateVersion(v => v + 1);
+                        } else if (n.type === 'event') {
+                           n.status = 'cleared';
+                           let nextE = game.current.map.edges.filter(e => e.from === n.id);
+                           nextE.forEach(e => { let nd = game.current.map.nodes.find(x => x.id === e.to); if(nd) nd.status = 'available'; });
+                           setGameState('event');
                         } else {
                            game.current.mission = generateMission(game.current.level, n.type);
                            game.current.spawnCooldown = 2.0; 
@@ -1076,6 +1085,7 @@ export default function App() {
                   </div>
                   {isAvailable && n.type === 'repair' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-pink-400 bg-black/60 px-2 py-1 rounded">REPAIR +30%</div>}
                   {isAvailable && n.type === 'shop' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-blue-400 bg-black/60 px-2 py-1 rounded">SYSTEM SHOP</div>}
+                  {isAvailable && n.type === 'event' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-yellow-400 bg-black/60 px-2 py-1 rounded border border-yellow-500/50">ANOMALY</div>}
                   {isAvailable && n.type === 'boss' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
                   {isAvailable && n.type === 'elite' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
                </div>
@@ -1113,6 +1123,9 @@ export default function App() {
 
       {/* Victory Screen */}
       {gameState === 'victory' && <VictoryScreen gameRef={game} startGame={startGame} />}
+
+      {/* Event Screen */}
+      {gameState === 'event' && <EventScreen gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}
     </div>
   );
 }

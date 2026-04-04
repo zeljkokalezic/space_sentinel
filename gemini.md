@@ -8,19 +8,21 @@
 
 ### `/src`
 The core directory containing the React-Three.js bridge.
-- `App.jsx`: The central loop. It manages absolute game state `[start, playing, shop, gameover, victory]`, contains the Three.js physics & rendering implementation (`updatePhysics`), and structurally integrates the overlay components.
+- `App.jsx`: The central loop. It manages absolute game state `[start, map, playing, shop, event, gameover, victory]`, contains the Three.js physics & rendering implementation (`updatePhysics`), and structurally integrates the overlay components.
 - `main.jsx`: Standard Vite React DOM initialization.
 
 ### `/src/components`
 Contains purely functional, isolated React GUI Overlays that render safely on top of the 3D canvas depending on the state of the game loop.
 - `StartScreen.jsx`: The initial sequence trigger.
 - `ShopOverlay.jsx`: Renders system upgrades, consuming `uiScrap` and `uiLevels` props.
+- `EventScreen.jsx`: Renders interactive narrative encounters and processes randomized `events.js` choice callbacks.
 - `VictoryScreen.jsx`: Handles end-of-sector boss clears.
 - `GameOverScreen.jsx`: Handles hull-breach resets.
 
 ### `/src/constants`
 Static data designed to be completely safely modifiable without touching core game loops.
 - `upgrades.js`: Contains `UPGRADE_DATA`, balancing numbers, names, descriptions, and scaling modifiers for ship systems.
+- `events.js`: Contains `EVENTS_DATA`, standardizing all written dialogue, logic conditions, and callback resolutions for randomized space encounters.
 
 ### `/src/engine`
 Standalone mathematical and generation algorithms detached entirely from React state.
