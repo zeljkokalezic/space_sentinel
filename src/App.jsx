@@ -30,26 +30,27 @@ export default function App() {
   const resetGame = () => {
     game.current = {
       player: {
-        x: window.innerWidth / 2, y: window.innerHeight / 2,
+        x: 0, y: 0,
         vx: 0, vy: 0, radius: 38,
         hp: 300, maxHp: 300,
         shield: 20, maxShield: 20,
-        speed: 260, magnetRadius: 150,
+        speed: 120, magnetRadius: 150,
+        yaw: Math.PI / 2,  // facing +Y (north) initially
       },
       scrap: 200, totalScrapEarned: 0,
       wave: 1, totalTime: 0, level: 1, mission: null,
       map: generateMap(),
       spawnCooldown: 2,
       enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
-      stars: Array.from({ length: 600 }, () => ({
-        x: Math.random() * window.innerWidth * 3 - window.innerWidth, 
-        y: Math.random() * window.innerHeight * 3 - window.innerHeight,
+      stars: Array.from({ length: 800 }, () => ({
+        x: (Math.random() - 0.5) * 8000,
+        y: (Math.random() - 0.5) * 8000,
         z: -Math.random() * 500,
         size: Math.random() * 2 + 1, speed: Math.random() * 80 + 20
       })),
-      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 1, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 1 },
+      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 1, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 0 },
       cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
-      keys: {}, mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false },
+      keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
       touchId: null, touchBase: null, touchCurrent: null,
       lastTime: performance.now()
     };
@@ -138,12 +139,11 @@ export default function App() {
   };
 
   const spawnEnemy = (g) => {
-    let side = Math.floor(Math.random() * 4);
-    let x, y, margin = 50;
-    if (side === 0) { x = Math.random() * window.innerWidth; y = -margin; }
-    else if (side === 1) { x = window.innerWidth + margin; y = Math.random() * window.innerHeight; }
-    else if (side === 2) { x = Math.random() * window.innerWidth; y = window.innerHeight + margin; }
-    else { x = -margin; y = Math.random() * window.innerHeight; }
+    // Spawn enemies in a ring around the player in world space
+    const spawnRadius = 900 + Math.random() * 400;
+    const angle = Math.random() * Math.PI * 2;
+    let x = g.player.x + Math.cos(angle) * spawnRadius;
+    let y = g.player.y + Math.sin(angle) * spawnRadius;
 
     let diffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
     
@@ -222,48 +222,52 @@ export default function App() {
       g.spawnCooldown = currentSpawnRate + Math.random() * 0.5;
     }
 
-    let dx = 0, dy = 0;
-    if (g.keys['w'] || g.keys['arrowup']) dy -= 1;
-    if (g.keys['s'] || g.keys['arrowdown']) dy += 1;
-    if (g.keys['a'] || g.keys['arrowleft']) dx -= 1;
-    if (g.keys['d'] || g.keys['arrowright']) dx += 1;
+    // --- Yaw-based ship movement ---
+    // A/D rotate the ship, W/S thrust forward/backward along its facing direction.
+    // This is defined in world Y-up coordinates.
+    if (g.player.yaw === undefined) g.player.yaw = Math.PI / 2;
+    const turnSpeed = 1.4; // radians per second — slow heavy battleship turn
+    let thrust = 0;
 
     if (g.touchBase && g.touchCurrent) {
       let tx = g.touchCurrent.x - g.touchBase.x;
       let ty = g.touchCurrent.y - g.touchBase.y;
       let dist = Math.hypot(tx, ty);
-      if (dist > 10) { dx = tx / dist; dy = ty / dist; }
-      if (dist > 60) {
-         g.touchBase.x = g.touchCurrent.x - dx * 60;
-         g.touchBase.y = g.touchCurrent.y - dy * 60;
+      if (dist > 10) {
+        let nx = tx / Math.max(dist, 60);
+        let ny = ty / Math.max(dist, 60);
+        g.player.yaw -= nx * turnSpeed * dt * 3;  // screen-right = turn right
+        thrust = -ny;                              // screen-up = forward
+        if (dist > 60) {
+          g.touchBase.x = g.touchCurrent.x - (tx / dist) * 60;
+          g.touchBase.y = g.touchCurrent.y - (ty / dist) * 60;
+        }
       }
-    } else if (g.mouse.active) {
-      let mx = g.mouse.x - g.player.x, my = g.mouse.y - g.player.y;
-      let dist = Math.hypot(mx, my);
-      if (dist > 10) { dx = mx / dist; dy = my / dist; }
-    } else if (dx !== 0 || dy !== 0) {
-      let dist = Math.hypot(dx, dy);
-      dx /= dist; dy /= dist;
+    } else {
+      if (g.keys['a'] || g.keys['arrowleft'])  g.player.yaw += turnSpeed * dt;
+      if (g.keys['d'] || g.keys['arrowright']) g.player.yaw -= turnSpeed * dt;
+      if (g.keys['w'] || g.keys['arrowup'])    thrust =  1;
+      if (g.keys['s'] || g.keys['arrowdown'])  thrust = -1;
     }
 
     let currentSpeed = g.player.speed + (g.levels.thrusters - 1) * 30;
-    g.player.vx = dx * currentSpeed;
-    g.player.vy = dy * currentSpeed;
+    const fwdX = Math.cos(g.player.yaw);
+    const fwdY = Math.sin(g.player.yaw);
+    g.player.vx = fwdX * thrust * currentSpeed;
+    g.player.vy = fwdY * thrust * currentSpeed;
     g.player.x += g.player.vx * dt;
     g.player.y += g.player.vy * dt;
-    g.player.x = Math.max(g.player.radius, Math.min(window.innerWidth - g.player.radius, g.player.x));
-    g.player.y = Math.max(g.player.radius, Math.min(window.innerHeight - g.player.radius, g.player.y));
+    g.player.x = Math.max(-4000, Math.min(4000, g.player.x));
+    g.player.y = Math.max(-4000, Math.min(4000, g.player.y));
 
-    // Track physical aiming logic with Slerp interpolation
-    let adx = g.mouse.x - g.player.x, ady = g.mouse.y - g.player.y;
-    if (g.touchBase && g.touchCurrent) {
-      if (dx !== 0 || dy !== 0) { adx = dx; ady = dy; }
-    }
-
+    // Aiming — turrets track worldMouse; autoAim overrides to nearest enemy
+    let adx = g.worldMouse.x - g.player.x;
+    let ady = g.worldMouse.y - g.player.y;
+    if (g.touchBase && g.touchCurrent) { adx = fwdX; ady = fwdY; }
     if (g.levels.autoAim > 0) {
       let ne = getNearestEnemy(g.player.x, g.player.y, g.enemies);
       if (ne) { adx = ne.x - g.player.x; ady = ne.y - g.player.y; }
-      else if (g.player.vx !== 0 || g.player.vy !== 0) { adx = g.player.vx; ady = g.player.vy; }
+      else { adx = fwdX; ady = fwdY; }
     }
     let targetAim = Math.atan2(ady, adx);
     if (g.player.aimAngle === undefined) g.player.aimAngle = targetAim;
@@ -279,22 +283,31 @@ export default function App() {
     if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0 && hasTarget) {
       let angle = g.player.aimAngle;
       let dmg = 10 + g.levels.autocannon * 5;
-        let shots = 1 + Math.floor(g.levels.autocannon / 3);
-        for (let i = 0; i < shots; i++) {
-          let spread = (i - (shots - 1) / 2) * 0.1;
-          fireProjectile(g, g.player.x, g.player.y, angle + spread, 700 + (Math.random() * 50), dmg, 'autocannon', false);
-        }
-        g.cooldowns.autocannon = Math.max(0.08, 0.4 - g.levels.autocannon * 0.025);
+      let shots = 1 + Math.floor(g.levels.autocannon / 3);
+      // Perpendicular direction to aim — laterally offsets each barrel
+      const perpX = -Math.sin(angle);
+      const perpY =  Math.cos(angle);
+      for (let i = 0; i < shots; i++) {
+        const lateralOff = (i - (shots - 1) / 2) * 18; // world-unit spacing between barrels
+        const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
+        const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
+        fireProjectile(g, bx, by, angle, 700 + (Math.random() * 50), dmg, 'autocannon', false);
+      }
+      g.cooldowns.autocannon = Math.max(0.08, 0.4 - g.levels.autocannon * 0.025);
     }
 
     if (g.levels.plasma > 0 && g.cooldowns.plasma <= 0 && hasTarget) {
       let angle = g.player.aimAngle;
       let shots = 1 + Math.floor(g.levels.plasma / 3);
-        for (let i = 0; i < shots; i++) {
-          let spread = (i - (shots - 1) / 2) * 0.15;
-          fireProjectile(g, g.player.x, g.player.y, angle + spread, 350, 30 + g.levels.plasma * 15, 'plasma', 1 + Math.floor(g.levels.plasma / 2));
-        }
-        g.cooldowns.plasma = Math.max(0.5, 2.0 - g.levels.plasma * 0.1);
+      const perpX = -Math.sin(angle);
+      const perpY =  Math.cos(angle);
+      for (let i = 0; i < shots; i++) {
+        const lateralOff = (i - (shots - 1) / 2) * 22;
+        const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
+        const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
+        fireProjectile(g, bx, by, angle, 350, 30 + g.levels.plasma * 15, 'plasma', 1 + Math.floor(g.levels.plasma / 2));
+      }
+      g.cooldowns.plasma = Math.max(0.5, 2.0 - g.levels.plasma * 0.1);
     }
 
     if (g.levels.missiles > 0 && g.cooldowns.missiles <= 0) {
@@ -508,19 +521,11 @@ export default function App() {
     for (let e of g.effects) {
       e.life -= dt;
       if (e.type === 'dmg') {
-        e.y -= 40 * dt;
+        e.y += 40 * dt;  // float up in Y-up world
       }
     }
 
-    for (let s of g.stars) {
-      let pFactor = 0.15 * (1 + s.z / 600); 
-      s.x -= g.player.vx * pFactor * dt;
-      s.y -= g.player.vy * pFactor * dt;
-      if (s.x < -window.innerWidth) s.x += window.innerWidth * 3;
-      if (s.x > window.innerWidth * 2) s.x -= window.innerWidth * 3;
-      if (s.y < -window.innerHeight) s.y += window.innerHeight * 3;
-      if (s.y > window.innerHeight * 2) s.y -= window.innerHeight * 3;
-    }
+    // Stars are fixed in world space (no parallax needed — camera follows player)
 
     if (g.totalTime % 5 < dt) {
       g.enemies = g.enemies.filter(e => e.active);
@@ -536,25 +541,25 @@ export default function App() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0a14);
 
-    // Ambient and Directional Light
+    // Fog for depth effect
+    scene.fog = new THREE.Fog(0x0a0a14, 2000, 5000);
+
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(100, -200, 300);
     scene.add(dirLight);
 
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 5000);
-    // Position camera so that 1 unit = 1 pixel at Z=0
-    camera.position.z = (window.innerHeight / 2) / Math.tan((50 * Math.PI / 180) / 2);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+    camera.position.set(0, 0, 200);
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    // Append to container
     if (containerRef.current) containerRef.current.appendChild(renderer.domElement);
 
-    // Shared Geometries & Materials
     const geoms = {
       box: new THREE.BoxGeometry(1, 1, 1),
       sphere: new THREE.SphereGeometry(1, 8, 8),
@@ -573,11 +578,33 @@ export default function App() {
     threeRef.current = { scene, camera, renderer, g: geoms, m: mats, meshes: new Map() };
   };
 
+  // Helper: raycast from screen pixel to world XY plane (z=0)
+  const raycastToPlane = (clientX, clientY, camera) => {
+    const ndcX = (clientX / window.innerWidth) * 2 - 1;
+    const ndcY = -(clientY / window.innerHeight) * 2 + 1;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, target);
+    if (!target) return null;
+    return { x: target.x, y: target.y };
+  };
+
+  // Helper: project a 3D world position to 2D canvas coords
+  const projectToScreen = (camera, wx, wy, wz = 0) => {
+    const v = new THREE.Vector3(wx, wy, wz);
+    v.project(camera);
+    return {
+      x: (v.x * 0.5 + 0.5) * window.innerWidth,
+      y: (-v.y * 0.5 + 0.5) * window.innerHeight,
+      visible: v.z < 1
+    };
+  };
+
   const drawThree = (threeObj, g) => {
     const { scene, camera, renderer, meshes, g: geoms, m: mats } = threeObj;
     const activeKeys = new Set();
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
 
     const getMesh = (obj, createFn) => {
       if (!meshes.has(obj)) {
@@ -589,55 +616,65 @@ export default function App() {
       return meshes.get(obj);
     };
 
-    // Update Stars
+    // --- 3rd Person Chase Camera (yaw-based, rock-solid) ---
+    // Camera sits directly behind the ship's yaw. No velocity math = no jumping ever.
+    const playerYaw = g.player.yaw !== undefined ? g.player.yaw : Math.PI / 2;
+    const camFwdX = Math.cos(playerYaw);
+    const camFwdY = Math.sin(playerYaw);
+    const camX = g.player.x - camFwdX * 220;
+    const camY = g.player.y - camFwdY * 220;
+    const targetX = g.player.x + camFwdX * 80;
+    const targetY = g.player.y + camFwdY * 80;
+
+    camera.position.lerp(new THREE.Vector3(camX, camY, 120), 0.03);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(new THREE.Vector3(targetX, targetY, 0));
+
+    // Re-raycast worldMouse every frame so aiming stays accurate as the ship moves.
+    // (Mouse events only fire on movement; without this, worldMouse drifts in world space.)
+    camera.updateMatrixWorld(true);
+    const freshWM = raycastToPlane(g.mouse.x || window.innerWidth / 2, g.mouse.y || window.innerHeight / 2, camera);
+    if (freshWM) g.worldMouse = freshWM;
+
+    // Update Stars (fixed world positions)
     for (let s of g.stars) {
       const sm = getMesh(s, () => {
         const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: 0x006400, wireframe: true, transparent: true, opacity: s.size / 3 }));
         m.scale.set(s.size, s.size, s.size);
         return m;
       });
-      sm.position.set(s.x - cx, cy - s.y, s.z);
+      sm.position.set(s.x, s.y, s.z);
     }
 
     // Update Player
     const pm = getMesh(g.player, () => {
       const group = new THREE.Group();
-
-      // Main Hull
       const body = new THREE.Mesh(new THREE.BoxGeometry(40, 60, 20), mats.player);
       group.add(body);
-
-      // Wings
       const wing = new THREE.Mesh(new THREE.BoxGeometry(80, 20, 10), mats.player);
       wing.position.set(0, -10, -5);
       group.add(wing);
-
-      // Superstructure
       const bridge = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 10), mats.player);
       bridge.position.set(0, 10, 10);
       group.add(bridge);
-
-      // Shield
-      const shield = new THREE.Mesh(new THREE.SphereGeometry(60, 16, 16), mats.shield);
+      const shield = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mats.shield);
+      shield.scale.set(42, 42, 42);
       shield.name = "shield";
       group.add(shield);
-
       const turrets = new THREE.Group();
       turrets.name = "turrets";
       group.add(turrets);
-
       return group;
     });
 
-    pm.position.set(g.player.x - cx, cy - g.player.y, 0);
-    
-    if (Math.abs(g.player.vx) > 0.01 || Math.abs(g.player.vy) > 0.01) {
-      let targetRotZ = Math.atan2(-g.player.vy, g.player.vx) - Math.PI / 2;
-      let diff = targetRotZ - pm.rotation.z;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      pm.rotation.z += diff * 0.15;
-    }
+    pm.position.set(g.player.x, g.player.y, 0);
+    // Ship mesh rotation follows yaw directly
+    const shipYaw = g.player.yaw !== undefined ? g.player.yaw : Math.PI / 2;
+    const targetRotZ = shipYaw - Math.PI / 2;
+    let rotDiff = targetRotZ - pm.rotation.z;
+    while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
+    while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
+    pm.rotation.z += rotDiff * 0.35;
     
     // If shield active
     const shieldMesh = pm.children.find(c => c.name === "shield");
@@ -713,7 +750,8 @@ export default function App() {
       }
 
       let shipRotZ = pm.rotation.z;
-      let worldAimAngle = -(g.player.aimAngle || 0);
+      // Y-up: aimAngle already in correct convention, no negation
+      let worldAimAngle = g.player.aimAngle || 0;
       turretsGroup.children.forEach(t => {
         if (t.userData.isAiming) {
             t.rotation.z = (worldAimAngle - Math.PI / 2) - shipRotZ;
@@ -729,7 +767,7 @@ export default function App() {
         m.scale.set(p.radius, p.radius, p.radius);
         return m;
       });
-      mesh.position.set(p.x - cx, cy - p.y, 0);
+      mesh.position.set(p.x, p.y, 0);
       mesh.rotation.x += 0.05;
       mesh.rotation.y += 0.05;
     }
@@ -743,11 +781,11 @@ export default function App() {
         m.scale.set(p.radius, p.radius, p.radius);
         return m;
       });
-      mesh.position.set(p.x - cx, cy - p.y, 0);
+      mesh.position.set(p.x, p.y, 0);
 
       if (p.type === 'missile' || p.type === 'enemy_missile') {
         mesh.scale.set(p.radius * 0.5, p.radius * 2, p.radius * 0.5);
-        mesh.rotation.z = Math.atan2(-p.vy, p.vx) - Math.PI / 2;
+        mesh.rotation.z = Math.atan2(p.vy, p.vx) - Math.PI / 2;
       }
     }
 
@@ -760,18 +798,16 @@ export default function App() {
         if (e.type === 'shooter') geo = new THREE.BoxGeometry(1, 0.5, 1);
         else if (e.type === 'missile_boat') geo = new THREE.BoxGeometry(1.5, 0.5, 1.5);
         else if (e.type === 'shielded') geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
-        
         const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: e.color, wireframe: true }));
         if (isHeavy) m.scale.set(e.radius * 2, e.radius * 2, e.radius * 2);
         else m.scale.set(e.radius * 2, e.radius * 2, e.radius);
-        
         return m;
       });
-      mesh.position.set(e.x - cx, cy - e.y, 0);
+      mesh.position.set(e.x, e.y, 0);
       // Face player
       let dx = g.player.x - e.x;
-      let dy = e.y - g.player.y; // flipped Y to math coordinates
-      mesh.rotation.z = Math.atan2(dy, dx) - Math.PI / 2;
+      let dy = g.player.y - e.y;
+      mesh.rotation.z = Math.atan2(-dy, dx) - Math.PI / 2;
     }
 
     // Particles
@@ -782,7 +818,7 @@ export default function App() {
         m.scale.set(3, 3, 3);
         return m;
       });
-      mesh.position.set(p.x - cx, cy - p.y, p.z || 0);
+      mesh.position.set(p.x, p.y, p.z || 0);
       mesh.material.opacity = p.life / p.maxLife;
     }
 
@@ -795,8 +831,8 @@ export default function App() {
         });
         if (e.source && e.target) {
             mesh.geometry.setFromPoints([
-                new THREE.Vector3(e.source.x - cx, cy - e.source.y, 0),
-                new THREE.Vector3(e.target.x - cx, cy - e.target.y, 0)
+                new THREE.Vector3(e.source.x, e.source.y, 0),
+                new THREE.Vector3(e.target.x, e.target.y, 0)
             ]);
         }
         mesh.material.opacity = e.life * 10;
@@ -879,32 +915,183 @@ export default function App() {
 
       // Space to upgrade removed
       
-      // Draw Enemy HP & Damage Indicators
+      // Draw Enemy HP & Damage Indicators using 3D projection
       for (let e of g.enemies) {
         if (!e.active || e.hp >= e.maxHp) continue;
-        const barW = 30;
+        const sp = projectToScreen(camera, e.x, e.y, 0);
+        if (!sp.visible) continue;
+        const barW = 40;
         const hpRatio = Math.max(0, e.hp / e.maxHp);
         c2d.fillStyle = 'rgba(57, 255, 20, 0.2)';
-        c2d.fillRect(e.x - barW/2, e.y - e.radius - 12, barW, 4);
+        c2d.fillRect(sp.x - barW/2, sp.y - 20, barW, 4);
         c2d.fillStyle = '#39ff14';
-        c2d.fillRect(e.x - barW/2, e.y - e.radius - 12, barW * hpRatio, 4);
+        c2d.fillRect(sp.x - barW/2, sp.y - 20, barW * hpRatio, 4);
       }
 
       for (let e of g.effects) {
         if (e.type === 'dmg') {
+          const sp = projectToScreen(camera, e.x, e.y, 0);
+          if (!sp.visible) continue;
           c2d.fillStyle = `rgba(57, 255, 20, ${Math.min(1, e.life * 2)})`;
           c2d.font = 'bold 16px monospace';
           c2d.textAlign = 'center';
-          c2d.fillText(e.text, e.x, e.y);
+          c2d.fillText(e.text, sp.x, sp.y);
         } else if (e.type === 'mission_complete') {
           let yOffset = Math.sin(e.life * Math.PI) * 10;
           c2d.fillStyle = `rgba(250, 204, 21, ${Math.min(1, e.life)})`;
           c2d.font = 'bold 36px monospace';
           c2d.textAlign = 'center';
-          c2d.fillText(e.text, e.x, e.y + yOffset);
-          e.y -= 0.5;
+          c2d.fillText(e.text, w / 2, h / 3 + yOffset);
         }
       }
+
+      // ═══════════════════════════════════════════
+      // TACTICAL RADAR
+      // ═══════════════════════════════════════════
+      const radarR = 90;          // scope radius in pixels
+      const radarX = w - radarR - 20;
+      const radarY = h - radarR - 20;
+      const radarRange = 1500;    // world units visible on radar
+
+      // Background + border
+      c2d.save();
+      c2d.beginPath();
+      c2d.arc(radarX, radarY, radarR, 0, Math.PI * 2);
+      c2d.fillStyle = 'rgba(0, 8, 0, 0.82)';
+      c2d.fill();
+      c2d.lineWidth = 2;
+      c2d.strokeStyle = '#39ff14';
+      c2d.stroke();
+
+      // Clip all radar content inside circle
+      c2d.beginPath();
+      c2d.arc(radarX, radarY, radarR - 1, 0, Math.PI * 2);
+      c2d.clip();
+
+      // Concentric range rings
+      [0.33, 0.66, 1.0].forEach(frac => {
+        c2d.beginPath();
+        c2d.arc(radarX, radarY, radarR * frac, 0, Math.PI * 2);
+        c2d.strokeStyle = 'rgba(57,255,20,0.15)';
+        c2d.lineWidth = 1;
+        c2d.stroke();
+      });
+
+      // Cross-hairs
+      c2d.strokeStyle = 'rgba(57,255,20,0.12)';
+      c2d.lineWidth = 1;
+      c2d.beginPath(); c2d.moveTo(radarX - radarR, radarY); c2d.lineTo(radarX + radarR, radarY); c2d.stroke();
+      c2d.beginPath(); c2d.moveTo(radarX, radarY - radarR); c2d.lineTo(radarX, radarY + radarR); c2d.stroke();
+
+      // Rotating sweep line with glow trail
+      if (!threeObj.radarAngle) threeObj.radarAngle = 0;
+      threeObj.radarAngle = (threeObj.radarAngle + 1.2 * (Math.PI / 180)) % (Math.PI * 2);
+      const sweepAngle = threeObj.radarAngle;
+      // Glow trail (fading arc behind sweep)
+      const trailLen = Math.PI / 2;
+      const grad = c2d.createConicalGradient
+        ? null  // not available in all browsers
+        : null;
+      // Fallback: draw multiple fading lines for trail
+      for (let t = 0; t < 12; t++) {
+        const a = sweepAngle - (t / 12) * trailLen;
+        c2d.beginPath();
+        c2d.moveTo(radarX, radarY);
+        c2d.lineTo(radarX + Math.cos(a) * radarR, radarY + Math.sin(a) * radarR);
+        c2d.strokeStyle = `rgba(57,255,20,${0.25 - t * 0.02})`;
+        c2d.lineWidth = 1.5;
+        c2d.stroke();
+      }
+      // Bright sweep line
+      c2d.beginPath();
+      c2d.moveTo(radarX, radarY);
+      c2d.lineTo(radarX + Math.cos(sweepAngle) * radarR, radarY + Math.sin(sweepAngle) * radarR);
+      c2d.strokeStyle = 'rgba(57,255,20,0.95)';
+      c2d.lineWidth = 1.5;
+      c2d.stroke();
+
+      // Convert world coords to radar pixel offset — HEADING-UP orientation.
+      // Rotate world deltas by (π/2 - yaw) so the player's forward is always up.
+      const playerYawDisplay = g.player.yaw || 0;
+      const radarRotation = Math.PI / 2 - playerYawDisplay; // CCW rotation to apply
+      const toRadar = (wx, wy) => {
+        const dx = wx - g.player.x;
+        const dy = wy - g.player.y;
+        // Rotate vector (dx, dy) by radarRotation
+        const rdx =  dx * Math.cos(radarRotation) - dy * Math.sin(radarRotation);
+        const rdy =  dx * Math.sin(radarRotation) + dy * Math.cos(radarRotation);
+        const px = radarX + (rdx / radarRange) * radarR;
+        const py = radarY - (rdy / radarRange) * radarR; // screen Y inverted
+        return { px, py };
+      };
+
+      // Enemy blips
+      for (let e of g.enemies) {
+        if (!e.active) continue;
+        const d = Math.hypot(e.x - g.player.x, e.y - g.player.y);
+        if (d > radarRange) continue;
+        const { px, py } = toRadar(e.x, e.y);
+        let blipColor = '#ef4444';
+        if (e.type === 'shielded') blipColor = '#3b82f6';
+        else if (e.type === 'shooter') blipColor = '#a855f7';
+        else if (e.type === 'missile_boat') blipColor = '#d946ef';
+        else if (e.type === 'heavy') blipColor = '#f97316';
+        else if (e.type === 'interceptor') blipColor = '#eab308';
+        const blipR = e.type === 'heavy' ? 3.5 : 2.5;
+        c2d.beginPath();
+        c2d.arc(px, py, blipR, 0, Math.PI * 2);
+        c2d.fillStyle = blipColor;
+        c2d.fill();
+      }
+
+      // Pickup blips (yellow diamonds)
+      for (let p of g.pickups) {
+        if (!p.active) continue;
+        const d = Math.hypot(p.x - g.player.x, p.y - g.player.y);
+        if (d > radarRange) continue;
+        const { px, py } = toRadar(p.x, p.y);
+        c2d.fillStyle = '#facc15';
+        c2d.beginPath();
+        c2d.moveTo(px, py - 4); c2d.lineTo(px + 3, py);
+        c2d.lineTo(px, py + 4); c2d.lineTo(px - 3, py);
+        c2d.closePath();
+        c2d.fill();
+      }
+
+      // Ship heading indicator — on heading-up radar the ship always faces UP.
+      // Draw a white chevron pointing straight up at radar center.
+      const hUpX = radarX, hUpY = radarY - 18;
+      c2d.beginPath();
+      c2d.moveTo(hUpX, hUpY);
+      c2d.lineTo(radarX - 8, radarY + 6);
+      c2d.lineTo(radarX, radarY + 2);
+      c2d.lineTo(radarX + 8, radarY + 6);
+      c2d.closePath();
+      c2d.fillStyle = '#ffffff';
+      c2d.fill();
+
+      // FWD label at top, and a rotating N tick showing actual north bearing
+      c2d.font = 'bold 9px monospace';
+      c2d.fillStyle = 'rgba(57,255,20,0.7)';
+      c2d.textAlign = 'center';
+      c2d.fillText('FWD', radarX, radarY - radarR + 11);
+
+      // North bearing tick (rotates as player turns)
+      const northAngle = -(Math.PI / 2 - playerYawDisplay) - Math.PI / 2;
+      const ntx = radarX + Math.cos(northAngle) * (radarR - 6);
+      const nty = radarY + Math.sin(northAngle) * (radarR - 6);
+      c2d.fillStyle = '#ef4444';
+      c2d.font = 'bold 9px monospace';
+      c2d.textAlign = 'center';
+      c2d.fillText('N', ntx, nty + 4);
+
+      // Label
+      c2d.font = 'bold 9px monospace';
+      c2d.fillStyle = 'rgba(57,255,20,0.5)';
+      c2d.textAlign = 'center';
+      c2d.fillText('TACTICAL', radarX, radarY + radarR + 14);
+
+      c2d.restore();
     }
   };
 
@@ -946,8 +1133,6 @@ export default function App() {
     const handleResize = () => {
       if (threeRef.current) {
         threeRef.current.camera.aspect = window.innerWidth / window.innerHeight;
-        // Adjust Z to keep 1unit = 1px at Z=0
-        threeRef.current.camera.position.z = (window.innerHeight / 2) / Math.tan((50 * Math.PI / 180) / 2);
         threeRef.current.camera.updateProjectionMatrix();
         threeRef.current.renderer.setSize(window.innerWidth, window.innerHeight);
       }
@@ -1094,11 +1279,6 @@ export default function App() {
                            n.status = 'cleared';
                            let heal = Math.floor(game.current.player.maxHp * 0.3);
                            game.current.player.hp = Math.min(game.current.player.maxHp, game.current.player.hp + heal);
-                           
-                           // Visual effect for repair
-                           let px = window.innerWidth/2; let py = window.innerHeight/2; // It'll just pop next time playing, wait we are in map!
-                           // We can't use 3D effects easily here, but the map updates immediately.
-                           
                            let nextE = game.current.map.edges.filter(e => e.from === n.id);
                            nextE.forEach(e => { let nd = game.current.map.nodes.find(x => x.id === e.to); if(nd) nd.status = 'available'; });
                            setMapStateVersion(v => v + 1);
@@ -1110,10 +1290,14 @@ export default function App() {
                         } else {
                            game.current.mission = generateMission(game.current.level, n.type);
                            game.current.spawnCooldown = 2.0; 
-                           game.current.totalTime = 0; // reset level timer start
-                           // Ensure player is centered
-                           game.current.player.x = window.innerWidth / 2;
-                           game.current.player.y = window.innerHeight / 2;
+                           game.current.totalTime = 0;
+                           // Re-center player in world space, reset facing north
+                           game.current.player.x = 0;
+                           game.current.player.y = 0;
+                           game.current.player.yaw = Math.PI / 2;
+                           game.current.player.vx = 0;
+                           game.current.player.vy = 0;
+                           game.current.worldMouse = { x: 0, y: 200 };
                            // Reset 3D effects
                            game.current.enemies = []; game.current.projectiles = []; 
                            game.current.particles = []; game.current.pickups = []; game.current.effects = [];
@@ -1151,7 +1335,11 @@ export default function App() {
                 game.current.touchCurrent = { x: e.clientX, y: e.clientY };
               }
             } else {
-              game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; 
+              game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true;
+              if (threeRef.current) {
+                const wm = raycastToPlane(e.clientX, e.clientY, threeRef.current.camera);
+                if (wm) game.current.worldMouse = wm;
+              }
             }
           } 
         }}
@@ -1159,10 +1347,13 @@ export default function App() {
           if (gameState === 'playing' && game.current) { 
             if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.pointerId === game.current.touchId) {
               game.current.touchCurrent = { x: e.clientX, y: e.clientY };
-            } else if (e.buttons > 0 && e.pointerType === 'mouse') {
-              game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true; 
             } else if (e.pointerType === 'mouse') {
               game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY;
+              if (e.buttons > 0) game.current.mouse.active = true;
+              if (threeRef.current) {
+                const wm = raycastToPlane(e.clientX, e.clientY, threeRef.current.camera);
+                if (wm) game.current.worldMouse = wm;
+              }
             }
           } 
         }}
