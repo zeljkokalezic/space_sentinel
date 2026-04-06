@@ -32,9 +32,9 @@ export default function App() {
       player: {
         x: window.innerWidth / 2, y: window.innerHeight / 2,
         vx: 0, vy: 0, radius: 38,
-        hp: 200, maxHp: 200,
-        shield: 0, maxShield: 0,
-        speed: 220, magnetRadius: 100,
+        hp: 300, maxHp: 300,
+        shield: 20, maxShield: 20,
+        speed: 260, magnetRadius: 150,
       },
       scrap: 200, totalScrapEarned: 0,
       wave: 1, totalTime: 0, level: 1, mission: null,
@@ -47,7 +47,7 @@ export default function App() {
         z: -Math.random() * 500,
         size: Math.random() * 2 + 1, speed: Math.random() * 80 + 20
       })),
-      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 0, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 0 },
+      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 1, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 1 },
       cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
       keys: {}, mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2, active: false },
       touchId: null, touchBase: null, touchCurrent: null,
@@ -145,8 +145,11 @@ export default function App() {
     else if (side === 2) { x = Math.random() * window.innerWidth; y = window.innerHeight + margin; }
     else { x = -margin; y = Math.random() * window.innerHeight; }
 
-    let diffMult = 1 + g.level * 0.2 + g.totalTime / 120;
-    let typeRoll = Math.random();
+    let diffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
+    
+    // Scale enemy type rarity dynamically (more elites later in run)
+    let eliteBonus = Math.min(0.4, g.level * 0.02 + g.totalTime / 2000);
+    let typeRoll = Math.random() + eliteBonus;
     let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 15, color = 0xef4444;
     let shield = 0, maxShield = 0, fireCooldown = 0;
 
@@ -210,8 +213,10 @@ export default function App() {
 
     g.totalTime += dt;
     g.spawnCooldown -= dt;
+    
+    let currentDiffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
 
-    let currentSpawnRate = Math.max(0.15, 2.0 - g.totalTime / 90);
+    let currentSpawnRate = Math.max(0.1, 2.5 - (g.level * 0.1) - (g.totalTime / 400));
     if (g.spawnCooldown <= 0) {
       spawnEnemy(g);
       g.spawnCooldown = currentSpawnRate + Math.random() * 0.5;
@@ -426,20 +431,21 @@ export default function App() {
 
       if (e.fireCooldown !== undefined) {
          e.fireCooldown -= dt;
-         if (e.fireCooldown <= 0) {
-            if (e.type === 'shooter' && distToPlayer < 600) {
-               fireProjectile(g, e.x, e.y, angle, 250, 15 * (1 + g.totalTime/120), 'enemy_bullet');
-               e.fireCooldown = 1.8 + Math.random();
-            } else if (e.type === 'missile_boat' && distToPlayer < 800) {
-               fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * (1 + g.totalTime/120), 'enemy_missile');
-               fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * (1 + g.totalTime/120), 'enemy_missile');
-               e.fireCooldown = 4.0;
-            }
-         }
+          if (e.fireCooldown <= 0) {
+             if (e.type === 'shooter' && distToPlayer < 600) {
+                fireProjectile(g, e.x, e.y, angle, 250, 15 * currentDiffMult, 'enemy_bullet');
+                e.fireCooldown = 1.8 + Math.random();
+             } else if (e.type === 'missile_boat' && distToPlayer < 800) {
+                fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
+                fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
+                e.fireCooldown = 4.0;
+             }
+          }
       }
 
       if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
-        let dmg = e.type === 'heavy' ? 20 : 10;
+        let baseDmg = e.type === 'heavy' ? 20 : 10;
+        let dmg = baseDmg * currentDiffMult;
         if (g.player.shield > 0) {
           let absorb = Math.min(g.player.shield, dmg);
           g.player.shield -= absorb; dmg -= absorb;

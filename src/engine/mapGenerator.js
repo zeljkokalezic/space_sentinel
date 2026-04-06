@@ -34,22 +34,11 @@ export const generateMap = () => {
         for (let i = 0; i < path.length; i++) {
             let info = path[i];
             if (!grid[info.row][info.col]) {
-                let r = info.row;
-                let type = 'combat'; 
-                if (r === rows - 1) type = 'boss';
-                else if (r === rows - 2) type = 'repair';
-                else if (r > 0) {
-                     let rnum = Math.random();
-                     if (rnum > 0.85) type = 'elite';
-                     else if (rnum > 0.65) type = 'event';
-                     else if (rnum > 0.50) type = 'shop';
-                     else if (rnum > 0.40) type = 'repair';
-                }
                 grid[info.row][info.col] = {
                    id: `node-${nodeIdCounter++}`,
                    row: info.row,
                    col: info.col,
-                   type: type,
+                   type: 'combat', // placeholder
                    status: info.row === 0 ? 'available' : 'locked'
                 };
             }
@@ -76,6 +65,42 @@ export const generateMap = () => {
              }
           }
        }
+    }
+
+    // Assign node types row by row to guarantee safe vertical distribution
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            let node = grid[r][c];
+            if (!node) continue;
+            
+            if (r === rows - 1) node.type = 'boss';
+            else if (r === rows - 2) node.type = 'repair';
+            else if (r === Math.floor(rows / 2)) node.type = 'shop';
+            else if (r > 0) {
+                 let hasShopParent = false;
+                 
+                 // Look purely at the generated topology to see if ANY incoming path is from a shop
+                 for (let edge of Object.values(edgesObj)) {
+                     if (edge.to === node.id) {
+                         let parentRow = r - 1;
+                         for (let pc = 0; pc < cols; pc++) {
+                             if (grid[parentRow][pc] && grid[parentRow][pc].id === edge.from) {
+                                 if (grid[parentRow][pc].type === 'shop') hasShopParent = true;
+                             }
+                         }
+                     }
+                 }
+
+                 let isBeforeMidpoint = (r === Math.floor(rows / 2) - 1);
+
+                 let rnum = Math.random();
+                 if (rnum > 0.88) node.type = 'elite';
+                 else if (rnum > 0.70) node.type = 'event';
+                 else if (rnum > 0.40 && !hasShopParent && !isBeforeMidpoint) node.type = 'shop'; 
+                 else if (rnum > 0.25) node.type = 'repair';
+                 else node.type = 'combat';
+            }
+        }
     }
 
     let nodes = [];
