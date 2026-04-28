@@ -38,10 +38,10 @@ export const generateMission = (level, nodeType) => {
     target = 10 + level * 5;
     title = `Destroy ${target} Enemies`;
     reward = 50 + level * 20;
-  } else if (t === 'collect') {
-    target = 30 + level * 10;
+  } else   if (t === 'collect') {
+    target = 15 + level * 3;
     title = `Collect ${target} Scrap`;
-    reward = 50 + level * 20;
+    reward = 80 + level * 25;
   } else {
     target = 20 + level * 10;
     title = `Survive for ${target} Seconds`;
