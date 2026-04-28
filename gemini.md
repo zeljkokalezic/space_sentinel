@@ -8,11 +8,12 @@
 
 ### `/src`
 The core directory containing the React-Three.js bridge.
-- `App.jsx`: The central loop. It manages absolute game state `[start, map, playing, shop, event, gameover, victory]`, contains the Three.js physics & rendering implementation (`updatePhysics`), structurally integrates the overlay components, and natively coordinates cross-platform input bridging (keyboard, mouse tracking, and mobile touch floating-joystick).
+- `App.jsx`: **Slim orchestrator (~170 lines).** Owns React state `[start, map, playing, shop, event, gameover, victory]`, refs (`game`, `threeRef`, `canvasRef`, `containerRef`), `resetGame()`, `startGame()`, `buyUpgrade()`, the `useEffect` game loop (calling imported engine functions), and pointer/keyboard event wiring. All heavy logic lives in `/src/engine/`.
 - `main.jsx`: Standard Vite React DOM initialization.
 
 ### `/src/components`
 Contains purely functional, isolated React GUI Overlays that render safely on top of the 3D canvas depending on the state of the game loop.
+- `MapOverlay.jsx`: Sector map screen (Slay the Spire style). Handles node rendering, edge drawing, and all node-click dispatch logic. Props: `game`, `setGameState`, `setUiScrap`, `setUiLevels`, `setMapStateVersion`, `mapStateVersion`.
 - `StartScreen.jsx`: The initial sequence trigger.
 - `ShopOverlay.jsx`: Renders system upgrades, consuming `uiScrap` and `uiLevels` props.
 - `EventScreen.jsx`: Renders interactive narrative encounters and processes randomized `events.js` choice callbacks.
@@ -25,5 +26,9 @@ Static data designed to be completely safely modifiable without touching core ga
 - `events.js`: Contains `EVENTS_DATA`, standardizing all written dialogue, logic conditions, and callback resolutions for randomized space encounters.
 
 ### `/src/engine`
-Standalone mathematical and generation algorithms detached entirely from React state.
+Standalone mathematical, simulation, and rendering algorithms detached entirely from React state.
 - `mapGenerator.js`: Defines `generateMap()`, a multi-path algorithm creating 4 continuous, intersecting pathways culminating in a Boss Node (Slay the Spire style maps).
+- `combat.js`: Low-level combat utilities — `getNearestEnemy()`, `fireProjectile()`, `createParticles()`. Pure functions; no side effects.
+- `spawner.js`: Enemy and mission generation — `spawnEnemy()`, `generateMission()`. Pure data-generation functions; safe to edit for balancing.
+- `physics.js`: Main simulation step — `updatePhysics(dt, g, callbacks)`. Contains the entire per-frame physics loop (movement, weapons, projectiles, enemy AI, pickups, particles). React state changes are delivered via the `callbacks` argument `{ setGameState, setMapStateVersion }`.
+- `renderer.js`: Three.js rendering and 2D HUD — `initThreeScene(containerEl)`, `drawFrame(threeObj, g, canvasEl, statusRef)`, `raycastToPlane()`, `projectToScreen()`. No React imports.
