@@ -76,6 +76,10 @@ export const generateMap = () => {
             if (r === rows - 1) node.type = 'boss';
             else if (r === rows - 2) node.type = 'repair';
             else if (r === Math.floor(rows / 2)) node.type = 'shop';
+            else if (r === 5 || r === 10) {
+                // Reserve rows for escort nodes
+                if (Math.random() < 0.3) node.type = 'escort';
+            }
             else if (r > 0) {
                  let hasShopParent = false;
                  

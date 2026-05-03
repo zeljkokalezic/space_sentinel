@@ -116,6 +116,14 @@ export default function App() {
        return { type: t, target, current: 0, title, reward };
     }
 
+    if (nodeType === 'escort') {
+       t = 'escort';
+       target = 30 + level * 5; // seconds to survive
+       title = `Escort the Civilian Transport`;
+       reward = 100 + level * 25;
+       return { type: t, target, current: 0, title, reward };
+    }
+
     const types = ['kill', 'survive', 'collect'];
     t = types[Math.floor(Math.random() * types.length)];
     if (level === 1) t = 'kill';
@@ -159,7 +167,18 @@ export default function App() {
     else if (typeRoll > 0.60) { type = 'heavy'; hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xf97316; }
     else if (typeRoll > 0.40) { type = 'interceptor'; hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xeab308; }
 
-    g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type, active: true, fireCooldown });
+    // Escort mission: spawn escort_hunter enemies that target the civilian transport
+    if (g.mission && g.mission.type === 'escort' && Math.random() < 0.4) {
+      type = 'escort_hunter';
+      hp = 50 * diffMult;
+      speed = 150 + Math.random() * 50;
+      radius = 18;
+      color = 0xf472b6;
+      fireCooldown = 1.2;
+      targetsEscort = true;
+    }
+
+    g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type, active: true, fireCooldown, targetsEscort: g.enemies[g.enemies.length - 1].targetsEscort || false });
   };
 
   const updatePhysics = (dt, g) => {
@@ -174,6 +193,7 @@ export default function App() {
           }
           g.transitionTimer = undefined;
           g.enemies = []; g.projectiles = []; g.particles = []; g.pickups = []; g.effects = [];
+          g.escortTarget = null;
        }
        return; 
     }
@@ -422,21 +442,47 @@ export default function App() {
       }
     }
 
+    // --- Escort damage from enemy projectiles ---
+    if (g.mission && g.mission.type === 'escort' && g.escortTarget && g.escortTarget.active) {
+      let et = g.escortTarget;
+      for (let p of g.projectiles) {
+        if (!p.active || !p.isEnemy) continue;
+        if (Math.hypot(p.x - et.x, p.y - et.y) < et.radius + p.radius) {
+          et.hp -= p.damage;
+          createParticles(g, p.x, p.y, 0xf472b6, 5);
+          g.effects.push({ type: 'dmg', x: et.x, y: et.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+          p.active = false;
+          if (et.hp <= 0) {
+            et.active = false;
+            g.effects.push({ type: 'mission_fail', x: window.innerWidth / 2, y: Math.max(100, window.innerHeight / 4), text: 'ESCORT LOST', life: 3.0 });
+            g.transitionTimer = 3.0;
+            g.isVictory = false;
+          }
+        }
+      }
+    }
+
     for (let e of g.enemies) {
       if (!e.active) continue;
       
-      let distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
-      let angle = Math.atan2(g.player.y - e.y, g.player.x - e.x);
+      // Determine what this enemy targets: player or escort
+      let targetEntity = g.player;
+      if (e.targetsEscort && g.escortTarget && g.escortTarget.active) {
+        targetEntity = g.escortTarget;
+      }
+      
+      let distToTarget = Math.hypot(targetEntity.x - e.x, targetEntity.y - e.y);
+      let angle = Math.atan2(targetEntity.y - e.y, targetEntity.x - e.x);
       let moveAngle = angle;
       if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
       
       let moveSpeed = e.speed;
       if (e.type === 'shooter') {
-         if (distToPlayer < 300) moveSpeed = e.speed * -0.5;
-         else if (distToPlayer < 400) moveSpeed = 0; 
+         if (distToTarget < 300) moveSpeed = e.speed * -0.5;
+         else if (distToTarget < 400) moveSpeed = 0; 
       } else if (e.type === 'missile_boat') {
-         if (distToPlayer < 500) moveSpeed = e.speed * -1;
-         else if (distToPlayer < 700) moveSpeed = 0; 
+         if (distToTarget < 500) moveSpeed = e.speed * -1;
+         else if (distToTarget < 700) moveSpeed = 0; 
       }
 
       e.x += Math.cos(moveAngle) * moveSpeed * dt;
@@ -445,10 +491,10 @@ export default function App() {
       if (e.fireCooldown !== undefined) {
          e.fireCooldown -= dt;
           if (e.fireCooldown <= 0) {
-             if (e.type === 'shooter' && distToPlayer < 600) {
+             if (e.type === 'shooter' && distToTarget < 600) {
                 fireProjectile(g, e.x, e.y, angle, 250, 15 * currentDiffMult, 'enemy_bullet');
                 e.fireCooldown = 1.8 + Math.random();
-             } else if (e.type === 'missile_boat' && distToPlayer < 800) {
+             } else if (e.type === 'missile_boat' && distToTarget < 800) {
                 fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
                 fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
                 e.fireCooldown = 4.0;
@@ -456,23 +502,44 @@ export default function App() {
           }
       }
 
-      if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
-        let baseDmg = e.type === 'heavy' ? 20 : 10;
-        let dmg = baseDmg * currentDiffMult;
-        if (g.player.shield > 0) {
-          let absorb = Math.min(g.player.shield, dmg);
-          g.player.shield -= absorb; dmg -= absorb;
+      // Player collision (only if player is the target or no escort is active)
+      if (!e.targetsEscort || !g.escortTarget || !g.escortTarget.active) {
+        if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
+          let baseDmg = e.type === 'heavy' ? 20 : 10;
+          let dmg = baseDmg * currentDiffMult;
+          if (g.player.shield > 0) {
+            let absorb = Math.min(g.player.shield, dmg);
+            g.player.shield -= absorb; dmg -= absorb;
+          }
+          g.player.hp -= dmg;
+          let eDamage = 20;
+          if (e.shield > 0) { let absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
+          e.hp -= eDamage;
+          g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: '20', life: 0.8 });
+
+          e.x += Math.cos(angle + Math.PI) * 30; e.y += Math.sin(angle + Math.PI) * 30;
+          createParticles(g, g.player.x, g.player.y, 0xef4444, 10);
+
+          if (g.player.hp <= 0) { setGameState('gameover'); return; }
         }
-        g.player.hp -= dmg;
-        let eDamage = 20;
-        if (e.shield > 0) { let absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
-        e.hp -= eDamage;
-        g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: '20', life: 0.8 });
+      }
 
-        e.x += Math.cos(angle + Math.PI) * 30; e.y += Math.sin(angle + Math.PI) * 30;
-        createParticles(g, g.player.x, g.player.y, 0xef4444, 10);
-
-        if (g.player.hp <= 0) { setGameState('gameover'); return; }
+      // Escort collision (only if this enemy targets the escort)
+      if (e.targetsEscort && g.escortTarget && g.escortTarget.active) {
+        if (Math.hypot(e.x - g.escortTarget.x, e.y - g.escortTarget.y) < e.radius + g.escortTarget.radius) {
+          let baseDmg = 15;
+          g.escortTarget.hp -= baseDmg;
+          createParticles(g, g.escortTarget.x, g.escortTarget.y, 0x39ff14, 8);
+          g.effects.push({ type: 'dmg', x: g.escortTarget.x, y: g.escortTarget.y - 10, text: String(baseDmg), life: 0.8 });
+          e.x += Math.cos(angle + Math.PI) * 20;
+          e.y += Math.sin(angle + Math.PI) * 20;
+          if (g.escortTarget.hp <= 0) {
+            g.escortTarget.active = false;
+            g.effects.push({ type: 'mission_fail', x: window.innerWidth / 2, y: Math.max(100, window.innerHeight / 4), text: 'ESCORT LOST', life: 3.0 });
+            g.transitionTimer = 3.0;
+            g.isVictory = false;
+          }
+        }
       }
 
       if (e.hp <= 0) {
@@ -507,6 +574,28 @@ export default function App() {
              if (g.mission.current >= g.mission.target) completeMission();
           }
         }
+      }
+    }
+
+    // --- Escort Target ---
+    if (g.mission && g.mission.type === 'escort' && g.escortTarget && g.escortTarget.active) {
+      let et = g.escortTarget;
+      // Move toward the player
+      let toPlayerX = g.player.x - et.x;
+      let toPlayerY = g.player.y - et.y;
+      let dist = Math.hypot(toPlayerX, toPlayerY);
+      if (dist > 100) {
+        et.x += (toPlayerX / dist) * et.speed * dt;
+        et.y += (toPlayerY / dist) * et.speed * dt;
+      } else {
+        // Reached player — mission complete
+        et.reachedSafeZone = true;
+      }
+      // Timer-based win condition
+      g.mission.current += dt;
+      if (g.mission.current >= g.mission.target) {
+        completeMission();
+        et.active = false;
       }
     }
 
@@ -798,6 +887,7 @@ export default function App() {
         if (e.type === 'shooter') geo = new THREE.BoxGeometry(1, 0.5, 1);
         else if (e.type === 'missile_boat') geo = new THREE.BoxGeometry(1.5, 0.5, 1.5);
         else if (e.type === 'shielded') geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
+        else if (e.type === 'escort_hunter') geo = new THREE.OctahedronGeometry(1);
         const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: e.color, wireframe: true }));
         if (isHeavy) m.scale.set(e.radius * 2, e.radius * 2, e.radius * 2);
         else m.scale.set(e.radius * 2, e.radius * 2, e.radius);
@@ -808,6 +898,45 @@ export default function App() {
       let dx = g.player.x - e.x;
       let dy = g.player.y - e.y;
       mesh.rotation.z = Math.atan2(-dy, dx) - Math.PI / 2;
+    }
+
+    // Escort Target (civilian transport)
+    if (g.escortTarget && g.escortTarget.active) {
+      const et = g.escortTarget;
+      const mesh = getMesh(et, () => {
+        const group = new THREE.Group();
+        // Civilian ship body (white/gray, distinct from player's green)
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xe2e8f0, wireframe: true }));
+        body.scale.set(30, 50, 15);
+        group.add(body);
+        // Cargo pods
+        const pod1 = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0x94a3b8, wireframe: true }));
+        pod1.scale.set(15, 20, 15);
+        pod1.position.set(-22, -5, 0); group.add(pod1);
+        const pod2 = pod1.clone();
+        pod2.position.set(22, -5, 0); group.add(pod2);
+        // Beacon light
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true }));
+        beacon.scale.set(3, 3, 3);
+        beacon.position.set(0, 28, 0); group.add(beacon);
+        return group;
+      });
+      mesh.position.set(et.x, et.y, 0);
+      // Rotate to face direction of travel
+      let travelAngle = Math.atan2(et.x - (et.x - (g.player.x - et.x)), et.y - (et.y - (g.player.y - et.y)));
+      // Simple: face the player
+      let dx = g.player.x - et.x;
+      let dy = g.player.y - et.y;
+      mesh.rotation.z = Math.atan2(dy, dx) - Math.PI / 2;
+      // Pulse the beacon
+      const beaconMesh = mesh.children.find(c => c.geometry?.type === 'SphereGeometry');
+      if (beaconMesh) {
+        beaconMesh.scale.setScalar(3 + Math.sin(g.totalTime * 6) * 0.5);
+        beaconMesh.material.opacity = 0.5 + Math.sin(g.totalTime * 6) * 0.3;
+      }
     }
 
     // Particles
@@ -888,9 +1017,15 @@ export default function App() {
       c2d.font = 'bold 16px sans-serif';
       c2d.textAlign = 'center';
       
-      let missionText = g.mission.type === 'survive' 
-         ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
-         : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
+      let missionText;
+      if (g.mission.type === 'escort') {
+        let remaining = Math.max(0, g.mission.target - g.mission.current);
+        missionText = `ESCORT MISSION: ${Math.floor(remaining)}s remaining`;
+      } else if (g.mission.type === 'survive') {
+        missionText = `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`;
+      } else {
+        missionText = `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
+      }
       c2d.fillText(missionText, w/2, 18);
 
       if (g.touchBase && g.touchCurrent) {
@@ -928,6 +1063,23 @@ export default function App() {
         c2d.fillRect(sp.x - barW/2, sp.y - 20, barW * hpRatio, 4);
       }
 
+      // Escort HP bar (projected 3D -> 2D)
+      if (g.escortTarget && g.escortTarget.active && g.escortTarget.hp < g.escortTarget.maxHp) {
+        const etSp = projectToScreen(camera, g.escortTarget.x, g.escortTarget.y, 0);
+        if (etSp.visible) {
+          const barW = 60;
+          const hpRatio = Math.max(0, g.escortTarget.hp / g.escortTarget.maxHp);
+          c2d.fillStyle = 'rgba(0,0,0,0.5)';
+          c2d.fillRect(etSp.x - barW/2, etSp.y - 35, barW, 6);
+          c2d.fillStyle = hpRatio > 0.5 ? '#39ff14' : (hpRatio > 0.25 ? '#facc15' : '#ef4444');
+          c2d.fillRect(etSp.x - barW/2, etSp.y - 35, barW * hpRatio, 6);
+          c2d.fillStyle = '#e2e8f0';
+          c2d.font = 'bold 10px monospace';
+          c2d.textAlign = 'center';
+          c2d.fillText('ESCORT', etSp.x, etSp.y - 40);
+        }
+      }
+
       for (let e of g.effects) {
         if (e.type === 'dmg') {
           const sp = projectToScreen(camera, e.x, e.y, 0);
@@ -939,6 +1091,12 @@ export default function App() {
         } else if (e.type === 'mission_complete') {
           let yOffset = Math.sin(e.life * Math.PI) * 10;
           c2d.fillStyle = `rgba(250, 204, 21, ${Math.min(1, e.life)})`;
+          c2d.font = 'bold 36px monospace';
+          c2d.textAlign = 'center';
+          c2d.fillText(e.text, w / 2, h / 3 + yOffset);
+        } else if (e.type === 'mission_fail') {
+          let yOffset = Math.sin(e.life * Math.PI) * 10;
+          c2d.fillStyle = `rgba(239, 68, 68, ${Math.min(1, e.life)})`;
           c2d.font = 'bold 36px monospace';
           c2d.textAlign = 'center';
           c2d.fillText(e.text, w / 2, h / 3 + yOffset);
@@ -1056,6 +1214,26 @@ export default function App() {
         c2d.lineTo(px, py + 4); c2d.lineTo(px - 3, py);
         c2d.closePath();
         c2d.fill();
+      }
+
+      // Escort blip (green triangle with pulsing ring)
+      if (g.escortTarget && g.escortTarget.active) {
+        const d = Math.hypot(g.escortTarget.x - g.player.x, g.escortTarget.y - g.player.y);
+        if (d <= radarRange) {
+          const { px, py } = toRadar(g.escortTarget.x, g.escortTarget.y);
+          c2d.fillStyle = '#39ff14';
+          c2d.beginPath();
+          c2d.moveTo(px, py - 5); c2d.lineTo(px + 4, py + 3);
+          c2d.lineTo(px - 4, py + 3);
+          c2d.closePath();
+          c2d.fill();
+          // Pulsing ring
+          c2d.strokeStyle = `rgba(57,255,20,${0.3 + 0.3 * Math.sin(g.totalTime * 4)})`;
+          c2d.lineWidth = 1;
+          c2d.beginPath();
+          c2d.arc(px, py, 6, 0, Math.PI * 2);
+          c2d.stroke();
+        }
       }
 
       // Ship heading indicator — on heading-up radar the ship always faces UP.
@@ -1194,6 +1372,7 @@ export default function App() {
        if (type === 'shop') return <Wrench className="w-5 h-5" />;
        if (type === 'repair') return <Heart className="w-5 h-5" />;
        if (type === 'event') return <AlertTriangle className="w-5 h-5" />;
+       if (type === 'escort') return <Shield className="w-5 h-5" />;
        return <Target className="w-5 h-5" />;
     };
 
@@ -1205,6 +1384,7 @@ export default function App() {
        if (type === 'shop') return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
        if (type === 'repair') return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
        if (type === 'event') return 'border-yellow-500 text-yellow-400 bg-yellow-900/60 shadow-[0_0_15px_#eab308]';
+       if (type === 'escort') return 'border-cyan-500 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#06b6d4]';
        return 'border-cyan-500 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#06b6d4]';
     };
 
@@ -1225,6 +1405,7 @@ export default function App() {
              <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-yellow-400" /> <span className="text-gray-300 font-bold">Unknown Anomaly</span></div>
              <div className="flex items-center gap-3"><Wrench className="w-5 h-5 text-blue-400" /> <span className="text-gray-300 font-bold">Systems Shop</span></div>
              <div className="flex items-center gap-3"><Heart className="w-5 h-5 text-pink-400" /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
+             <div className="flex items-center gap-3"><Shield className="w-5 h-5 text-cyan-400" /> <span className="text-gray-300 font-bold">Escort Mission</span></div>
              <div className="flex items-center gap-3"><Skull className="w-5 h-5 text-red-500" /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
           </div>
           
@@ -1301,6 +1482,22 @@ export default function App() {
                            // Reset 3D effects
                            game.current.enemies = []; game.current.projectiles = []; 
                            game.current.particles = []; game.current.pickups = []; game.current.effects = [];
+                           // Initialize escort target if this is an escort node
+                           if (n.type === 'escort') {
+                              game.current.escortTarget = {
+                                 id: 'escort-' + Math.random().toString(36).substr(2, 6),
+                                 x: 0,
+                                 y: -600 - game.current.level * 20, // starts ahead of player
+                                 hp: 150 + game.current.level * 20,
+                                 maxHp: 150 + game.current.level * 20,
+                                 speed: 40 + game.current.level * 2,
+                                 radius: 25,
+                                 active: true,
+                                 reachedSafeZone: false
+                              };
+                           } else {
+                              game.current.escortTarget = null;
+                           }
                            setGameState('playing');
                         }
                     }}>
@@ -1312,6 +1509,7 @@ export default function App() {
                   {isAvailable && n.type === 'event' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-yellow-400 bg-black/60 px-2 py-1 rounded border border-yellow-500/50">ANOMALY</div>}
                   {isAvailable && n.type === 'boss' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
                   {isAvailable && n.type === 'elite' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
+                  {isAvailable && n.type === 'escort' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-cyan-400 bg-black/60 px-2 py-1 rounded border border-cyan-500/50">ESCORT</div>}
                </div>
              )
           })}
