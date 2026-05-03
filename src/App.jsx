@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target, Skull, Map as MapIcon, AlertTriangle } from 'lucide-react';
+import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Play, RotateCcw, Target, Skull, Map as MapIcon, AlertTriangle, Anchor } from 'lucide-react';
 import * as THREE from 'three';
 
 import { UPGRADE_DATA } from './constants/upgrades';
@@ -39,6 +39,7 @@ export default function App() {
       },
       scrap: 200, totalScrapEarned: 0,
       wave: 1, totalTime: 0, level: 1, mission: null,
+      escort: { x: 0, y: 0, hp: 0, maxHp: 0, speed: 70, radius: 30, waypoints: [], currentWaypoint: 0, active: false, fireCooldown: 0 },
       map: generateMap(),
       spawnCooldown: 2,
       enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
@@ -114,6 +115,19 @@ export default function App() {
        title = `Destroy ${target} Elite Enemies`;
        reward = 100 + level * 30;
        return { type: t, target, current: 0, title, reward };
+    }
+
+    if (nodeType === 'escort') {
+       let waypointCount = 3 + Math.floor(level / 2);
+       if (waypointCount > 5) waypointCount = 5;
+       if (waypointCount < 3) waypointCount = 3;
+       return {
+          type: 'escort',
+          target: waypointCount,
+          current: 0,
+          title: `Escort the ship through ${waypointCount} waypoints`,
+          reward: 150 + level * 40
+       };
     }
 
     const types = ['kill', 'survive', 'collect'];
@@ -208,6 +222,57 @@ export default function App() {
       if (g.mission.type === 'survive') {
         g.mission.current += dt;
         if (g.mission.current >= g.mission.target) completeMission();
+      }
+
+      // Escort mission tracking
+      if (g.mission.type === 'escort' && g.escort.active) {
+        let esc = g.escort;
+        let wp = esc.waypoints[esc.currentWaypoint];
+        if (wp) {
+          let dx = wp.x - esc.x;
+          let dy = wp.y - esc.y;
+          let dist = Math.hypot(dx, dy);
+          if (dist < 30) {
+            // Reached waypoint
+            esc.currentWaypoint++;
+            g.mission.current++;
+            if (esc.currentWaypoint >= esc.waypoints.length) {
+              // All waypoints reached - mission complete
+              completeMission();
+            }
+          } else {
+            // Move toward waypoint
+            let moveAngle = Math.atan2(dy, dx);
+            esc.x += Math.cos(moveAngle) * esc.speed * dt;
+            esc.y += Math.sin(moveAngle) * esc.speed * dt;
+          }
+        }
+
+        // Escort auto-fire at nearby enemies
+        esc.fireCooldown -= dt;
+        if (esc.fireCooldown <= 0) {
+          let nearestEnemy = null;
+          let nearestDist = 400;
+          for (let e of g.enemies) {
+            if (!e.active) continue;
+            let d = Math.hypot(e.x - esc.x, e.y - esc.y);
+            if (d < nearestDist) { nearestDist = d; nearestEnemy = e; }
+          }
+          if (nearestEnemy) {
+            let fireAngle = Math.atan2(nearestEnemy.y - esc.y, nearestEnemy.x - esc.x);
+            fireProjectile(g, esc.x, esc.y, fireAngle, 300, 8 + g.level * 2, 'escort_bullet');
+            esc.fireCooldown = 1.5;
+          }
+        }
+
+        // Check escort HP
+        if (esc.hp <= 0) {
+          esc.active = false;
+          g.effects.push({ type: 'mission_complete', x: window.innerWidth / 2, y: Math.max(100, window.innerHeight / 4), text: 'ESCORT DESTROYED!', life: 3.0 });
+          g.deathReason = 'escort';
+          setGameState('gameover');
+          return;
+        }
       }
     }
 
@@ -405,6 +470,17 @@ export default function App() {
            g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
            if (g.player.hp <= 0) { setGameState('gameover'); return; }
         }
+
+        // Escort damage from enemy projectiles
+        if (g.mission && g.mission.type === 'escort' && g.escort.active) {
+           let escDist = Math.hypot(p.x - g.escort.x, p.y - g.escort.y);
+           if (escDist < g.escort.radius + p.radius) {
+              g.escort.hp -= p.damage;
+              createParticles(g, p.x, p.y, 0x22d3ee, 5);
+              p.active = false;
+              g.effects.push({ type: 'dmg', x: g.escort.x, y: g.escort.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+           }
+        }
       } else {
         for (let e of g.enemies) {
           if (!e.active || p.hitList.includes(e.id)) continue;
@@ -424,9 +500,17 @@ export default function App() {
 
     for (let e of g.enemies) {
       if (!e.active) continue;
-      
+
+      // Determine target: escort (if active and nearby) or player
+      let targetX = g.player.x;
+      let targetY = g.player.y;
+      if (g.mission && g.mission.type === 'escort' && g.escort.active) {
+         let escDist = Math.hypot(e.x - g.escort.x, e.y - g.escort.y);
+         if (escDist < 300) { targetX = g.escort.x; targetY = g.escort.y; }
+      }
+
       let distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
-      let angle = Math.atan2(g.player.y - e.y, g.player.x - e.x);
+      let angle = Math.atan2(targetY - e.y, targetX - e.x);
       let moveAngle = angle;
       if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
       
@@ -473,6 +557,20 @@ export default function App() {
         createParticles(g, g.player.x, g.player.y, 0xef4444, 10);
 
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
+      }
+
+      // Escort collision damage
+      if (g.mission && g.mission.type === 'escort' && g.escort.active) {
+         let escDist = Math.hypot(e.x - g.escort.x, e.y - g.escort.y);
+         if (escDist < e.radius + g.escort.radius) {
+            g.escort.hp -= 15 * currentDiffMult;
+            createParticles(g, e.x, e.y, 0x22d3ee, 5);
+            g.effects.push({ type: 'dmg', x: g.escort.x, y: g.escort.y - 10, text: Math.ceil(15 * currentDiffMult).toString(), life: 0.8 });
+            // Push enemy away from escort
+            let escAngle = Math.atan2(e.y - g.escort.y, e.x - g.escort.x);
+            e.x += Math.cos(escAngle) * 40;
+            e.y += Math.sin(escAngle) * 40;
+         }
       }
 
       if (e.hp <= 0) {
@@ -675,12 +773,47 @@ export default function App() {
     while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
     while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
     pm.rotation.z += rotDiff * 0.35;
-    
+
     // If shield active
     const shieldMesh = pm.children.find(c => c.name === "shield");
     if (shieldMesh) {
       shieldMesh.visible = g.player.maxShield > 0;
       shieldMesh.material.opacity = Math.max(0.1, 0.5 * (g.player.shield / g.player.maxShield));
+    }
+
+    // --- Escort Ship 3D Mesh ---
+    if (g.escort && g.escort.active) {
+      const em = getMesh(g.escort, () => {
+        const group = new THREE.Group();
+        const escortMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(35, 50, 15), escortMat);
+        group.add(body);
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(65, 15, 8), escortMat);
+        wing.position.set(0, -8, -4);
+        group.add(wing);
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), escortMat);
+        dome.scale.set(10, 15, 10);
+        dome.position.set(0, 12, 8);
+        group.add(dome);
+        // Escort shield glow
+        const escShield = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.2 }));
+        escShield.scale.set(35, 35, 35);
+        escShield.name = "escShield";
+        group.add(escShield);
+        return group;
+      });
+      em.position.set(g.escort.x, g.escort.y, 0);
+      // Face toward current waypoint
+      let wp = g.escort.waypoints[g.escort.currentWaypoint];
+      if (wp) {
+        let faceAngle = Math.atan2(wp.y - g.escort.y, wp.x - g.escort.x);
+        em.rotation.z = faceAngle - Math.PI / 2;
+      }
+      // Update escort shield opacity based on HP
+      const escShieldMesh = em.children.find(c => c.name === "escShield");
+      if (escShieldMesh) {
+        escShieldMesh.material.opacity = Math.max(0.05, 0.4 * (g.escort.hp / g.escort.maxHp));
+      }
     }
 
     // --- Dynamic Turrets Re-generation and Aiming ---
@@ -888,10 +1021,33 @@ export default function App() {
       c2d.font = 'bold 16px sans-serif';
       c2d.textAlign = 'center';
       
-      let missionText = g.mission.type === 'survive' 
+      let missionText = g.mission.type === 'survive'
          ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
          : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
       c2d.fillText(missionText, w/2, 18);
+
+      // Escort HP indicator on HUD
+      if (g.escort && g.escort.active) {
+        const escHpRatio = Math.max(0, g.escort.hp / g.escort.maxHp);
+        const escBarW = 120;
+        const escBarX = 20;
+        const escBarY = 12;
+        c2d.fillStyle = 'rgba(0,0,0,0.6)';
+        c2d.fillRect(escBarX, escBarY, escBarW, 12);
+        let escBarColor = escHpRatio > 0.5 ? '#22d3ee' : (escHpRatio > 0.25 ? '#eab308' : '#ef4444');
+        c2d.fillStyle = escBarColor;
+        c2d.fillRect(escBarX, escBarY, escBarW * escHpRatio, 12);
+        c2d.strokeStyle = 'rgba(34, 211, 238, 0.5)';
+        c2d.lineWidth = 1;
+        c2d.strokeRect(escBarX, escBarY, escBarW, 12);
+        c2d.fillStyle = '#fff';
+        c2d.font = 'bold 10px monospace';
+        c2d.textAlign = 'left';
+        c2d.fillText(`ESCORT ${Math.ceil(g.escort.hp)}/${g.escort.maxHp}`, escBarX + 4, escBarY + 10);
+        // Waypoint progress
+        c2d.textAlign = 'right';
+        c2d.fillText(`WP ${g.escort.currentWaypoint}/${g.escort.waypoints.length}`, w - 20, escBarY + 10);
+      }
 
       if (g.touchBase && g.touchCurrent) {
         c2d.beginPath();
@@ -926,6 +1082,61 @@ export default function App() {
         c2d.fillRect(sp.x - barW/2, sp.y - 20, barW, 4);
         c2d.fillStyle = '#39ff14';
         c2d.fillRect(sp.x - barW/2, sp.y - 20, barW * hpRatio, 4);
+      }
+
+      // Escort HP bar and waypoint path
+      if (g.escort && g.escort.active) {
+        const escSp = projectToScreen(camera, g.escort.x, g.escort.y, 0);
+        if (escSp.visible) {
+          const escBarW = 50;
+          const escHpRatio = Math.max(0, g.escort.hp / g.escort.maxHp);
+          // Background
+          c2d.fillStyle = 'rgba(34, 211, 238, 0.2)';
+          c2d.fillRect(escSp.x - escBarW/2, escSp.y - 25, escBarW, 5);
+          // HP fill
+          let escHpColor = escHpRatio > 0.5 ? '#22d3ee' : (escHpRatio > 0.25 ? '#eab308' : '#ef4444');
+          c2d.fillStyle = escHpColor;
+          c2d.fillRect(escSp.x - escBarW/2, escSp.y - 25, escBarW * escHpRatio, 5);
+          // Label
+          c2d.fillStyle = '#22d3ee';
+          c2d.font = 'bold 10px monospace';
+          c2d.textAlign = 'center';
+          c2d.fillText('ESCORT', escSp.x, escSp.y - 28);
+        }
+
+        // Draw waypoint path lines
+        c2d.strokeStyle = 'rgba(34, 211, 238, 0.3)';
+        c2d.lineWidth = 2;
+        c2d.setLineDash([8, 8]);
+        c2d.beginPath();
+        let firstWp = true;
+        for (let wp of g.escort.waypoints) {
+          const wpSp = projectToScreen(camera, wp.x, wp.y, 0);
+          if (wpSp.visible) {
+            if (firstWp) { c2d.moveTo(wpSp.x, wpSp.y); firstWp = false; }
+            else c2d.lineTo(wpSp.x, wpSp.y);
+          }
+        }
+        c2d.stroke();
+        c2d.setLineDash([]);
+
+        // Draw waypoint markers
+        for (let i = 0; i < g.escort.waypoints.length; i++) {
+          const wp = g.escort.waypoints[i];
+          const wpSp = projectToScreen(camera, wp.x, wp.y, 0);
+          if (wpSp.visible) {
+            c2d.beginPath();
+            c2d.arc(wpSp.x, wpSp.y, 5, 0, Math.PI * 2);
+            if (i < g.escort.currentWaypoint) {
+              c2d.fillStyle = 'rgba(34, 197, 94, 0.6)'; // completed
+            } else if (i === g.escort.currentWaypoint) {
+              c2d.fillStyle = '#22d3ee'; // current
+            } else {
+              c2d.fillStyle = 'rgba(34, 211, 238, 0.3)'; // upcoming
+            }
+            c2d.fill();
+          }
+        }
       }
 
       for (let e of g.effects) {
@@ -1191,6 +1402,7 @@ export default function App() {
     const getIconForType = (type) => {
        if (type === 'boss') return <Skull className="w-8 h-8" />;
        if (type === 'elite') return <Activity className="w-6 h-6" />;
+       if (type === 'escort') return <Anchor className="w-6 h-6" />;
        if (type === 'shop') return <Wrench className="w-5 h-5" />;
        if (type === 'repair') return <Heart className="w-5 h-5" />;
        if (type === 'event') return <AlertTriangle className="w-5 h-5" />;
@@ -1202,6 +1414,7 @@ export default function App() {
        if (status === 'cleared') return 'border-green-600 text-green-500 bg-green-900/40 shadow-[0_0_10px_#16a34a]';
        if (type === 'boss') return 'border-red-500 text-red-500 bg-red-900/60 shadow-[0_0_20px_#ef4444]';
        if (type === 'elite') return 'border-purple-500 text-purple-400 bg-purple-900/60 shadow-[0_0_15px_#a855f7]';
+       if (type === 'escort') return 'border-cyan-400 text-cyan-300 bg-cyan-900/60 shadow-[0_0_15px_#22d3ee]';
        if (type === 'shop') return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
        if (type === 'repair') return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
        if (type === 'event') return 'border-yellow-500 text-yellow-400 bg-yellow-900/60 shadow-[0_0_15px_#eab308]';
@@ -1225,6 +1438,7 @@ export default function App() {
              <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-yellow-400" /> <span className="text-gray-300 font-bold">Unknown Anomaly</span></div>
              <div className="flex items-center gap-3"><Wrench className="w-5 h-5 text-blue-400" /> <span className="text-gray-300 font-bold">Systems Shop</span></div>
              <div className="flex items-center gap-3"><Heart className="w-5 h-5 text-pink-400" /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
+             <div className="flex items-center gap-3"><Anchor className="w-5 h-5 text-cyan-300" /> <span className="text-gray-300 font-bold">Escort Mission</span></div>
              <div className="flex items-center gap-3"><Skull className="w-5 h-5 text-red-500" /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
           </div>
           
@@ -1289,7 +1503,7 @@ export default function App() {
                            setGameState('event');
                         } else {
                            game.current.mission = generateMission(game.current.level, n.type);
-                           game.current.spawnCooldown = 2.0; 
+                           game.current.spawnCooldown = 2.0;
                            game.current.totalTime = 0;
                            // Re-center player in world space, reset facing north
                            game.current.player.x = 0;
@@ -1299,8 +1513,33 @@ export default function App() {
                            game.current.player.vy = 0;
                            game.current.worldMouse = { x: 0, y: 200 };
                            // Reset 3D effects
-                           game.current.enemies = []; game.current.projectiles = []; 
+                           game.current.enemies = []; game.current.projectiles = [];
                            game.current.particles = []; game.current.pickups = []; game.current.effects = [];
+
+                           // Initialize escort for escort missions
+                           if (n.type === 'escort') {
+                              let escortHP = 100 + game.current.level * 30;
+                              game.current.escort.x = -50;
+                              game.current.escort.y = -50;
+                              game.current.escort.hp = escortHP;
+                              game.current.escort.maxHp = escortHP;
+                              game.current.escort.active = true;
+                              game.current.escort.currentWaypoint = 0;
+                              game.current.escort.fireCooldown = 0;
+                              // Generate waypoint path across the arena
+                              game.current.escort.waypoints = [];
+                              let wpCount = game.current.mission.target;
+                              for (let wp = 0; wp < wpCount; wp++) {
+                                 let angle = (wp / wpCount) * Math.PI + Math.PI * 0.3;
+                                 let dist = 400 + (wp + 1) * 250;
+                                 game.current.escort.waypoints.push({
+                                    x: Math.cos(angle) * dist + (Math.random() - 0.5) * 200,
+                                    y: Math.sin(angle) * dist + (Math.random() - 0.5) * 200
+                                 });
+                              }
+                           } else {
+                              game.current.escort.active = false;
+                           }
                            setGameState('playing');
                         }
                     }}>
@@ -1312,6 +1551,7 @@ export default function App() {
                   {isAvailable && n.type === 'event' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-yellow-400 bg-black/60 px-2 py-1 rounded border border-yellow-500/50">ANOMALY</div>}
                   {isAvailable && n.type === 'boss' && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
                   {isAvailable && n.type === 'elite' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
+                  {isAvailable && n.type === 'escort' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-cyan-300 bg-black/60 px-2 py-1 rounded border border-cyan-400/50">ESCORT MISSION</div>}
                </div>
              )
           })}

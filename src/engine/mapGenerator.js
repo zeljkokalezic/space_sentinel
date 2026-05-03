@@ -94,10 +94,11 @@ export const generateMap = () => {
                  let isBeforeMidpoint = (r === Math.floor(rows / 2) - 1);
 
                  let rnum = Math.random();
-                 if (rnum > 0.88) node.type = 'elite';
-                 else if (rnum > 0.70) node.type = 'event';
-                 else if (rnum > 0.40 && !hasShopParent && !isBeforeMidpoint) node.type = 'shop'; 
-                 else if (rnum > 0.25) node.type = 'repair';
+                 if (rnum > 0.90) node.type = 'elite';
+                 else if (rnum > 0.80) node.type = 'escort';
+                 else if (rnum > 0.65) node.type = 'event';
+                 else if (rnum > 0.35 && !hasShopParent && !isBeforeMidpoint) node.type = 'shop'; 
+                 else if (rnum > 0.20) node.type = 'repair';
                  else node.type = 'combat';
             }
         }
