@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Sentinel Architecture Diagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #020617;
+      min-height: 100vh;
+      padding: 2rem;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+    }
+    
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pulse-dot {
+      width: 12px;
+      height: 12px;
+      background: #22d3ee;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+    
+    .subtitle {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-left: 1.75rem;
+    }
+    
+    .diagram-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 1rem;
+      border: 1px solid #1e293b;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    
+    svg {
+      width: 100%;
+      min-width: 900px;
+      display: block;
+    }
+    
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    
+    .card {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      padding: 1.25rem;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    
+    .card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .card ul {
+      list-style: none;
+      color: #94a3b8;
+      font-size: 0.75rem;
+    }
+    
+    .card li {
+      margin-bottom: 0.375rem;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: #475569;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>Space Sentinel Architecture</h1>
+      </div>
+      <p class="subtitle">Vite + React + Three.js Game Engine Architecture</p>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 920">
+        <!-- Definitions -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- =================================================================
+             LAYER BOUNDARIES
+             ================================================================= -->
+
+        <!-- Layer 1: React UI Layer -->
+        <rect x="40" y="30" width="920" height="180" rx="12" fill="rgba(8, 51, 68, 0.1)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="52" y="48" fill="#22d3ee" font-size="10" font-weight="600">React UI Layer</text>
+
+        <!-- Layer 2: Game Engine Layer -->
+        <rect x="40" y="230" width="920" height="200" rx="12" fill="rgba(6, 78, 59, 0.1)" stroke="#34d399" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="52" y="248" fill="#34d399" font-size="10" font-weight="600">Game Engine Layer</text>
+
+        <!-- Layer 3: Systems Layer -->
+        <rect x="40" y="450" width="920" height="160" rx="12" fill="rgba(120, 53, 15, 0.1)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="52" y="468" fill="#fbbf24" font-size="10" font-weight="600">Physics Systems Layer</text>
+
+        <!-- Layer 4: Constants Layer -->
+        <rect x="40" y="630" width="920" height="100" rx="12" fill="rgba(76, 29, 149, 0.1)" stroke="#a78bfa" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="52" y="648" fill="#a78bfa" font-size="10" font-weight="600">Constants Layer</text>
+
+        <!-- =================================================================
+             LAYER 1: REACT UI COMPONENTS
+             ================================================================= -->
+
+        <!-- App.jsx Orchestrator -->
+        <rect x="60" y="60" width="120" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="120" y="85" fill="white" font-size="11" font-weight="600" text-anchor="middle">App.jsx</text>
+        <text x="120" y="101" fill="#94a3b8" font-size="9" text-anchor="middle">Orchestrator</text>
+
+        <!-- React Components -->
+        <rect x="200" y="60" width="100" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="250" y="80" fill="white" font-size="10" font-weight="600" text-anchor="middle">MapOverlay</text>
+        <text x="250" y="96" fill="#94a3b8" font-size="8" text-anchor="middle">Sector Map</text>
+
+        <rect x="320" y="60" width="100" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="370" y="80" fill="white" font-size="10" font-weight="600" text-anchor="middle">ShopOverlay</text>
+        <text x="370" y="96" fill="#94a3b8" font-size="8" text-anchor="middle">Upgrades</text>
+
+        <rect x="440" y="60" width="100" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="490" y="80" fill="white" font-size="10" font-weight="600" text-anchor="middle">EventScreen</text>
+        <text x="490" y="96" fill="#94a3b8" font-size="8" text-anchor="middle">Narrative</text>
+
+        <rect x="560" y="60" width="100" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="610" y="80" fill="white" font-size="10" font-weight="600" text-anchor="middle">DevPicker</text>
+        <text x="610" y="96" fill="#94a3b8" font-size="8" text-anchor="middle">Dev Mode</text>
+
+        <rect x="680" y="60" width="100" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="730" y="80" fill="white" font-size="10" font-weight="600" text-anchor="middle">VictoryScreen</text>
+        <text x="730" y="96" fill="#94a3b8" font-size="8" text-anchor="middle">Victory</text>
+
+        <rect x="800" y="60" width="100" height="50" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="850" y="80" fill="white" font-size="10" font-weight="600" text-anchor="middle">GameOver</text>
+        <text x="850" y="96" fill="#94a3b8" font-size="8" text-anchor="middle">Game Over</text>
+
+        <!-- Hooks -->
+        <rect x="60" y="130" width="120" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="120" y="155" fill="white" font-size="11" font-weight="600" text-anchor="middle">useGameLoop</text>
+        <text x="120" y="171" fill="#94a3b8" font-size="9" text-anchor="middle">Animation Frame</text>
+
+        <rect x="200" y="130" width="120" height="60" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+        <text x="260" y="155" fill="white" font-size="11" font-weight="600" text-anchor="middle">useInput</text>
+        <text x="260" y="171" fill="#94a3b8" font-size="9" text-anchor="middle">Keyboard/Pointer</text>
+
+        <!-- =================================================================
+             LAYER 2: GAME ENGINE
+             ================================================================= -->
+
+        <!-- Core Engine Modules -->
+        <rect x="60" y="260" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="120" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">physics.js</text>
+        <text x="120" y="301" fill="#94a3b8" font-size="9" text-anchor="middle">Simulation Orchestrator</text>
+
+        <rect x="200" y="260" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="260" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">renderer.js</text>
+        <text x="260" y="301" fill="#94a3b8" font-size="9" text-anchor="middle">3D + 2D Rendering</text>
+
+        <rect x="340" y="260" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="400" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">combat.js</text>
+        <text x="400" y="301" fill="#94a3b8" font-size="9" text-anchor="middle">Combat Utilities</text>
+
+        <rect x="480" y="260" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="540" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">spawner.js</text>
+        <text x="540" y="301" fill="#94a3b8" font-size="9" text-anchor="middle">Enemy/Mission Gen</text>
+
+        <rect x="620" y="260" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="680" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">state.js</text>
+        <text x="680" y="301" fill="#94a3b8" font-size="9" text-anchor="middle">Game State Factory</text>
+
+        <rect x="760" y="260" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="820" y="285" fill="white" font-size="11" font-weight="600" text-anchor="middle">mapGenerator</text>
+        <text x="820" y="301" fill="#94a3b8" font-size="9" text-anchor="middle">Sector Map Gen</text>
+
+        <!-- Setup Modules -->
+        <rect x="60" y="340" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="120" y="365" fill="white" font-size="11" font-weight="600" text-anchor="middle">missionSetup</text>
+        <text x="120" y="381" fill="#94a3b8" font-size="9" text-anchor="middle">Combat Mission Init</text>
+
+        <rect x="200" y="340" width="120" height="60" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+        <text x="260" y="365" fill="white" font-size="11" font-weight="600" text-anchor="middle">escortSetup</text>
+        <text x="260" y="381" fill="#94a3b8" font-size="9" text-anchor="middle">Escort Mission Init</text>
+
+        <!-- =================================================================
+             LAYER 3: PHYSICS SYSTEMS
+             ================================================================= -->
+
+        <!-- Individual Systems -->
+        <rect x="60" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="110" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">playerMovement</text>
+        <text x="110" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">WASD/Joystick</text>
+
+        <rect x="180" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="230" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">weapons</text>
+        <text x="230" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">Autocannon/Plasma</text>
+
+        <rect x="300" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="350" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">projectiles</text>
+        <text x="350" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">Movement/Collision</text>
+
+        <rect x="420" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="470" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">enemies</text>
+        <text x="470" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">AI Behavior</text>
+
+        <rect x="540" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="590" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">pickups</text>
+        <text x="590" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">Scrap Magnet</text>
+
+        <rect x="660" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="710" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">particles</text>
+        <text x="710" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">Visual Effects</text>
+
+        <rect x="780" y="480" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="830" y="500" fill="white" font-size="10" font-weight="600" text-anchor="middle">cleanup</text>
+        <text x="830" y="516" fill="#94a3b8" font-size="8" text-anchor="middle">Entity Removal</text>
+
+        <rect x="60" y="550" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="110" y="570" fill="white" font-size="10" font-weight="600" text-anchor="middle">mission</text>
+        <text x="110" y="586" fill="#94a3b8" font-size="8" text-anchor="middle">Progress/Rewards</text>
+
+        <rect x="180" y="550" width="100" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="230" y="570" fill="white" font-size="10" font-weight="600" text-anchor="middle">escort</text>
+        <text x="230" y="586" fill="#94a3b8" font-size="8" text-anchor="middle">Drone AI</text>
+
+        <!-- =================================================================
+             LAYER 4: CONSTANTS
+             ================================================================= -->
+
+        <rect x="60" y="660" width="120" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="120" y="680" fill="white" font-size="10" font-weight="600" text-anchor="middle">gameConfig</text>
+        <text x="120" y="696" fill="#94a3b8" font-size="8" text-anchor="middle">Player Stats/Weapons</text>
+
+        <rect x="200" y="660" width="120" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="260" y="680" fill="white" font-size="10" font-weight="600" text-anchor="middle">upgrades</text>
+        <text x="260" y="696" fill="#94a3b8" font-size="8" text-anchor="middle">9 Upgrade Types</text>
+
+        <rect x="340" y="660" width="120" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="400" y="680" fill="white" font-size="10" font-weight="600" text-anchor="middle">events</text>
+        <text x="400" y="696" fill="#94a3b8" font-size="8" text-anchor="middle">Narrative Encounters</text>
+
+        <!-- =================================================================
+             ARROWS - DATA FLOWS
+             ================================================================= -->
+
+        <!-- App.jsx to Hooks -->
+        <line x1="120" y1="120" x2="120" y2="128" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="120" y1="120" x2="260" y2="128" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Hooks to Engine -->
+        <line x1="120" y1="190" x2="120" y2="258" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="260" y1="190" x2="260" y2="258" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Engine to Systems -->
+        <line x1="120" y1="400" x2="110" y2="478" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="260" y1="400" x2="230" y2="478" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Systems to Constants (bidirectional) -->
+        <line x1="110" y1="600" x2="120" y2="658" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <line x1="230" y1="600" x2="260" y2="658" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Cross-layer feedback arrows -->
+        <path d="M 320 170 L 320 200 Q 320 210 330 210 L 340 210 Q 350 210 350 220 L 350 258" fill="none" stroke="#22d3ee" stroke-width="1" stroke-dasharray="5,5"/>
+        <text x="360" y="230" fill="#94a3b8" font-size="8">State Updates</text>
+
+        <!-- =================================================================
+             LEGEND
+             ================================================================= -->
+        <text x="720" y="760" fill="white" font-size="10" font-weight="600">Legend</text>
+        
+        <rect x="720" y="772" width="16" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="742" y="780" fill="#94a3b8" font-size="8">React UI Components</text>
+        
+        <rect x="720" y="788" width="16" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="742" y="796" fill="#94a3b8" font-size="8">Game Engine</text>
+        
+        <rect x="720" y="804" width="16" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="742" y="812" fill="#94a3b8" font-size="8">Physics Systems</text>
+        
+        <rect x="720" y="820" width="16" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="742" y="828" fill="#94a3b8" font-size="8">Constants/Config</text>
+        
+        <line x1="720" y1="842" x2="736" y2="842" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="742" y="845" fill="#94a3b8" font-size="8">State Flow</text>
+        
+        <rect x="720" y="852" width="16" height="10" rx="2" fill="transparent" stroke="#22d3ee" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="742" y="860" fill="#94a3b8" font-size="8">Layer Boundary</text>
+      </svg>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>React UI Layer</h3>
+        </div>
+        <ul>
+          <li>• App.jsx Orchestrates Game State</li>
+          <li>• 7 Overlay Components (Map, Shop, Events, etc.)</li>
+          <li>• Custom Hooks (useGameLoop, useInput)</li>
+          <li>• Isolated from Engine Logic</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Game Engine Layer</h3>
+        </div>
+        <ul>
+          <li>• physics.js: Simulation Orchestrator</li>
+          <li>• renderer.js: 3D (Three.js) + 2D (Canvas HUD)</li>
+          <li>• combat.js, spawner.js, state.js, mapGenerator.js</li>
+          <li>• No React Imports - Pure Game Logic</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Physics Systems</h3>
+        </div>
+        <ul>
+          <li>• 9 Independent System Modules</li>
+          <li>• Explicit Parameters (No Global State)</li>
+          <li>• Direct Game State Array Mutation</li>
+          <li>• playerMovement, weapons, enemies, projectiles, etc.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="footer">
+      Space Sentinel • Vite + React + Three.js Game Architecture
+    </p>
+  </div>
+</body>
+</html>
