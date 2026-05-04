@@ -200,6 +200,43 @@ export const drawFrame = (threeObj, g, canvasEl, statusRef) => {
     m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
   }
 
+  // Escort drone
+  if (g.escort.active && g.escort.hp > 0 && g.escort.respawnTimer <= 0) {
+    const esc = g.escort;
+    const dm = getMesh(esc, () => {
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true }));
+      body.scale.set(esc.radius, esc.radius, esc.radius);
+      group.add(body);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(esc.radius * 1.3, esc.radius * 1.5, 16), new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, side: THREE.DoubleSide }));
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+      return group;
+    });
+    dm.position.set(esc.x, esc.y, 0);
+    dm.children[1].rotation.z += 0.02; // Spin the ring
+  }
+
+  // Destination marker
+  if (g.escort.active && g.escort.hp > 0) {
+    const dest = g.escort;
+    const destKey = 'escort_dest';
+    if (!meshes.has(destKey)) {
+      const marker = new THREE.Group();
+      const outer = new THREE.Mesh(new THREE.RingGeometry(25, 35, 24), new THREE.MeshBasicMaterial({ color: 0x22ff22, wireframe: true, side: THREE.DoubleSide }));
+      outer.rotation.x = -Math.PI / 2;
+      marker.add(outer);
+      const inner = new THREE.Mesh(new THREE.RingGeometry(10, 15, 16), new THREE.MeshBasicMaterial({ color: 0x22ff22, wireframe: true, side: THREE.DoubleSide }));
+      inner.rotation.x = -Math.PI / 2;
+      marker.add(inner);
+      scene.add(marker);
+      meshes.set(destKey, marker);
+    }
+    const destMesh = meshes.get(destKey);
+    destMesh.position.set(dest.targetX, dest.targetY, 0);
+    destMesh.children.forEach(c => c.rotation.z += 0.01);
+  }
+
   // Particles
   for (let p of g.particles) {
     if (!p.active) continue;
@@ -236,6 +273,13 @@ export const drawFrame = (threeObj, g, canvasEl, statusRef) => {
   c.fillText(`HULL: ${Math.ceil(g.player.hp)} / ${g.player.maxHp}`, 230, 25);
   c.fillStyle='#facc15'; c.font='bold 24px monospace'; c.textAlign='right';
   c.fillText(`SCRAP: ${g.scrap}`, w-20, 35);
+
+  // Dev mode badge
+  if (g.devMode) {
+    c.fillStyle='rgba(251,146,60,0.8)'; c.font='bold 11px monospace'; c.textAlign='right';
+    c.fillText('DEV MODE [`]', w-20, 55);
+  }
+
   c.fillStyle='#ffffff'; c.font='bold 20px monospace'; c.textAlign='center';
   c.fillText(`TIME: ${Math.floor(g.totalTime/60)}:${Math.floor(g.totalTime%60).toString().padStart(2,'0')}`, w/2, 50);
 
@@ -246,6 +290,8 @@ export const drawFrame = (threeObj, g, canvasEl, statusRef) => {
   c.fillStyle='#fff'; c.font='bold 16px sans-serif'; c.textAlign='center';
   const mTxt = g.mission.type==='survive'
     ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+    : g.mission.type==='escort'
+    ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
     : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
   c.fillText(mTxt, w/2, 18);
 
@@ -265,6 +311,29 @@ export const drawFrame = (threeObj, g, canvasEl, statusRef) => {
     const sp=projectToScreen(camera,e.x,e.y,0); if(!sp.visible) continue;
     c.fillStyle='rgba(57,255,20,0.2)'; c.fillRect(sp.x-20,sp.y-20,40,4);
     c.fillStyle='#39ff14'; c.fillRect(sp.x-20,sp.y-20,40*Math.max(0,e.hp/e.maxHp),4);
+  }
+
+  // Escort drone HP bar
+  if (g.escort.active && g.escort.hp > 0 && g.escort.respawnTimer <= 0) {
+    const esc = g.escort;
+    const esp = projectToScreen(camera, esc.x, esc.y, 0);
+    if (esp.visible) {
+      c.fillStyle='rgba(34,211,238,0.2)'; c.fillRect(esp.x-25,esp.y-25,50,5);
+      c.fillStyle='#22d3ee'; c.fillRect(esp.x-25,esp.y-25,50*Math.max(0,esc.hp/esc.maxHp),5);
+      c.fillStyle='#22d3ee'; c.font='bold 10px monospace'; c.textAlign='center';
+      c.fillText(`DRONE [${esc.lives} lives]`, esp.x, esp.y-30);
+    }
+  }
+
+  // Escort destination screen marker
+  if (g.escort.active && g.escort.hp > 0) {
+    const destSp = projectToScreen(camera, g.escort.targetX, g.escort.targetY, 0);
+    if (destSp.visible) {
+      c.strokeStyle='#22ff22'; c.lineWidth=2;
+      c.beginPath(); c.arc(destSp.x, destSp.y, 12, 0, Math.PI*2); c.stroke();
+      c.fillStyle='#22ff22'; c.font='bold 10px monospace'; c.textAlign='center';
+      c.fillText('DEST', destSp.x, destSp.y - 18);
+    }
   }
 
   // Effects (damage numbers, mission banner)
@@ -309,6 +378,26 @@ export const drawFrame = (threeObj, g, canvasEl, statusRef) => {
   for (let p of g.pickups) {
     if (!p.active||Math.hypot(p.x-g.player.x,p.y-g.player.y)>rRange) continue;
     const{px,py}=toR(p.x,p.y); c.fillStyle='#facc15'; c.beginPath(); c.moveTo(px,py-4); c.lineTo(px+3,py); c.lineTo(px,py+4); c.lineTo(px-3,py); c.closePath(); c.fill();
+  }
+
+  // Escort drone on radar
+  if (g.escort.active && g.escort.hp > 0 && g.escort.respawnTimer <= 0) {
+    const esc = g.escort;
+    const ed = Math.hypot(esc.x-g.player.x, esc.y-g.player.y);
+    if (ed <= rRange) {
+      const {px,py} = toR(esc.x, esc.y);
+      c.fillStyle='#22d3ee'; c.beginPath(); c.arc(px,py,4,0,Math.PI*2); c.fill();
+      c.strokeStyle='#22d3ee'; c.lineWidth=1; c.stroke();
+    }
+  }
+
+  // Escort destination on radar
+  if (g.escort.active && g.escort.hp > 0) {
+    const destD = Math.hypot(g.escort.targetX-g.player.x, g.escort.targetY-g.player.y);
+    if (destD <= rRange) {
+      const {px,py} = toR(g.escort.targetX, g.escort.targetY);
+      c.strokeStyle='#22ff22'; c.lineWidth=1; c.beginPath(); c.arc(px,py,5,0,Math.PI*2); c.stroke();
+    }
   }
 
   c.beginPath(); c.moveTo(rX,rY-18); c.lineTo(rX-8,rY+6); c.lineTo(rX,rY+2); c.lineTo(rX+8,rY+6); c.closePath(); c.fillStyle='#ffffff'; c.fill();

@@ -10,12 +10,14 @@ import StartScreen   from './components/StartScreen';
 import GameOverScreen from './components/GameOverScreen';
 import VictoryScreen from './components/VictoryScreen';
 import EventScreen   from './components/EventScreen';
+import DevMissionPicker from './components/DevMissionPicker';
 
 export default function App() {
   const [gameState,       setGameState]       = useState('start');
   const [uiScrap,         setUiScrap]         = useState(0);
   const [uiLevels,        setUiLevels]        = useState(null);
   const [mapStateVersion, setMapStateVersion] = useState(0);
+  const [devMode,         setDevMode]         = useState(false);
 
   const containerRef = useRef(null);
   const canvasRef    = useRef(null);
@@ -23,8 +25,10 @@ export default function App() {
   const threeRef     = useRef(null);
   const reqRef       = useRef();
   const statusRef    = useRef(gameState);
+  const devModeRef   = useRef(devMode);
 
   useEffect(() => { statusRef.current = gameState; }, [gameState]);
+  useEffect(() => { devModeRef.current = devMode; }, [devMode]);
 
   // ─── Game state initialisation ─────────────────────────────────────────────
   const resetGame = () => {
@@ -50,13 +54,86 @@ export default function App() {
       })),
       levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 1, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 0 },
       cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
+      escort: {
+        active: false,
+        x: 0, y: 0,
+        targetX: 0, targetY: 0,
+        hp: 0, maxHp: 0,
+        speed: 80,
+        radius: 20,
+        lives: 1,
+        evasionAngle: 0,
+        evasionTimer: 0,
+        respawnTimer: 0,
+      },
       keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
       touchId: null, touchBase: null, touchCurrent: null,
       lastTime: performance.now(),
     };
   };
 
-  const startGame = () => { resetGame(); setGameState('map'); };
+  const startGame = () => { resetGame(); setGameState(devModeRef.current ? 'dev' : 'map'); };
+
+  // ─── Dev mode: launch a specific mission ────────────────────────────────────
+  const launchDevMission = ({ type, level }) => {
+    resetGame();
+    game.current.level = level;
+
+    // Create mission directly based on selected type
+    let mission;
+    if (type === 'kill') {
+      const target = 10 + level * 5;
+      mission = { type: 'kill', target, current: 0, title: `Destroy ${target} Enemies`, reward: 50 + level * 20 };
+    } else if (type === 'collect') {
+      const target = 15 + level * 3;
+      mission = { type: 'collect', target, current: 0, title: `Collect ${target} Scrap`, reward: 80 + level * 25 };
+    } else if (type === 'survive') {
+      const target = 20 + level * 10;
+      mission = { type: 'survive', target, current: 0, title: `Survive for ${target} Seconds`, reward: 80 + level * 15 };
+    } else if (type === 'escort') {
+      mission = { type: 'escort', target: 0, current: 0, title: 'Escort the Drone to Safety', reward: 120 + level * 35 };
+    } else if (type === 'kill_elite') {
+      const target = 3 + Math.floor(level / 3);
+      mission = { type: 'kill_elite', target, current: 0, title: `Destroy ${target} Elite Enemies`, reward: 100 + level * 30 };
+    } else if (type === 'kill_boss') {
+      mission = { type: 'kill_boss', target: 1, current: 0, title: 'Destroy the Sentinel Core', reward: 500 };
+    }
+
+    game.current.mission = mission;
+    game.current.devMode = true;
+    game.current.spawnCooldown = 2.0;
+    game.current.totalTime = 0;
+    game.current.player.x = 0; game.current.player.y = 0;
+    game.current.player.yaw = Math.PI / 2;
+    game.current.player.vx = 0; game.current.player.vy = 0;
+    game.current.worldMouse = { x: 0, y: 200 };
+    game.current.enemies = []; game.current.projectiles = [];
+    game.current.particles = []; game.current.pickups = []; game.current.effects = [];
+
+    // Set up escort if needed
+    if (type === 'escort') {
+      const lvl = level;
+      game.current.escort.active = true;
+      game.current.escort.hp = game.current.escort.maxHp = 120 + lvl * 25;
+      game.current.escort.lives = Math.max(1, 3 - Math.floor(lvl / 4));
+      game.current.escort.x = (Math.random() - 0.5) * 300;
+      game.current.escort.y = (Math.random() - 0.5) * 300;
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 1000 + lvl * 80;
+      game.current.escort.targetX = Math.max(-3500, Math.min(3500, game.current.escort.x + Math.cos(angle) * distance));
+      game.current.escort.targetY = Math.max(-3500, Math.min(3500, game.current.escort.y + Math.sin(angle) * distance));
+      game.current.escort.speed = 55 + lvl * 3;
+      game.current.escort.respawnTimer = 0;
+      game.current.escort.evasionTimer = 0;
+      game.current.escort.evasionAngle = 0;
+      game.current.escort.startDist = distance;
+    } else {
+      game.current.escort.active = false;
+    }
+
+    setUiLevels({ ...game.current.levels });
+    setGameState('playing');
+  };
 
   // ─── Upgrade purchase ──────────────────────────────────────────────────────
   const buyUpgrade = (key, cost) => {
@@ -81,7 +158,15 @@ export default function App() {
       threeRef.current = initThreeScene(containerRef.current);
     }
 
-    const physicsCbs = { setGameState, setMapStateVersion };
+    // In dev mode, redirect 'map' transitions back to 'dev' picker
+    const devAwareSetState = (state) => {
+      if (state === 'map' && devModeRef.current) {
+        setGameState('dev');
+      } else {
+        setGameState(state);
+      }
+    };
+    const physicsCbs = { setGameState: devAwareSetState, setMapStateVersion };
 
     const loop = (time) => {
       if (!game.current) return;
@@ -108,6 +193,19 @@ export default function App() {
           if (prev === 'start' || prev === 'gameover') { setTimeout(startGame, 0); return prev; }
           return prev;
         });
+      }
+      // Toggle dev mode with backtick ` key on start/gameover/victory screens
+      if (key === '`' && !e.repeat) {
+        const currentGameState = statusRef.current;
+        if (currentGameState === 'start' || currentGameState === 'gameover' || currentGameState === 'victory') {
+          setDevMode(dm => !dm);
+        } else if (currentGameState === 'playing' && game.current?.devMode) {
+          // During gameplay in dev mode: abort mission, go back to picker
+          setDevMode(true); // keep dev mode on
+          setGameState('dev');
+        }
+        if (game.current) game.current.keys[key] = true;
+        return;
       }
       if (game.current) game.current.keys[key] = true;
     };
@@ -207,10 +305,11 @@ export default function App() {
       )}
 
       {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} />}
-      {gameState === 'start'    && <StartScreen    startGame={startGame} />}
+      {gameState === 'start'    && <StartScreen    startGame={startGame} devMode={devMode} />}
       {gameState === 'gameover' && <GameOverScreen  gameRef={game} startGame={startGame} />}
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}
       {gameState === 'event'    && <EventScreen     gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}
+      {gameState === 'dev'      && <DevMissionPicker onLaunch={launchDevMission} onExit={() => { setDevMode(false); setGameState('start'); }} />}
     </div>
   );
 }
