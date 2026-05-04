@@ -1,6 +1,6 @@
 import React from 'react';
 import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon } from 'lucide-react';
-import { generateMission } from '../engine/spawner';
+import { enterNodeMission } from '../engine/missionSetup';
 
 /**
  * MapOverlay — Sector map screen (Slay-the-Spire style).
@@ -78,39 +78,7 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
       setGameState('event');
     } else {
       // Combat / elite / boss node
-      game.mission        = generateMission(game.level, n.type);
-      game.spawnCooldown  = 2.0;
-      game.totalTime      = 0;
-      game.player.x       = 0; game.player.y = 0;
-      game.player.yaw     = Math.PI / 2;
-      game.player.vx      = 0; game.player.vy = 0;
-      game.worldMouse     = { x: 0, y: 200 };
-      game.enemies        = []; game.projectiles = [];
-      game.particles      = []; game.pickups     = []; game.effects = [];
-
-      // Set up escort mission if selected
-      if (game.mission.type === 'escort') {
-        const level = game.level;
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 1000 + level * 80;
-        game.escort.active = true;
-        game.escort.hp = game.escort.maxHp = 120 + level * 25;
-        game.escort.lives = Math.max(1, 3 - Math.floor(level / 4));
-        game.escort.x = (Math.random() - 0.5) * 300;
-        game.escort.y = (Math.random() - 0.5) * 300;
-        game.escort.targetX = game.escort.x + Math.cos(angle) * distance;
-        game.escort.targetY = game.escort.y + Math.sin(angle) * distance;
-        game.escort.targetX = Math.max(-3500, Math.min(3500, game.escort.targetX));
-        game.escort.targetY = Math.max(-3500, Math.min(3500, game.escort.targetY));
-        game.escort.speed = 55 + level * 3;
-        game.escort.respawnTimer = 0;
-        game.escort.evasionTimer = 0;
-        game.escort.evasionAngle = 0;
-        game.escort.startDist = distance;
-      } else {
-        game.escort.active = false;
-      }
-
+      enterNodeMission(game, game.level, n.type);
       setGameState('playing');
     }
   };

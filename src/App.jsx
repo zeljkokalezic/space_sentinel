@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { generateMap }       from './engine/mapGenerator';
-import { updatePhysics }     from './engine/physics';
-import { initThreeScene, drawFrame, raycastToPlane } from './engine/renderer';
+import { setupEscort, resetEscort } from './engine/escortSetup';
+
+import { useGameLoop } from './hooks/useGameLoop';
+import { useInput }    from './hooks/useInput';
 
 import MapOverlay    from './components/MapOverlay';
 import ShopOverlay   from './components/ShopOverlay';
@@ -13,22 +15,17 @@ import EventScreen   from './components/EventScreen';
 import DevMissionPicker from './components/DevMissionPicker';
 
 export default function App() {
+  // ─── React state ────────────────────────────────────────────────────────────
   const [gameState,       setGameState]       = useState('start');
   const [uiScrap,         setUiScrap]         = useState(0);
   const [uiLevels,        setUiLevels]        = useState(null);
   const [mapStateVersion, setMapStateVersion] = useState(0);
   const [devMode,         setDevMode]         = useState(false);
 
+  // ─── Mutable refs (shared across hooks) ─────────────────────────────────────
   const containerRef = useRef(null);
   const canvasRef    = useRef(null);
   const game         = useRef(null);
-  const threeRef     = useRef(null);
-  const reqRef       = useRef();
-  const statusRef    = useRef(gameState);
-  const devModeRef   = useRef(devMode);
-
-  useEffect(() => { statusRef.current = gameState; }, [gameState]);
-  useEffect(() => { devModeRef.current = devMode; }, [devMode]);
 
   // ─── Game state initialisation ─────────────────────────────────────────────
   const resetGame = () => {
@@ -72,14 +69,13 @@ export default function App() {
     };
   };
 
-  const startGame = () => { resetGame(); setGameState(devModeRef.current ? 'dev' : 'map'); };
+  const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };
 
   // ─── Dev mode: launch a specific mission ────────────────────────────────────
   const launchDevMission = ({ type, level }) => {
     resetGame();
     game.current.level = level;
 
-    // Create mission directly based on selected type
     let mission;
     if (type === 'kill') {
       const target = 10 + level * 5;
@@ -110,25 +106,10 @@ export default function App() {
     game.current.enemies = []; game.current.projectiles = [];
     game.current.particles = []; game.current.pickups = []; game.current.effects = [];
 
-    // Set up escort if needed
     if (type === 'escort') {
-      const lvl = level;
-      game.current.escort.active = true;
-      game.current.escort.hp = game.current.escort.maxHp = 120 + lvl * 25;
-      game.current.escort.lives = Math.max(1, 3 - Math.floor(lvl / 4));
-      game.current.escort.x = (Math.random() - 0.5) * 300;
-      game.current.escort.y = (Math.random() - 0.5) * 300;
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 1000 + lvl * 80;
-      game.current.escort.targetX = Math.max(-3500, Math.min(3500, game.current.escort.x + Math.cos(angle) * distance));
-      game.current.escort.targetY = Math.max(-3500, Math.min(3500, game.current.escort.y + Math.sin(angle) * distance));
-      game.current.escort.speed = 55 + lvl * 3;
-      game.current.escort.respawnTimer = 0;
-      game.current.escort.evasionTimer = 0;
-      game.current.escort.evasionAngle = 0;
-      game.current.escort.startDist = distance;
+      setupEscort(game.current, level);
     } else {
-      game.current.escort.active = false;
+      resetEscort(game.current);
     }
 
     setUiLevels({ ...game.current.levels });
@@ -149,131 +130,17 @@ export default function App() {
     });
   };
 
-  // ─── Main effect: three.js init + game loop ────────────────────────────────
-  useEffect(() => {
-    resetGame();
+  // ─── Init game state on mount ──────────────────────────────────────────────
+  useEffect(() => { resetGame(); }, []);
 
-    // Init Three.js
-    if (!threeRef.current) {
-      threeRef.current = initThreeScene(containerRef.current);
-    }
+  // ─── Hooks ──────────────────────────────────────────────────────────────────
+  const { threeRef, statusRef } = useGameLoop({
+    containerRef, canvasRef, game, gameState, setGameState, setMapStateVersion, devMode,
+  });
 
-    // In dev mode, redirect 'map' transitions back to 'dev' picker
-    const devAwareSetState = (state) => {
-      if (state === 'map' && devModeRef.current) {
-        setGameState('dev');
-      } else {
-        setGameState(state);
-      }
-    };
-    const physicsCbs = { setGameState: devAwareSetState, setMapStateVersion };
-
-    const loop = (time) => {
-      if (!game.current) return;
-      let dt = (time - game.current.lastTime) / 1000;
-      game.current.lastTime = time;
-      if (dt > 0.1) dt = 0.1;
-
-      if (statusRef.current === 'playing') {
-        updatePhysics(dt, game.current, physicsCbs);
-      }
-
-      if (threeRef.current) {
-        drawFrame(threeRef.current, game.current, canvasRef.current, statusRef);
-      }
-
-      reqRef.current = requestAnimationFrame(loop);
-    };
-
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      if (key === ' ' && !e.repeat) {
-        setGameState(prev => {
-          if (prev === 'shop') return 'map';
-          if (prev === 'start' || prev === 'gameover') { setTimeout(startGame, 0); return prev; }
-          return prev;
-        });
-      }
-      // Toggle dev mode with backtick ` key on start/gameover/victory screens
-      if (key === '`' && !e.repeat) {
-        const currentGameState = statusRef.current;
-        if (currentGameState === 'start' || currentGameState === 'gameover' || currentGameState === 'victory') {
-          setDevMode(dm => !dm);
-        } else if (currentGameState === 'playing' && game.current?.devMode) {
-          // During gameplay in dev mode: abort mission, go back to picker
-          setDevMode(true); // keep dev mode on
-          setGameState('dev');
-        }
-        if (game.current) game.current.keys[key] = true;
-        return;
-      }
-      if (game.current) game.current.keys[key] = true;
-    };
-    const handleKeyUp = (e) => { if (game.current) game.current.keys[e.key.toLowerCase()] = false; };
-    const handleResize = () => {
-      if (!threeRef.current) return;
-      threeRef.current.camera.aspect = window.innerWidth / window.innerHeight;
-      threeRef.current.camera.updateProjectionMatrix();
-      threeRef.current.renderer.setSize(window.innerWidth, window.innerHeight);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup',   handleKeyUp);
-    window.addEventListener('resize',  handleResize);
-    handleResize();
-    reqRef.current = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(reqRef.current);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup',   handleKeyUp);
-      window.removeEventListener('resize',  handleResize);
-      if (threeRef.current && containerRef.current) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        containerRef.current.removeChild(threeRef.current.renderer.domElement);
-        threeRef.current.renderer.dispose();
-        threeRef.current = null;
-      }
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Pointer event helpers (inline to keep access to threeRef & game) ─────
-  const onPointerDown = (e) => {
-    if (gameState !== 'playing' || !game.current) return;
-    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-      if (game.current.touchId === null) {
-        game.current.touchId      = e.pointerId;
-        game.current.touchBase    = { x: e.clientX, y: e.clientY };
-        game.current.touchCurrent = { x: e.clientX, y: e.clientY };
-      }
-    } else {
-      game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY; game.current.mouse.active = true;
-      if (threeRef.current) {
-        const wm = raycastToPlane(e.clientX, e.clientY, threeRef.current.camera);
-        if (wm) game.current.worldMouse = wm;
-      }
-    }
-  };
-
-  const onPointerMove = (e) => {
-    if (gameState !== 'playing' || !game.current) return;
-    if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.pointerId === game.current.touchId) {
-      game.current.touchCurrent = { x: e.clientX, y: e.clientY };
-    } else if (e.pointerType === 'mouse') {
-      game.current.mouse.x = e.clientX; game.current.mouse.y = e.clientY;
-      if (e.buttons > 0) game.current.mouse.active = true;
-      if (threeRef.current) {
-        const wm = raycastToPlane(e.clientX, e.clientY, threeRef.current.camera);
-        if (wm) game.current.worldMouse = wm;
-      }
-    }
-  };
-
-  const onPointerUp = (e) => {
-    if (!game.current) return;
-    if (e.pointerId === game.current.touchId) { game.current.touchId = null; game.current.touchBase = null; game.current.touchCurrent = null; }
-    if (e.pointerType === 'mouse') game.current.mouse.active = false;
-  };
+  const { onPointerDown, onPointerMove, onPointerUp } = useInput({
+    game, threeRef, gameState, statusRef, devMode, setGameState, setDevMode, startGame,
+  });
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
