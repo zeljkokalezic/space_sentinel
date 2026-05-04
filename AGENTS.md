@@ -62,3 +62,6 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `renderer.js`: **Barrel module** — re-exports from renderer3d.js and renderer2d.js. Provides `drawFrame(threeObj, g, canvasEl, statusRef)` which calls both 3D and 2D renderers.
 - `renderer3d.js`: Three.js scene setup and per-frame 3D rendering — `initThreeScene(containerEl)` returns scene object with camera, renderer, geometries cache, and materials. `draw3DFrame(threeObj, g)` handles chase camera following player, star field, player ship with dynamic turrets (mesh caching via Map), enemies, projectiles, particles, pickups, escort drone. `raycastToPlane()` and `projectToScreen()` for world/screen coordinate conversion. No React imports.
 - `renderer2d.js`: 2D HUD overlay rendering on canvas — `draw2DFrame(camera, g, canvasEl, statusRef, projectFn)`. Renders top bar (HP/shield/scrap), mission progress bar, radar display, and touch joystick. No React imports, no Three.js scene logic.
+
+## Deployment
+The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to build and publish to the `gh-pages` branch. This runs `npm run build` (via `predeploy`) then pushes `dist/` to the branch. Live site: https://zeljkokalezic.github.io/space_sentinel/

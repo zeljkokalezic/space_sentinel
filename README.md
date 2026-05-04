@@ -31,6 +31,12 @@ Ensure you have **Node.js** installed on your machine.
 4. Open the `http://localhost:5173/space_sentinel` link generated in your terminal!
 
 ## 🌐 Deployment
-This game is optimized to act as a purely static frontend site with zero backend server necessities. It is automatically compiled and hosted securely out to GitHub Pages via the `"deploy": "gh-pages -d dist"` script in our `package.json`.
+This game is optimized to act as a purely static frontend site with zero backend server necessities. It is deployed to GitHub Pages via the `gh-pages` npm package.
+
+To deploy locally, run:
+```bash
+npm run deploy
+```
+This runs `vite build` (via `predeploy`) then pushes the `dist/` folder to the `gh-pages` branch.
 
 **Play it live here:** [https://zeljkokalezic.github.io/space_sentinel/](https://zeljkokalezic.github.io/space_sentinel/)
