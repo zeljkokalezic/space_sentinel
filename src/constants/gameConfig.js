@@ -14,6 +14,15 @@ export const GAME_CONFIG = {
     worldBounds: 4000,
   },
 
+  thrusters: {
+    speedPerLevel: 30,
+  },
+
+  magnet: {
+    radiusPerLevel: 35,
+    pullSpeed: 500,
+  },
+
   weapons: {
     autocannon: {
       baseDamage: 10,
@@ -23,6 +32,7 @@ export const GAME_CONFIG = {
       shotsPerExtraLevels: 3,
       speed: 700,
       speedVariance: 50,
+      minCooldown: 0.08,
     },
     plasma: {
       baseDamage: 30,
@@ -31,6 +41,7 @@ export const GAME_CONFIG = {
       baseCooldown: 2.0,
       cooldownReduction: 0.1,
       shotsPerExtraLevels: 3,
+      minCooldown: 0.5,
     },
     missiles: {
       baseDamage: 20,
@@ -38,6 +49,7 @@ export const GAME_CONFIG = {
       baseSpeed: 250,
       baseCooldown: 3.0,
       cooldownReduction: 0.15,
+      minCooldown: 1.0,
     },
     pointDefense: {
       baseRange: 250,
@@ -47,6 +59,7 @@ export const GAME_CONFIG = {
       baseCooldown: 0.5,
       cooldownReduction: 0.03,
       maxHitsPer2Levels: 2,
+      minCooldown: 0.2,
     },
   },
 
@@ -91,6 +104,7 @@ export const GAME_CONFIG = {
     destinationThreshold: 30,
     worldBounds: 3800,
     ramDamage: 15,
+    respawnSpread: 100,
   },
 
   cleanup: {
@@ -99,5 +113,15 @@ export const GAME_CONFIG = {
 
   transition: {
     duration: 3.0,
+  },
+
+  projectile: {
+    lifetime: 4.0,
+  },
+
+  particles: {
+    life: 1.0,
+    speedMin: 50,
+    speedMax: 100,
   },
 };

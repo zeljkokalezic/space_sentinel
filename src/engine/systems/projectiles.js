@@ -1,18 +1,21 @@
 /**
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles } from '../combat';
 
 /**
+
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  * @param {function} setGameState — React state setter callback
  */
 export const updateProjectiles = (dt, g, setGameState) => {
+  const C = GAME_CONFIG;
   for (let p of g.projectiles) {
     if (!p.active) continue;
     p.life += dt;
-    if (p.life > 4) { p.active = false; continue; }
+    if (p.life > C.projectile.lifetime) { p.active = false; continue; }
 
     // ── Player missile homing ──
     if (p.type === 'missile' && p.target && p.target.hp > 0) {
@@ -34,7 +37,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
 
     if (p.isEnemy) {
       // ── Enemy missile homing ──
-      if (p.type === 'enemy_missile' && p.target && g.player.hp > 0 && p.life < 4.0) {
+      if (p.type === 'enemy_missile' && p.target && g.player.hp > 0 && p.life < C.projectile.lifetime) {
         const angle = Math.atan2(p.target.y - p.y, p.target.x - p.x);
         const cAngle = Math.atan2(p.vy, p.vx);
         let diff = angle - cAngle;

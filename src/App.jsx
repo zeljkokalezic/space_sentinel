@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-import { generateMap }       from './engine/mapGenerator';
+import { generateMap }             from './engine/mapGenerator';
 import { setupEscort, resetEscort } from './engine/escortSetup';
+import { generateMission }         from './engine/spawner';
+import { setupCombatMission }      from './engine/missionSetup';
+import { GAME_CONFIG }             from './constants/gameConfig';
 
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
@@ -29,12 +32,14 @@ export default function App() {
 
   // ─── Game state initialisation ─────────────────────────────────────────────
   const resetGame = () => {
+    const C = GAME_CONFIG;
     game.current = {
       player: {
-        x: 0, y: 0, vx: 0, vy: 0, radius: 38,
-        hp: 300, maxHp: 300,
-        shield: 20, maxShield: 20,
-        speed: 120, magnetRadius: 150,
+        x: 0, y: 0, vx: 0, vy: 0,
+        radius: C.player.radius,
+        hp: C.player.baseHp, maxHp: C.player.baseHp,
+        shield: C.player.baseShield, maxShield: C.player.baseShield,
+        speed: C.player.baseSpeed, magnetRadius: C.player.magnetRadius,
         yaw: Math.PI / 2,
       },
       scrap: 200, totalScrapEarned: 0,
@@ -42,10 +47,10 @@ export default function App() {
       map: generateMap(),
       spawnCooldown: 2,
       enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
-      stars: Array.from({ length: 800 }, () => ({
-        x: (Math.random() - 0.5) * 8000,
-        y: (Math.random() - 0.5) * 8000,
-        z: -Math.random() * 500,
+      stars: Array.from({ length: C.world.starCount }, () => ({
+        x: (Math.random() - 0.5) * C.world.starSpread,
+        y: (Math.random() - 0.5) * C.world.starSpread,
+        z: -Math.random() * C.world.starDepth,
         size: Math.random() * 2 + 1,
         speed: Math.random() * 80 + 20,
       })),
@@ -76,41 +81,20 @@ export default function App() {
     resetGame();
     game.current.level = level;
 
-    let mission;
-    if (type === 'kill') {
-      const target = 10 + level * 5;
-      mission = { type: 'kill', target, current: 0, title: `Destroy ${target} Enemies`, reward: 50 + level * 20 };
-    } else if (type === 'collect') {
-      const target = 15 + level * 3;
-      mission = { type: 'collect', target, current: 0, title: `Collect ${target} Scrap`, reward: 80 + level * 25 };
-    } else if (type === 'survive') {
-      const target = 20 + level * 10;
-      mission = { type: 'survive', target, current: 0, title: `Survive for ${target} Seconds`, reward: 80 + level * 15 };
-    } else if (type === 'escort') {
-      mission = { type: 'escort', target: 0, current: 0, title: 'Escort the Drone to Safety', reward: 120 + level * 35 };
-    } else if (type === 'kill_elite') {
-      const target = 3 + Math.floor(level / 3);
-      mission = { type: 'kill_elite', target, current: 0, title: `Destroy ${target} Elite Enemies`, reward: 100 + level * 30 };
-    } else if (type === 'kill_boss') {
-      mission = { type: 'kill_boss', target: 1, current: 0, title: 'Destroy the Sentinel Core', reward: 500 };
-    }
+    // Map dev type names to node types for generateMission
+    const nodeTypeMap = {
+      kill: 'kill',
+      collect: 'collect',
+      survive: 'survive',
+      escort: 'escort',
+      kill_elite: 'elite',
+      kill_boss: 'boss',
+    };
+    const nodeType = nodeTypeMap[type] || 'kill';
+    const mission = generateMission(level, nodeType);
 
-    game.current.mission = mission;
     game.current.devMode = true;
-    game.current.spawnCooldown = 2.0;
-    game.current.totalTime = 0;
-    game.current.player.x = 0; game.current.player.y = 0;
-    game.current.player.yaw = Math.PI / 2;
-    game.current.player.vx = 0; game.current.player.vy = 0;
-    game.current.worldMouse = { x: 0, y: 200 };
-    game.current.enemies = []; game.current.projectiles = [];
-    game.current.particles = []; game.current.pickups = []; game.current.effects = [];
-
-    if (type === 'escort') {
-      setupEscort(game.current, level);
-    } else {
-      resetEscort(game.current);
-    }
+    setupCombatMission(game.current, mission, level);
 
     setUiLevels({ ...game.current.levels });
     setGameState('playing');

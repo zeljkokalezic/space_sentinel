@@ -6,12 +6,13 @@
  * @param {object} g       - Live game state (game.current)
  * @param {object} cbs     - { setGameState, setMapStateVersion }
  */
+import { GAME_CONFIG } from '../constants/gameConfig';
 import { spawnEnemy } from './spawner';
 import { getNearestEnemy, fireProjectile, createParticles } from './combat';
 
 // Systems
 import { updateTransition, createCompleteMission, checkMissionProgress } from './systems/mission';
-import { updatePlayer } from './systems/playerMovement';
+import { updatePlayer }       from './systems/playerMovement';
 import { updateWeapons } from './systems/weapons';
 import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
@@ -36,12 +37,13 @@ export const updatePhysics = (dt, g, cbs) => {
   g.totalTime += dt;
   g.spawnCooldown -= dt;
 
+  const C = GAME_CONFIG;
   const currentDiffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
-  const currentSpawnRate = Math.max(0.1, 2.5 - (g.level * 0.1) - (g.totalTime / 400));
+  const currentSpawnRate = Math.max(0.1, C.enemies.baseSpawnRate - (g.level * C.enemies.spawnRateLevelDecay) - (g.totalTime * C.enemies.spawnRateTimeDecay));
 
   if (g.spawnCooldown <= 0) {
     spawnEnemy(g);
-    g.spawnCooldown = currentSpawnRate + Math.random() * 0.5;
+    g.spawnCooldown = currentSpawnRate + Math.random() * C.enemies.spawnCooldownVariance;
   }
 
   // ─── Player movement (yaw-based) ──────────────────────────────────────────────

@@ -1,9 +1,11 @@
 /**
- * systems/enemies.js — Enemy AI movement, firing, and collision with player.
+ * systems/enemies.js — Enemy AI movement, firing, collision.
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 import { fireProjectile, createParticles } from '../combat';
 
 /**
+
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  * @param {number} currentDiffMult — Difficulty multiplier
@@ -11,6 +13,7 @@ import { fireProjectile, createParticles } from '../combat';
  * @param {function} setGameState — React state setter callback
  */
 export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameState) => {
+  const C = GAME_CONFIG;
   for (let e of g.enemies) {
     if (!e.active) continue;
 
@@ -21,11 +24,11 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
 
     let moveSpeed = e.speed;
     if (e.type === 'shooter') {
-      if      (distToPlayer < 300) moveSpeed = e.speed * -0.5;
-      else if (distToPlayer < 400) moveSpeed = 0;
+      if      (distToPlayer < C.player.radius * 8) moveSpeed = e.speed * -0.5;
+      else if (distToPlayer < C.player.radius * 10) moveSpeed = 0;
     } else if (e.type === 'missile_boat') {
-      if      (distToPlayer < 500) moveSpeed = e.speed * -1;
-      else if (distToPlayer < 700) moveSpeed = 0;
+      if      (distToPlayer < C.player.radius * 13) moveSpeed = e.speed * -1;
+      else if (distToPlayer < C.player.radius * 18) moveSpeed = 0;
     }
 
     e.x += Math.cos(moveAngle) * moveSpeed * dt;
@@ -35,10 +38,10 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     if (e.fireCooldown !== undefined) {
       e.fireCooldown -= dt;
       if (e.fireCooldown <= 0) {
-        if (e.type === 'shooter' && distToPlayer < 600) {
-          fireProjectile(g, e.x, e.y, angle, 250, 15 * currentDiffMult, 'enemy_bullet');
+        if (e.type === 'shooter' && distToPlayer < C.player.radius * 16) {
+          fireProjectile(g, e.x, e.y, angle, C.weapons.missiles.baseSpeed, 15 * currentDiffMult, 'enemy_bullet');
           e.fireCooldown = 1.8 + Math.random();
-        } else if (e.type === 'missile_boat' && distToPlayer < 800) {
+        } else if (e.type === 'missile_boat' && distToPlayer < C.player.radius * 21) {
           fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
           fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
           e.fireCooldown = 4.0;
@@ -48,14 +51,14 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
 
     // ── Enemy rams player ──
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
-      const baseDmg = e.type === 'heavy' ? 20 : 10;
+      const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
       let dmg = baseDmg * currentDiffMult;
       if (g.player.shield > 0) {
         const absorb = Math.min(g.player.shield, dmg);
         g.player.shield -= absorb; dmg -= absorb;
       }
       g.player.hp -= dmg;
-      let eDamage = 20;
+      let eDamage = C.weapons.missiles.baseDamage;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
       e.hp -= eDamage;
       g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: '20', life: 0.8 });

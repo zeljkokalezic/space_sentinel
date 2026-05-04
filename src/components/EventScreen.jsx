@@ -16,7 +16,7 @@ export default function EventScreen({ gameRef, setGameState, setUiScrap, setUiLe
   const handleChoice = (choice) => {
     // Execute the consequence
     if (choice.resolve) {
-      choice.resolve(gameRef, setUiScrap, setUiLevels);
+      choice.resolve(gameRef);
     }
     
     // Always sync React UI state

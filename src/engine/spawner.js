@@ -1,10 +1,12 @@
 /**
- * spawner.js — Enemy spawning & mission generation.
+ * spawner.js — Enemy and mission generation.
  * Pure functions; no React imports.
  */
+import { GAME_CONFIG } from '../constants/gameConfig';
 
 /**
- * Generates a mission descriptor for a given level and node type.
+ * Spawn an enemy at a random position around the player.
+
  * @param {number} level    - Current player level
  * @param {string} nodeType - 'boss' | 'elite' | 'kill' | 'collect' | 'survive'
  * @returns {{ type, target, current, title, reward }}
@@ -29,10 +31,16 @@ export const generateMission = (level, nodeType) => {
     return { type: t, target, current: 0, title, reward };
   }
 
-  const types = ['kill', 'survive', 'collect', 'escort'];
-  t = types[Math.floor(Math.random() * types.length)];
-  if (level === 1) t = 'kill';
-  if (level === 2) t = 'collect';
+  // If nodeType explicitly specifies a mission type, use it directly.
+  // Only randomise when nodeType is 'combat' (normal map generation).
+  if (['kill', 'collect', 'survive', 'escort'].includes(nodeType)) {
+    t = nodeType;
+  } else {
+    const types = ['kill', 'survive', 'collect', 'escort'];
+    t = types[Math.floor(Math.random() * types.length)];
+    if (level === 1) t = 'kill';
+    if (level === 2) t = 'collect';
+  }
 
   if (t === 'kill') {
     target = 10 + level * 5;
@@ -62,15 +70,16 @@ export const generateMission = (level, nodeType) => {
  * @param {object} g - Live game state object
  */
 export const spawnEnemy = (g) => {
-  const spawnRadius = 900 + Math.random() * 400;
+  const C = GAME_CONFIG;
   const angle = Math.random() * Math.PI * 2;
+  const spawnRadius = C.enemies.spawnRadiusMin + Math.random() * (C.enemies.spawnRadiusMax - C.enemies.spawnRadiusMin);
   const x = g.player.x + Math.cos(angle) * spawnRadius;
   const y = g.player.y + Math.sin(angle) * spawnRadius;
 
   const diffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
 
   // Scale enemy type rarity dynamically (more elites later in run)
-  const eliteBonus = Math.min(0.4, g.level * 0.02 + g.totalTime / 2000);
+  const eliteBonus = Math.min(C.enemies.eliteBonusMax, g.level * C.enemies.eliteBonusBase + g.totalTime * C.enemies.eliteBonusTimeFactor);
   const typeRoll = Math.random() + eliteBonus;
 
   let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 15, color = 0xef4444;

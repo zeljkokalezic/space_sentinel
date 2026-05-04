@@ -232,6 +232,7 @@ export const draw3DFrame = (threeObj, g) => {
       scene.add(marker);
       meshes.set(destKey, marker);
     }
+    activeKeys.add(destKey);
     const destMesh = meshes.get(destKey);
     destMesh.position.set(dest.targetX, dest.targetY, 0);
     destMesh.children.forEach(c => c.rotation.z += 0.01);

@@ -1,8 +1,10 @@
 /**
  * systems/mission.js — Mission completion detection, rewards, map progression, transition timer.
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 
 /**
+
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
  * @param {number} dt — Delta time
  * @param {object} g — Game state
@@ -46,6 +48,7 @@ export const checkMissionProgress = (dt, g, completeMission) => {
  * @param {object} g — Game state
  */
 export const createCompleteMission = (g) => {
+  const C = GAME_CONFIG;
   return () => {
     if (g.mission.completed) return;
     g.scrap += g.mission.reward;
@@ -55,10 +58,10 @@ export const createCompleteMission = (g) => {
       x: window.innerWidth / 2,
       y: Math.max(100, window.innerHeight / 4),
       text: `AREA CLEARED! +${g.mission.reward} SCRAP`,
-      life: 3.0,
+      life: C.transition.duration,
     });
     g.mission.completed = true;
-    g.transitionTimer = 3.0;
+    g.transitionTimer = C.transition.duration;
 
     if (g.mission.type === 'kill_boss') g.isVictory = true;
 

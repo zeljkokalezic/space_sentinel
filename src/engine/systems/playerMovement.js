@@ -4,13 +4,15 @@
  * Handles keyboard (WASD/arrows) and touch joystick input.
  * Movement is yaw-based: W/S thrust forward/back, A/D rotate.
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 
 /**
  * @param {number} dt — Delta time in seconds
  * @param {object} g  — Game state
  */
 export const updatePlayer = (dt, g) => {
-  const turnSpeed = 1.4;
+  const C = GAME_CONFIG;
+  const turnSpeed = C.player.turnSpeed;
 
   if (g.player.yaw === undefined) g.player.yaw = Math.PI / 2;
 
@@ -37,13 +39,13 @@ export const updatePlayer = (dt, g) => {
     if (g.keys['s'] || g.keys['arrowdown'])  thrust = -1;
   }
 
-  const currentSpeed = g.player.speed + (g.levels.thrusters - 1) * 30;
+  const currentSpeed = g.player.speed + (g.levels.thrusters - 1) * C.thrusters.speedPerLevel;
   const fwdX = Math.cos(g.player.yaw);
   const fwdY = Math.sin(g.player.yaw);
   g.player.vx = fwdX * thrust * currentSpeed;
   g.player.vy = fwdY * thrust * currentSpeed;
   g.player.x += g.player.vx * dt;
   g.player.y += g.player.vy * dt;
-  g.player.x = Math.max(-4000, Math.min(4000, g.player.x));
-  g.player.y = Math.max(-4000, Math.min(4000, g.player.y));
+  g.player.x = Math.max(-C.player.worldBounds, Math.min(C.player.worldBounds, g.player.x));
+  g.player.y = Math.max(-C.player.worldBounds, Math.min(C.player.worldBounds, g.player.y));
 };

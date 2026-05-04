@@ -1,9 +1,11 @@
 /**
  * systems/escort.js — Escort drone movement, evasion, collision, and mission checks.
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, fireProjectile } from '../combat';
 
 /**
+
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  * @param {number} currentDiffMult — Difficulty multiplier
@@ -12,12 +14,13 @@ import { createParticles, fireProjectile } from '../combat';
  * @returns {boolean} true if game should stop (gameover triggered)
  */
 export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameState) => {
+  const C = GAME_CONFIG;
   if (!g.escort.active || g.mission?.completed) return false;
   const esc = g.escort;
 
   // ── Handle respawn (drone destroyed but has lives left) ──
   if (esc.hp <= 0 && esc.lives > 0) {
-    esc.respawnTimer = 2.0;
+    esc.respawnTimer = C.escort.respawnTimer;
     esc.lives--;
     esc.hp = esc.maxHp;
   }
@@ -25,8 +28,8 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
   if (esc.respawnTimer > 0) {
     esc.respawnTimer -= dt;
     if (esc.respawnTimer <= 0) {
-      esc.x = g.player.x + (Math.random() - 0.5) * 100;
-      esc.y = g.player.y + (Math.random() - 0.5) * 100;
+      esc.x = g.player.x + (Math.random() - 0.5) * C.escort.respawnSpread;
+      esc.y = g.player.y + (Math.random() - 0.5) * C.escort.respawnSpread;
     }
   } else if (esc.hp > 0) {
     // ── Move toward destination ──
@@ -41,7 +44,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
       g.mission.target = esc.startDist;
     }
 
-    if (distToTarget > 30) {
+    if (distToTarget > C.escort.destinationThreshold) {
       const moveAngle = Math.atan2(dy, dx);
       esc.x += Math.cos(moveAngle) * esc.speed * dt;
       esc.y += Math.sin(moveAngle) * esc.speed * dt;
@@ -51,7 +54,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     esc.evasionTimer -= dt;
     if (esc.evasionTimer <= 0) {
       let threat = null;
-      let closestThreatDist = 200;
+      let closestThreatDist = C.escort.evasionThreatRadius;
       for (let p of g.projectiles) {
         if (!p.active || !p.isEnemy) continue;
         const pd = Math.hypot(p.x - esc.x, p.y - esc.y);
@@ -63,13 +66,13 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
           while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
           if (Math.abs(angleDiff) < Math.PI / 2) {
             threat = p;
-            closestThreatDist = pd;
+      let closestThreatDist = C.escort.evasionThreatRadius;
           }
         }
       }
       if (threat) {
         esc.evasionAngle = Math.atan2(threat.y - esc.y, threat.x - esc.x) + Math.PI / 2;
-        esc.evasionTimer = 0.3;
+        esc.evasionTimer = C.escort.evasionCooldown;
       }
     }
 
@@ -80,11 +83,11 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     }
 
     // Clamp to world bounds
-    esc.x = Math.max(-3800, Math.min(3800, esc.x));
-    esc.y = Math.max(-3800, Math.min(3800, esc.y));
+    esc.x = Math.max(-C.escort.worldBounds, Math.min(C.escort.worldBounds, esc.x));
+    esc.y = Math.max(-C.escort.worldBounds, Math.min(C.escort.worldBounds, esc.y));
 
     // Check if drone reached destination
-    if (distToTarget <= 30) {
+    if (distToTarget <= C.escort.destinationThreshold) {
       completeMission();
     }
   }
@@ -124,9 +127,9 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     for (let e of g.enemies) {
       if (!e.active) continue;
       if (Math.hypot(e.x - esc.x, e.y - esc.y) < e.radius + esc.radius) {
-        esc.hp -= 15;
+        esc.hp -= C.escort.ramDamage;
         createParticles(g, esc.x, esc.y, 0x22d3ee, 10);
-        g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: '15', life: 0.8 });
+        g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: C.escort.ramDamage.toString(), life: 0.8 });
         if (esc.hp <= 0) {
           createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
           esc.lives--;
@@ -153,13 +156,13 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     if (!e.active) continue;
     const distToEscort = Math.hypot(esc.x - e.x, esc.y - e.y);
     const distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
-    if (distToEscort < distToPlayer && distToEscort < 500) {
+    if (distToEscort < distToPlayer && distToEscort < C.enemies.spawnRadiusMin) {
       const angle = Math.atan2(esc.y - e.y, esc.x - e.x);
       if (e.fireCooldown !== undefined && e.fireCooldown <= 0) {
-        if (e.type === 'shooter' && distToEscort < 600) {
-          fireProjectile(g, e.x, e.y, angle, 250, 15 * currentDiffMult, 'enemy_bullet');
+        if (e.type === 'shooter' && distToEscort < C.player.radius * 16) {
+          fireProjectile(g, e.x, e.y, angle, C.weapons.missiles.baseSpeed, 15 * currentDiffMult, 'enemy_bullet');
           e.fireCooldown = 1.8 + Math.random();
-        } else if (e.type === 'missile_boat' && distToEscort < 800) {
+        } else if (e.type === 'missile_boat' && distToEscort < C.player.radius * 21) {
           fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
           fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
           e.fireCooldown = 4.0;
