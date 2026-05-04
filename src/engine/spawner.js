@@ -29,7 +29,7 @@ export const generateMission = (level, nodeType) => {
     return { type: t, target, current: 0, title, reward };
   }
 
-  const types = ['kill', 'survive', 'collect'];
+  const types = ['kill', 'survive', 'collect', 'escort'];
   t = types[Math.floor(Math.random() * types.length)];
   if (level === 1) t = 'kill';
   if (level === 2) t = 'collect';
@@ -38,14 +38,20 @@ export const generateMission = (level, nodeType) => {
     target = 10 + level * 5;
     title = `Destroy ${target} Enemies`;
     reward = 50 + level * 20;
-  } else   if (t === 'collect') {
+  } else if (t === 'collect') {
     target = 15 + level * 3;
     title = `Collect ${target} Scrap`;
     reward = 80 + level * 25;
-  } else {
+  } else if (t === 'survive') {
     target = 20 + level * 10;
     title = `Survive for ${target} Seconds`;
     reward = 80 + level * 15;
+  } else {
+    // Escort mission — protect a drone as it travels to a destination
+    title = 'Escort the Drone to Safety';
+    reward = 120 + level * 35;
+    target = 0; // Distance-based, not a fixed number
+    return { type: t, target, current: 0, title, reward };
   }
 
   return { type: t, target, current: 0, title, reward };
