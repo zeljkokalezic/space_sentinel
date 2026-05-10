@@ -3,6 +3,7 @@
  * Pure functions; no React imports.
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
+import { calculateDifficultyMultiplier } from './difficulty';
 
 /**
  * Spawn an enemy at a random position around the player.
@@ -76,7 +77,7 @@ export const spawnEnemy = (g) => {
   const x = g.player.x + Math.cos(angle) * spawnRadius;
   const y = g.player.y + Math.sin(angle) * spawnRadius;
 
-  const diffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
+  const diffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
 
   // Scale enemy type rarity dynamically (more elites later in run)
   const eliteBonus = Math.min(C.enemies.eliteBonusMax, g.level * C.enemies.eliteBonusBase + g.totalTime * C.enemies.eliteBonusTimeFactor);

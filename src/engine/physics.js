@@ -9,6 +9,7 @@
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { spawnEnemy } from './spawner';
 import { getNearestEnemy } from './combat';
+import { calculateDifficultyMultiplier } from './difficulty';
 
 // Systems
 import { updateTransition, createCompleteMission, checkMissionProgress } from './systems/mission';
@@ -38,7 +39,7 @@ export const updatePhysics = (dt, g, cbs) => {
   g.spawnCooldown -= dt;
 
   const C = GAME_CONFIG;
-  const currentDiffMult = 0.5 + (g.level * 0.15) + Math.pow(g.level, 1.6) * 0.04 + g.totalTime / 100;
+  const currentDiffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
   const currentSpawnRate = Math.max(0.1, C.enemies.baseSpawnRate - (g.level * C.enemies.spawnRateLevelDecay) - (g.totalTime * C.enemies.spawnRateTimeDecay));
 
   if (g.spawnCooldown <= 0) {
