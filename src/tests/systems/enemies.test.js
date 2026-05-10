@@ -539,6 +539,51 @@ describe('enemy collision with player', () => {
     expect(dmgEffect).toBeDefined();
   });
 
+  it('collision damage effect text shows actual pre-shield damage (baseDmg * diffMult)', () => {
+    const g = createTestState();
+    g.player.shield = 0;
+    const enemy = createTestEnemy(0, 0, 'fighter');
+    g.enemies = [enemy];
+
+    updateEnemies(0.1, g, 1, noop, noop);
+
+    const dmgEffect = g.effects.find(e => e.type === 'dmg');
+    expect(dmgEffect).toBeDefined();
+    // fighter: autocannon baseDamage=10, diffMult=1 → text should be '10'
+    expect(dmgEffect.text).toBe('10');
+  });
+
+  it('collision damage effect text scales with difficulty multiplier', () => {
+    const g = createTestState();
+    g.player.shield = 0;
+    const enemy = createTestEnemy(0, 0, 'heavy');
+    g.enemies = [enemy];
+
+    updateEnemies(0.1, g, 3, noop, noop);
+
+    const dmgEffect = g.effects.find(e => e.type === 'dmg');
+    expect(dmgEffect).toBeDefined();
+    // heavy: baseDamage=20, diffMult=3 → text should be '60'
+    expect(dmgEffect.text).toBe('60');
+  });
+
+  it('collision particles spawn at enemy position, not player position', () => {
+    const g = createTestState();
+    const enemy = createTestEnemy(0, 0, 'fighter');
+    g.enemies = [enemy];
+    // Player is at (0,0) from createTestState, enemy starts at (0,0)
+    // After movement and collision push, enemy.x will not be 0
+    // Particles should be at the pushed enemy position, not the original player position
+
+    updateEnemies(0.1, g, 1, noop, noop);
+
+    const collisionParticles = g.particles.filter(p => p.color === 0xef4444);
+    expect(collisionParticles.length).toBeGreaterThan(0);
+    // All collision particles should be at the enemy's final position
+    expect(collisionParticles[0].x).toBe(enemy.x);
+    expect(collisionParticles[0].y).toBe(enemy.y);
+  });
+
   it('enemy takes missile baseDamage on collision', () => {
     const g = createTestState();
     const enemy = createTestEnemy(0, 0, 'fighter');

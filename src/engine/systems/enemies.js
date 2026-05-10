@@ -61,10 +61,10 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       let eDamage = C.weapons.missiles.baseDamage;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
       e.hp -= eDamage;
-      g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: '20', life: 0.8 });
+      g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: String(baseDmg * currentDiffMult), life: 0.8 });
       e.x += Math.cos(angle + Math.PI) * 30;
       e.y += Math.sin(angle + Math.PI) * 30;
-      createParticles(g, g.player.x, g.player.y, 0xef4444, 10);
+      createParticles(g, e.x, e.y, 0xef4444, 10);
       if (g.player.hp <= 0) { setGameState('gameover'); return; }
     }
 
