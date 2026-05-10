@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-import { generateMap }          from './engine/mapGenerator';
+import { createGameState }      from './engine/state';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
-import { GAME_CONFIG }             from './constants/gameConfig';
 
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
@@ -31,46 +30,7 @@ export default function App() {
 
   // ─── Game state initialisation ─────────────────────────────────────────────
   const resetGame = () => {
-    const C = GAME_CONFIG;
-    game.current = {
-      player: {
-        x: 0, y: 0, vx: 0, vy: 0,
-        radius: C.player.radius,
-        hp: C.player.baseHp, maxHp: C.player.baseHp,
-        shield: C.player.baseShield, maxShield: C.player.baseShield,
-        speed: C.player.baseSpeed, magnetRadius: C.player.magnetRadius,
-        yaw: Math.PI / 2,
-      },
-      scrap: 200, totalScrapEarned: 0,
-      wave: 1, totalTime: 0, level: 1, mission: null,
-      map: generateMap(),
-      spawnCooldown: 2,
-      enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
-      stars: Array.from({ length: C.world.starCount }, () => ({
-        x: (Math.random() - 0.5) * C.world.starSpread,
-        y: (Math.random() - 0.5) * C.world.starSpread,
-        z: -Math.random() * C.world.starDepth,
-        size: Math.random() * 2 + 1,
-        speed: Math.random() * 80 + 20,
-      })),
-      levels: { autocannon: 1, plasma: 0, missiles: 0, hull: 1, shield: 1, thrusters: 1, magnet: 1, pointDefense: 0, autoAim: 0 },
-      cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
-      escort: {
-        active: false,
-        x: 0, y: 0,
-        targetX: 0, targetY: 0,
-        hp: 0, maxHp: 0,
-        speed: 80,
-        radius: 20,
-        lives: 1,
-        evasionAngle: 0,
-        evasionTimer: 0,
-        respawnTimer: 0,
-      },
-      keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
-      touchId: null, touchBase: null, touchCurrent: null,
-      lastTime: performance.now(),
-    };
+    game.current = createGameState();
   };
 
   const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };

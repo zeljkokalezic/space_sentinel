@@ -86,13 +86,14 @@ export const createGameState = () => ({
   escort: createDefaultEscort(),
   keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
   touchId: null, touchBase: null, touchCurrent: null,
-  lastTime: performance.now(),
+  devMode: false,
+  lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
 /**
  * @returns {Object} Default escort drone state
  */
-const createDefaultEscort = () => ({
+export const createDefaultEscort = () => ({
   active: false,
   x: 0, y: 0,
   targetX: 0, targetY: 0,
