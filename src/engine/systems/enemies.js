@@ -2,7 +2,8 @@
  * systems/enemies.js — Enemy AI movement, firing, collision.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { fireProjectile, createParticles } from '../combat';
+import { createParticles } from '../combat';
+import { tryFireEnemyWeapon } from './enemyFire';
 
 /**
 
@@ -35,19 +36,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     e.y += Math.sin(moveAngle) * moveSpeed * dt;
 
     // ── Enemy firing ──
-    if (e.fireCooldown !== undefined) {
-      e.fireCooldown -= dt;
-      if (e.fireCooldown <= 0) {
-        if (e.type === 'shooter' && distToPlayer < C.player.radius * 16) {
-          fireProjectile(g, e.x, e.y, angle, C.weapons.missiles.baseSpeed, 15 * currentDiffMult, 'enemy_bullet');
-          e.fireCooldown = 1.8 + Math.random();
-        } else if (e.type === 'missile_boat' && distToPlayer < C.player.radius * 21) {
-          fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
-          fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
-          e.fireCooldown = 4.0;
-        }
-      }
-    }
+    tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g);
 
     // ── Enemy rams player ──
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {

@@ -2,7 +2,8 @@
  * systems/escort.js — Escort drone movement, evasion, collision, and mission checks.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, fireProjectile } from '../combat';
+import { createParticles } from '../combat';
+import { tryFireEnemyWeapon } from './enemyFire';
 
 /**
 
@@ -156,16 +157,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     const distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
     if (distToEscort < distToPlayer && distToEscort < C.enemies.spawnRadiusMin) {
       const angle = Math.atan2(esc.y - e.y, esc.x - e.x);
-      if (e.fireCooldown !== undefined && e.fireCooldown <= 0) {
-        if (e.type === 'shooter' && distToEscort < C.player.radius * 16) {
-          fireProjectile(g, e.x, e.y, angle, C.weapons.missiles.baseSpeed, 15 * currentDiffMult, 'enemy_bullet');
-          e.fireCooldown = 1.8 + Math.random();
-        } else if (e.type === 'missile_boat' && distToEscort < C.player.radius * 21) {
-          fireProjectile(g, e.x, e.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
-          fireProjectile(g, e.x, e.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
-          e.fireCooldown = 4.0;
-        }
-      }
+      tryFireEnemyWeapon(e, angle, distToEscort, dt, currentDiffMult, g);
     }
   }
 
