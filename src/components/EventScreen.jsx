@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { EVENTS_DATA } from '../constants/events';
 
-export default function EventScreen({ gameRef, setGameState, setUiScrap, setUiLevels }) {
+export default function EventScreen(  { gameRef, setGameState, setUiScrap, setUiLevels }) {
   const [eventData, setEventData] = useState(null);
 
   useEffect(() => {

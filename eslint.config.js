@@ -24,6 +24,32 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Game uses mutable-ref architecture for engine state - refs are accessed during render intentionally
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
+    },
+  },
+  // Test files need vitest globals and more lenient unused-vars
+  {
+    files: ['src/tests/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        vi: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        global: 'readonly',
+      },
+    },
+    rules: {
+      // Tests often import vitest APIs and destructure values they don't use
+      'no-unused-vars': ['error', { varsIgnorePattern: '.*', argsIgnorePattern: '.*' }],
     },
   },
 ])

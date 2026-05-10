@@ -1,7 +1,7 @@
 import React from 'react';
 import { Heart, RotateCcw } from 'lucide-react';
 
-export default function GameOverScreen({ gameRef, startGame }) {
+export default function GameOverScreen(  { gameRef, startGame }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-950/90 text-white z-50 backdrop-blur-md">
       <Heart className="w-24 h-24 text-red-500 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]" />

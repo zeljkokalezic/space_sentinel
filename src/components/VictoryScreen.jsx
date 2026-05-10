@@ -1,7 +1,7 @@
 import React from 'react';
 import { Shield, RotateCcw } from 'lucide-react';
 
-export default function VictoryScreen({ gameRef, startGame }) {
+export default function VictoryScreen(  { gameRef, startGame }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-cyan-950/90 text-white z-50 backdrop-blur-md">
       <Shield className="w-24 h-24 text-cyan-400 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(34,211,238,0.8)]" />

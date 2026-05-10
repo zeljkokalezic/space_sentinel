@@ -15,7 +15,6 @@ export const useInput = ({
   threeRef,       // useRef from useGameLoop — .current is the Three.js scene
   gameState,
   statusRef,      // useRef synced to gameState
-  devMode,
   setGameState,
   setDevMode,
   startGame,

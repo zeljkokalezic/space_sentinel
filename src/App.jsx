@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-import { generateMap }             from './engine/mapGenerator';
-import { setupEscort, resetEscort } from './engine/escortSetup';
+import { generateMap }          from './engine/mapGenerator';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
 import { GAME_CONFIG }             from './constants/gameConfig';
@@ -144,6 +143,7 @@ export default function App() {
       <canvas ref={canvasRef} className={`absolute inset-0 pointer-events-none z-20 ${gameState === 'playing' ? 'opacity-100' : 'opacity-0'}`} />
 
       {/* Sector Map */}
+      { }
       {gameState === 'map' && (
         <MapOverlay
           game={game.current}

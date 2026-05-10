@@ -54,11 +54,10 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     esc.evasionTimer -= dt;
     if (esc.evasionTimer <= 0) {
       let threat = null;
-      let closestThreatDist = C.escort.evasionThreatRadius;
       for (let p of g.projectiles) {
         if (!p.active || !p.isEnemy) continue;
         const pd = Math.hypot(p.x - esc.x, p.y - esc.y);
-        if (pd < closestThreatDist) {
+        if (pd < C.escort.evasionThreatRadius) {
           const pAngle = Math.atan2(p.vy, p.vx);
           const toDroneAngle = Math.atan2(esc.y - p.y, esc.x - p.x);
           let angleDiff = toDroneAngle - pAngle;
@@ -66,7 +65,6 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
           while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
           if (Math.abs(angleDiff) < Math.PI / 2) {
             threat = p;
-      let closestThreatDist = C.escort.evasionThreatRadius;
           }
         }
       }

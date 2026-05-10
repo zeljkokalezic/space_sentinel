@@ -41,9 +41,10 @@ export const useGameLoop = ({
   const physicsCbs = { setGameState: devAwareSetState, setMapStateVersion };
 
   useEffect(() => {
+    const containerEl = containerRef.current;
     // Init Three.js scene
     if (!threeRef.current) {
-      threeRef.current = initThreeScene(containerRef.current);
+      threeRef.current = initThreeScene(containerEl);
     }
 
     const loop = (time) => {
@@ -77,8 +78,8 @@ export const useGameLoop = ({
     return () => {
       cancelAnimationFrame(reqRef.current);
       window.removeEventListener('resize', handleResize);
-      if (threeRef.current && containerRef.current) {
-        containerRef.current.removeChild(threeRef.current.renderer.domElement);
+      if (threeRef.current && containerEl) {
+        containerEl.removeChild(threeRef.current.renderer.domElement);
         threeRef.current.renderer.dispose();
         threeRef.current = null;
       }

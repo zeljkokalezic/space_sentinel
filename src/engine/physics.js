@@ -8,7 +8,7 @@
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { spawnEnemy } from './spawner';
-import { getNearestEnemy, fireProjectile, createParticles } from './combat';
+import { getNearestEnemy } from './combat';
 
 // Systems
 import { updateTransition, createCompleteMission, checkMissionProgress } from './systems/mission';
@@ -22,7 +22,7 @@ import { updateEscort } from './systems/escort';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
-  const { setGameState, setMapStateVersion } = cbs;
+  const { setGameState } = cbs;
 
   // ─── Transition timer (runs after mission complete, before returning to map) ───
   if (updateTransition(dt, g, cbs)) return;

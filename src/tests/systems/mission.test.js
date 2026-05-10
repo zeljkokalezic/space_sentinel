@@ -411,7 +411,7 @@ describe('updateTransition', () => {
   it('calls setMapStateVersion on map transition', () => {
     const g = createTestState({ transitionTimer: 1 });
     const setGameState = vi.fn();
-    const setMapStateVersion = vi.fn((fn) => {
+    const setMapStateVersion = vi.fn((_fn) => {
       // Simulate the functional updater pattern
     });
     updateTransition(1, g, { setGameState, setMapStateVersion });
