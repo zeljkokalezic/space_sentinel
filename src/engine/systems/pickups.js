@@ -23,7 +23,7 @@ export const updatePickups = (dt, g, completeMission) => {
         g.scrap += p.value;
         g.totalScrapEarned += p.value;
         p.active = false;
-        if (g.mission.type === 'collect') {
+        if (g.mission && g.mission.type === 'collect') {
           g.mission.current += p.value;
           if (g.mission.current >= g.mission.target) completeMission();
         }
