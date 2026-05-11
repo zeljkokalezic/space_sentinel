@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { generateMap } from '../engine/mapGenerator';
 
-const VALID_TYPES = ['combat', 'event', 'shop', 'repair', 'elite', 'boss'];
+const VALID_TYPES = ['combat', 'event', 'shop', 'repair', 'elite', 'boss', 'defend', 'escort'];
+const GUARANTEED_TYPES = ['combat', 'event', 'shop', 'repair', 'elite', 'boss']; // defend is random, not guaranteed
 const ROWS = 15;
 const COLS = 5;
 
@@ -241,9 +242,9 @@ describe('generateMap()', () => {
 
   // ---- 10. Node type distribution ----
   describe('node type distribution', () => {
-    it('contains at least one node of each type: combat, event, shop, repair, elite, boss', () => {
+    it('contains at least one node of each guaranteed type: combat, event, shop, repair, elite, boss', () => {
       const presentTypes = new Set(map.nodes.map((n) => n.type));
-      for (const t of VALID_TYPES) {
+      for (const t of GUARANTEED_TYPES) {
         expect(presentTypes.has(t)).toBe(true);
       }
     });

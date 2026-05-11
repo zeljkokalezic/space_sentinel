@@ -49,6 +49,8 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
     : g.mission.type==='escort'
     ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
+    : g.mission.type==='defend'
+    ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
     : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
   c.fillText(mTxt, w/2, 18);
 
@@ -90,6 +92,18 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.beginPath(); c.arc(destSp.x, destSp.y, 12, 0, Math.PI*2); c.stroke();
       c.fillStyle='#22ff22'; c.font='bold 10px monospace'; c.textAlign='center';
       c.fillText('DEST', destSp.x, destSp.y - 18);
+    }
+  }
+
+  // Beacon HP bar
+  if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
+    const bc = g.beacon;
+    const bsp = projectFn(camera, bc.x, bc.y, 0);
+    if (bsp.visible) {
+      c.fillStyle='rgba(34,211,238,0.2)'; c.fillRect(bsp.x-25,bsp.y-25,50,5);
+      c.fillStyle='#22d3ee'; c.fillRect(bsp.x-25,bsp.y-25,50*Math.max(0,bc.hp/bc.maxHp),5);
+      c.fillStyle='#22d3ee'; c.font='bold 10px monospace'; c.textAlign='center';
+      c.fillText(`BEACON [${Math.ceil(bc.hp)}HP]`, bsp.x, bsp.y-30);
     }
   }
 
@@ -153,6 +167,18 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     if (destD <= rRange) {
       const {px,py} = toR(g.escort.targetX, g.escort.targetY);
       c.strokeStyle='#22ff22'; c.lineWidth=1; c.beginPath(); c.arc(px,py,5,0,Math.PI*2); c.stroke();
+    }
+  }
+
+  // Beacon on radar
+  if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
+    const bc = g.beacon;
+    const bd = Math.hypot(bc.x-g.player.x, bc.y-g.player.y);
+    if (bd <= rRange) {
+      const {px,py} = toR(bc.x, bc.y);
+      c.fillStyle='#22d3ee'; c.beginPath();
+      c.moveTo(px,py-5); c.lineTo(px+4,py); c.lineTo(px,py+5); c.lineTo(px-4,py);
+      c.closePath(); c.fill();
     }
   }
 

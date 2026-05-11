@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon } from 'lucide-react';
+import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield } from 'lucide-react';
 import { enterNodeMission } from '../engine/missionSetup';
 
 /**
@@ -99,6 +99,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
       <div className="absolute bottom-8 left-4 md:left-8 bg-[#0a0a14]/90 border border-gray-700 rounded-xl p-5 font-sans text-sm flex flex-col gap-3 shadow-2xl z-50 backdrop-blur-md">
         <div className="text-gray-400 font-black mb-1 border-b border-gray-700 pb-2 tracking-widest text-xs uppercase">Node Legend</div>
         <div className="flex items-center gap-3"><Target       className="w-5 h-5 text-cyan-400"   /> <span className="text-gray-300 font-bold">Standard Combat</span></div>
+        <div className="flex items-center gap-3"><Navigation   className="w-5 h-5 text-pink-400"   /> <span className="text-gray-300 font-bold">Escort Drone</span></div>
+        <div className="flex items-center gap-3"><Shield       className="w-5 h-5 text-blue-400"    /> <span className="text-gray-300 font-bold">Defend Beacon</span></div>
         <div className="flex items-center gap-3"><Activity     className="w-5 h-5 text-purple-400" /> <span className="text-gray-300 font-bold">Elite Encounter</span></div>
         <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-yellow-400"/> <span className="text-gray-300 font-bold">Unknown Anomaly</span></div>
         <div className="flex items-center gap-3"><Wrench       className="w-5 h-5 text-blue-400"   /> <span className="text-gray-300 font-bold">Systems Shop</span></div>

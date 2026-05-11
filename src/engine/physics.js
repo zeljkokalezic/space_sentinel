@@ -20,6 +20,7 @@ import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
 import { updateParticles, updateEffects } from './systems/particles';
 import { updateEscort } from './systems/escort';
+import { updateBeacon } from './systems/beacon';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
@@ -94,6 +95,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Escort mission logic ────────────────────────────────────────────────────
   if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;
+
+  // ─── Beacon mission logic ────────────────────────────────────────────────────
+  if (updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)) return;
 
   // ─── Pool cleanup (every 5 seconds) ──────────────────────────────────────────
   cleanup(dt, g);

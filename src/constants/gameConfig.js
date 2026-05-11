@@ -107,6 +107,15 @@ export const GAME_CONFIG = {
     respawnSpread: 100,
   },
 
+  beacon: {
+    baseHp: 200,
+    hpPerLevel: 50,
+    spawnSpread: 400,
+    radius: 30,
+    defenseRadius: 250,
+    color: 0x22d3ee,
+  },
+
   cleanup: {
     interval: 5.0,
   },

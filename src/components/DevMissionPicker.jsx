@@ -12,6 +12,7 @@ const MISSION_TYPES = [
   { id: 'collect',    label: 'Collect',    icon: Package,   color: 'green',  desc: 'Collect N scrap from enemies' },
   { id: 'survive',    label: 'Survive',    icon: Timer,     color: 'orange', desc: 'Survive for N seconds' },
   { id: 'escort',     label: 'Escort',     icon: Navigation, color: 'pink',  desc: 'Protect a drone to its destination' },
+  { id: 'defend',     label: 'Defend',     icon: Shield,    color: 'blue',   desc: 'Defend a position from waves' },
   { id: 'kill_elite', label: 'Elite Hunt', icon: Activity,  color: 'purple', desc: 'Destroy elite-tier enemies' },
   { id: 'kill_boss',  label: 'Boss Rush',  icon: Skull,     color: 'red',    desc: 'Fight the Sentinel Core boss' },
 ];
@@ -21,6 +22,7 @@ const COLOR_MAP = {
   green:  { border: 'border-green-500', bg: 'bg-green-900/40',  text: 'text-green-400',   glow: 'shadow-[0_0_15px_#22c55e]' },
   orange: { border: 'border-orange-500', bg: 'bg-orange-900/40', text: 'text-orange-400',  glow: 'shadow-[0_0_15px_#f97316]' },
   pink:   { border: 'border-pink-500',  bg: 'bg-pink-900/40',   text: 'text-pink-400',    glow: 'shadow-[0_0_15px_#ec4899]' },
+  blue:   { border: 'border-blue-500',  bg: 'bg-blue-900/40',   text: 'text-blue-400',    glow: 'shadow-[0_0_15px_#3b82f6]' },
   purple: { border: 'border-purple-500', bg: 'bg-purple-900/40', text: 'text-purple-400',  glow: 'shadow-[0_0_15px_#a855f7]' },
   red:    { border: 'border-red-500',   bg: 'bg-red-900/40',    text: 'text-red-400',     glow: 'shadow-[0_0_15px_#ef4444]' },
 };

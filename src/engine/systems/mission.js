@@ -24,7 +24,8 @@ export const updateTransition = (dt, g, cbs) => {
     }
     g.transitionTimer = undefined;
     g.enemies = []; g.projectiles = []; g.particles = []; g.pickups = []; g.effects = [];
-    g.escort.active = false;
+    if (g.escort) g.escort.active = false;
+    if (g.beacon) g.beacon.active = false;
   }
   return true;
 };
@@ -37,7 +38,7 @@ export const updateTransition = (dt, g, cbs) => {
  */
 export const checkMissionProgress = (dt, g, completeMission) => {
   if (!g.mission || g.mission.completed) return;
-  if (g.mission.type === 'survive') {
+  if (g.mission.type === 'survive' || g.mission.type === 'defend') {
     g.mission.current += dt;
     if (g.mission.current >= g.mission.target) completeMission();
   }

@@ -46,6 +46,7 @@ export default function App() {
       collect: 'collect',
       survive: 'survive',
       escort: 'escort',
+      defend: 'defend',
       kill_elite: 'elite',
       kill_boss: 'boss',
     };

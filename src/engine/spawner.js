@@ -34,10 +34,10 @@ export const generateMission = (level, nodeType) => {
 
   // If nodeType explicitly specifies a mission type, use it directly.
   // Only randomise when nodeType is 'combat' (normal map generation).
-  if (['kill', 'collect', 'survive', 'escort'].includes(nodeType)) {
+  if (['kill', 'collect', 'survive', 'escort', 'defend'].includes(nodeType)) {
     t = nodeType;
   } else {
-    const types = ['kill', 'survive', 'collect', 'escort'];
+    const types = ['kill', 'survive', 'collect', 'escort', 'defend'];
     t = types[Math.floor(Math.random() * types.length)];
     if (level === 1) t = 'kill';
     if (level === 2) t = 'collect';
@@ -55,6 +55,11 @@ export const generateMission = (level, nodeType) => {
     target = 20 + level * 10;
     title = `Survive for ${target} Seconds`;
     reward = 80 + level * 15;
+  } else if (t === 'defend') {
+    target = 30 + level * 10;
+    title = `Defend the Beacon for ${target} Seconds`;
+    reward = 100 + level * 30;
+    return { type: t, target, current: 0, title, reward };
   } else {
     // Escort mission — protect a drone as it travels to a destination
     title = 'Escort the Drone to Safety';

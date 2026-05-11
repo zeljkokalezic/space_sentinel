@@ -65,6 +65,14 @@ describe('generateMission', () => {
     expect(m.reward).toBe(120 + 5 * 35); // 295
   });
 
+  // ---------- 6b. 'defend' ----------
+  it('defend -> type="defend", target=30+level*10, reward=100+level*30', () => {
+    const m = generateMission(4, 'defend');
+    expect(m.type).toBe('defend');
+    expect(m.target).toBe(30 + 4 * 10); // 70
+    expect(m.reward).toBe(100 + 4 * 30); // 220
+  });
+
   // ---------- 7. 'combat' at level 1 -> always 'kill' ----------
   it('combat at level 1 -> always "kill" type', () => {
     // Run multiple times to cover the random branch — level 1 forces 'kill'
@@ -84,7 +92,7 @@ describe('generateMission', () => {
 
   // ---------- 9. All missions have current=0 ----------
   it('all missions have current=0 initially', () => {
-    const nodeTypes = ['boss', 'elite', 'kill', 'collect', 'survive', 'escort'];
+    const nodeTypes = ['boss', 'elite', 'kill', 'collect', 'survive', 'escort', 'defend'];
     for (const nt of nodeTypes) {
       const m = generateMission(1, nt);
       expect(m.current).toBe(0);
@@ -93,7 +101,7 @@ describe('generateMission', () => {
 
   // ---------- 10. All missions have title string ----------
   it('all missions have a title string', () => {
-    const nodeTypes = ['boss', 'elite', 'kill', 'collect', 'survive', 'escort'];
+    const nodeTypes = ['boss', 'elite', 'kill', 'collect', 'survive', 'escort', 'defend'];
     for (const nt of nodeTypes) {
       const m = generateMission(1, nt);
       expect(typeof m.title).toBe('string');
@@ -103,7 +111,7 @@ describe('generateMission', () => {
 
   // ---------- 11. Target scales with level ----------
   it('target scales with level (higher level = higher target)', () => {
-    const scalingTypes = ['kill', 'collect', 'survive'];
+    const scalingTypes = ['kill', 'collect', 'survive', 'defend'];
     for (const nt of scalingTypes) {
       const low = generateMission(1, nt).target;
       const high = generateMission(10, nt).target;
@@ -113,7 +121,7 @@ describe('generateMission', () => {
 
   // ---------- Bonus: reward scales with level ----------
   it('reward scales with level for all node types', () => {
-    const nodeTypes = ['boss', 'elite', 'kill', 'collect', 'survive', 'escort'];
+    const nodeTypes = ['boss', 'elite', 'kill', 'collect', 'survive', 'escort', 'defend'];
     for (const nt of nodeTypes) {
       const low = generateMission(1, nt).reward;
       const high = generateMission(10, nt).reward;
@@ -126,10 +134,10 @@ describe('generateMission', () => {
     }
   });
 
-  // ---------- Bonus: 'combat' at level 3+ can produce any of the 4 types ----------
-  it('combat at level 3+ can produce kill/collect/survive/escort types', () => {
+  // ---------- Bonus: 'combat' at level 3+ can produce any of the 5 types ----------
+  it('combat at level 3+ can produce kill/collect/survive/escort/defend types', () => {
     const seen = new Set();
-    // With enough iterations we should hit all 4 types
+    // With enough iterations we should hit all 5 types
     for (let i = 0; i < 500; i++) {
       const m = generateMission(5, 'combat');
       seen.add(m.type);
@@ -138,6 +146,7 @@ describe('generateMission', () => {
     expect(seen.has('collect')).toBe(true);
     expect(seen.has('survive')).toBe(true);
     expect(seen.has('escort')).toBe(true);
+    expect(seen.has('defend')).toBe(true);
   });
 });
 

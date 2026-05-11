@@ -217,6 +217,26 @@ export const draw3DFrame = (threeObj, g) => {
     dm.children[1].rotation.z += 0.02; // Spin the ring
   }
 
+  // Beacon (defend mission)
+  if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
+    const bm = getMesh(g.beacon, () => {
+      const m = new THREE.Mesh(geoms.tetra, new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true }));
+      m.scale.set(g.beacon.radius, g.beacon.radius, g.beacon.radius);
+      return m;
+    });
+    bm.position.set(g.beacon.x, g.beacon.y, 0);
+  }
+
+  // Beacon shield ring
+  if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
+    const shieldMesh = getMesh(g.beacon + '_shield', () => {
+      const ringGeom = new THREE.RingGeometry(g.beacon.radius + 5, g.beacon.radius + 10, 16);
+      const m = new THREE.Mesh(ringGeom, new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.3 }));
+      return m;
+    });
+    shieldMesh.position.set(g.beacon.x, g.beacon.y, 0);
+  }
+
   // Destination marker
   if (g.escort.active && g.escort.hp > 0) {
     const dest = g.escort;
