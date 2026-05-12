@@ -5,14 +5,26 @@
  * - checkMissionProgress (survive missions, early returns)
  * - createCompleteMission (rewards, effects, map updates, victory flag, level increment)
  * - updateTransition (countdown, map/victory routing, state cleanup)
+ * - SoundManager.play('mission_complete') on mission completion
+ * - triggerGameOver / SoundManager.play('game_over') on player death
  *
  * Run:  npm run test:run -- src/tests/systems/mission.test.js
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+/* ──────────────────────────────────────────────
+ * Mock SoundManager so we can assert .play() calls
+ * vi.hoisted ensures mockPlay exists before vi.mock hoisting
+ * ────────────────────────────────────────────── */
+const mockPlay = vi.hoisted(() => vi.fn());
+vi.mock('../../engine/audio', () => ({
+  SoundManager: { play: mockPlay },
+}));
 import {
   checkMissionProgress,
   createCompleteMission,
   updateTransition,
+  triggerGameOver,
 } from '../../engine/systems/mission';
 import { createTestState, createTestEnemy } from '../helpers';
 import { GAME_CONFIG } from '../../constants/gameConfig';
@@ -26,6 +38,10 @@ beforeEach(() => {
     writable: true,
     configurable: true,
   });
+});
+
+afterEach(() => {
+  mockPlay.mockClear();
 });
 
 /* ──────────────────────────────────────────────
@@ -561,7 +577,69 @@ describe('integration: survive mission full flow', () => {
     expect(g.mission.completed).toBe(true);
     expect(g.scrap).toBe(500);
     expect(g.isVictory).toBe(true);
-    expect(setGameState).toHaveBeenCalledWith('victory');
-    expect(setMapStateVersion).not.toHaveBeenCalled();
+ expect(setGameState).toHaveBeenCalledWith('victory');
+  expect(setMapStateVersion).not.toHaveBeenCalled();
+  });
+});
+
+/* ──────────────────────────────────────────────
+ * 5. SoundManager.play('mission_complete') on completion
+ * ────────────────────────────────────────────── */
+describe('SoundManager.play on mission complete', () => {
+  it('plays mission_complete sound when mission completes', () => {
+    const g = createTestState({
+      mission: { type: 'kill', current: 5, target: 5, reward: 30, completed: false },
+    });
+    const complete = createCompleteMission(g);
+    complete();
+    expect(mockPlay).toHaveBeenCalledWith('mission_complete');
+  });
+
+  it('does not play mission_complete sound on second (idempotent) call', () => {
+    const g = createTestState({
+      mission: { type: 'kill', current: 5, target: 5, reward: 30, completed: false },
+    });
+    const complete = createCompleteMission(g);
+    complete();
+    complete();
+    // Only one call — idempotent guard prevents replay
+    expect(mockPlay).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays mission_complete sound for survive mission', () => {
+    const g = createTestState({
+      mission: { type: 'survive', current: 10, target: 10, reward: 30, completed: false },
+    });
+    const complete = createCompleteMission(g);
+    complete();
+    expect(mockPlay).toHaveBeenCalledWith('mission_complete');
+  });
+
+  it('plays mission_complete sound for kill_boss mission', () => {
+    const g = createTestState({
+      mission: { type: 'kill_boss', current: 1, target: 1, reward: 500, completed: false },
+    });
+    const complete = createCompleteMission(g);
+    complete();
+    expect(mockPlay).toHaveBeenCalledWith('mission_complete');
+  });
+});
+
+/* ──────────────────────────────────────────────
+ * 6. triggerGameOver — plays game_over sound
+ * ────────────────────────────────────────────── */
+describe('triggerGameOver', () => {
+  it('plays game_over sound', () => {
+    const g = createTestState();
+    triggerGameOver(g);
+    expect(mockPlay).toHaveBeenCalledWith('game_over');
+  });
+
+  it('can be called multiple times (e.g. from different death sources)', () => {
+    const g = createTestState();
+    triggerGameOver(g);
+    triggerGameOver(g);
+    expect(mockPlay).toHaveBeenCalledTimes(2);
+    expect(mockPlay).toHaveBeenCalledWith('game_over');
   });
 });

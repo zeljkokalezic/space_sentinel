@@ -6,6 +6,11 @@
 // Radar sweep angle persists across frames
 let radarAngle = 0;
 
+// ── Mute button layout constants ──────────────────────────────────────────────
+export const MUTE_BTN_X_OFFSET = 20;   // px from right edge
+export const MUTE_BTN_Y        = 68;   // px from top (below the 60px top bar)
+export const MUTE_BTN_SIZE     = 40;   // button is a square
+
 /**
  * Draw the 2D HUD overlay on the canvas element.
  * @param {THREE.PerspectiveCamera} camera — Three.js camera for world-to-screen projection
@@ -55,6 +60,70 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     ? `LEVEL ${g.level}: ${g.mission.title} [${g.mission.current} / ${g.mission.target}]`
     : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
   c.fillText(mTxt, w/2, 18);
+
+  // ── Mute toggle button (top-right, below top bar) ──────────────────────────
+  const muted = g.audio?.muted ?? false;
+  const btnX = w - MUTE_BTN_X_OFFSET - MUTE_BTN_SIZE;
+  const btnY = MUTE_BTN_Y;
+  const btnCX = btnX + MUTE_BTN_SIZE / 2;
+  const btnCY = btnY + MUTE_BTN_SIZE / 2;
+
+  // Button background
+  c.fillStyle = muted ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.12)';
+  c.strokeStyle = muted ? '#ef4444' : 'rgba(255,255,255,0.5)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.roundRect(btnX, btnY, MUTE_BTN_SIZE, MUTE_BTN_SIZE, 6);
+  c.fill(); c.stroke();
+
+  // Speaker icon (triangle body + curved horn)
+  c.fillStyle = muted ? '#ef4444' : '#ffffff';
+  // Speaker body (left triangle)
+  c.beginPath();
+  c.moveTo(btnCX - 8, btnCY - 5);
+  c.lineTo(btnCX - 8, btnCY + 5);
+  c.lineTo(btnCX - 2, btnCY + 8);
+  c.lineTo(btnCX - 2, btnCY - 8);
+  c.closePath();
+  c.fill();
+  // Speaker cone
+  c.beginPath();
+  c.moveTo(btnCX - 2, btnCY - 4);
+  c.lineTo(btnCX - 2, btnCY + 4);
+  c.lineTo(btnCX + 3, btnCY + 7);
+  c.lineTo(btnCX + 3, btnCY - 7);
+  c.closePath();
+  c.fill();
+  // Sound waves (right arcs)
+  c.lineWidth = 2;
+  c.strokeStyle = muted ? '#ef4444' : '#ffffff';
+  c.beginPath();
+  c.arc(btnCX + 3, btnCY, 5, -0.6, 0.6);
+  c.stroke();
+  c.beginPath();
+  c.arc(btnCX + 3, btnCY, 9, -0.45, 0.45);
+  c.stroke();
+
+  // Muted state: draw X through the icon
+  if (muted) {
+    c.strokeStyle = '#ef4444';
+    c.lineWidth = 3;
+    const xOff = 7;
+    c.beginPath();
+    c.moveTo(btnCX - xOff, btnCY - xOff);
+    c.lineTo(btnCX + xOff, btnCY + xOff);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(btnCX + xOff, btnCY - xOff);
+    c.lineTo(btnCX - xOff, btnCY + xOff);
+    c.stroke();
+  }
+
+  // Mute label
+  c.fillStyle = muted ? '#ef4444' : 'rgba(255,255,255,0.6)';
+  c.font = 'bold 9px monospace';
+  c.textAlign = 'center';
+  c.fillText(muted ? 'MUTED' : 'AUDIO', btnCX, btnY + MUTE_BTN_SIZE + 12);
 
   // Touch joystick
   if (g.touchBase && g.touchCurrent) {

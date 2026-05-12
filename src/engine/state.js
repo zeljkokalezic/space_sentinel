@@ -54,6 +54,9 @@
  * @property {number} [touchId] — Active touch pointer ID
  * @property {Object|null} [touchBase] — Touch joystick base position
  * @property {Object|null} [touchCurrent] — Touch joystick current position
+ * @property {Object} audio — Audio system state
+ * @property {boolean} audio.muted — Whether audio is muted
+ * @property {number} audio.volume — Master volume (0.0–1.0)
  * @property {number} [_cleanupTimer] — Internal cleanup interval timer
  */
 
@@ -91,6 +94,7 @@ export const createGameState = () => ({
   keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
   touchId: null, touchBase: null, touchCurrent: null,
   devMode: false,
+  audio: { muted: false, volume: 0.5 },
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 

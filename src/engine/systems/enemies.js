@@ -4,6 +4,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
+import { SoundManager } from '../audio';
 
 /**
 
@@ -42,10 +43,14 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
       const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
       let dmg = baseDmg * currentDiffMult;
+      let shieldAbsorbed = false;
       if (g.player.shield > 0) {
         const absorb = Math.min(g.player.shield, dmg);
         g.player.shield -= absorb; dmg -= absorb;
+        if (absorb > 0) shieldAbsorbed = true;
       }
+      if (shieldAbsorbed) SoundManager.play('shield_hit');
+      else SoundManager.play('player_hit');
       g.player.hp -= dmg;
       let eDamage = C.weapons.missiles.baseDamage;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }

@@ -427,7 +427,35 @@ describe('createGameState', () => {
   });
 
   /* ──────────────────────────────────────────────
-   * 13. Other top-level fields
+   * 13. Audio state
+   * ────────────────────────────────────────────── */
+  describe('audio', () => {
+    it('has an audio object', () => {
+      expect(typeof state.audio).toBe('object');
+      expect(state.audio).not.toBeNull();
+    });
+
+    it('muted defaults to false', () => {
+      expect(state.audio.muted).toBe(false);
+    });
+
+    it('volume defaults to 0.5', () => {
+      expect(state.audio.volume).toBe(0.5);
+    });
+
+    it('audio object is independent across calls', () => {
+      const s1 = createGameState();
+      const s2 = createGameState();
+      expect(s1.audio).not.toBe(s2.audio);
+      s1.audio.muted = true;
+      expect(s2.audio.muted).toBe(false);
+      s1.audio.volume = 1;
+      expect(s2.audio.volume).toBe(0.5);
+    });
+  });
+
+  /* ──────────────────────────────────────────────
+   * 14. Other top-level fields
    * ────────────────────────────────────────────── */
   describe('other top-level fields', () => {
     it('spawnCooldown is 2', () => {

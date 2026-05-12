@@ -3,6 +3,7 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles } from '../combat';
+import { SoundManager } from '../audio';
 
 /**
 
@@ -68,6 +69,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
       for (let e of g.enemies) {
         if (!e.active || p.hitList.includes(e.id)) continue;
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
+          SoundManager.play('hit');
           let actualDmg = p.damage;
           if (e.shield > 0) { const absorb = Math.min(e.shield, actualDmg); e.shield -= absorb; actualDmg -= absorb; }
           e.hp -= actualDmg;

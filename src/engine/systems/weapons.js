@@ -3,6 +3,7 @@
  */
 import { fireProjectile, getNearestEnemy } from '../combat';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { SoundManager } from '../audio';
 
 /**
  * @param {number} dt — Delta time
@@ -16,6 +17,7 @@ export const updateWeapons = (dt, g) => {
 
   // ── Autocannon ──
   if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0 && hasTarget) {
+    SoundManager.play('shoot');
     const angle = g.player.aimAngle;
     const dmg = C.weapons.autocannon.baseDamage + g.levels.autocannon * C.weapons.autocannon.damagePerLevel;
     const shots = 1 + Math.floor(g.levels.autocannon / C.weapons.autocannon.shotsPerExtraLevels);
@@ -32,6 +34,7 @@ export const updateWeapons = (dt, g) => {
 
   // ── Plasma Piercer ──
   if (g.levels.plasma > 0 && g.cooldowns.plasma <= 0 && hasTarget) {
+    SoundManager.play('shoot_plasma');
     const angle = g.player.aimAngle;
     const shots = 1 + Math.floor(g.levels.plasma / C.weapons.plasma.shotsPerExtraLevels);
     const perpX = -Math.sin(angle);
@@ -47,6 +50,7 @@ export const updateWeapons = (dt, g) => {
 
   // ── Missiles (360-degree ring) ──
   if (g.levels.missiles > 0 && g.cooldowns.missiles <= 0) {
+    SoundManager.play('shoot_missile');
     const count = g.levels.missiles;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i;

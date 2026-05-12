@@ -2,6 +2,7 @@
  * systems/mission.js — Mission completion detection, rewards, map progression, transition timer.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { SoundManager } from '../audio';
 
 /**
 
@@ -52,6 +53,7 @@ export const createCompleteMission = (g) => {
   const C = GAME_CONFIG;
   return () => {
     if (g.mission.completed) return;
+    SoundManager.play('mission_complete');
     g.scrap += g.mission.reward;
     g.totalScrapEarned += g.mission.reward;
     g.effects.push({
@@ -78,4 +80,12 @@ export const createCompleteMission = (g) => {
     }
     g.level++;
   };
+};
+
+/**
+ * Trigger game over: play the game_over sound.
+ * Call this when the player is destroyed (from enemies.js, escort.js, etc.).
+ */
+export const triggerGameOver = () => {
+  SoundManager.play('game_over');
 };

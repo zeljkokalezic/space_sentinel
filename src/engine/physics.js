@@ -22,6 +22,7 @@ import { updateParticles, updateEffects } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
+import { updateAudio } from './systems/audio';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
@@ -51,6 +52,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Player movement (yaw-based) ──────────────────────────────────────────────
   updatePlayer(dt, g);
+
+  // ─── Audio event detection & playback ─────────────────────────────────────────
+  updateAudio(dt, g);
 
   // ─── Aiming (turret tracking) ─────────────────────────────────────────────────
   let adx = g.worldMouse.x - g.player.x;

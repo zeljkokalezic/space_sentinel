@@ -9,6 +9,8 @@
  */
 import { useEffect } from 'react';
 import { raycastToPlane } from '../engine/renderer';
+import { SoundManager } from '../engine/audio';
+import { MUTE_BTN_X_OFFSET, MUTE_BTN_Y, MUTE_BTN_SIZE } from '../engine/renderer2d';
 
 export const useInput = ({
   game,
@@ -61,6 +63,22 @@ export const useInput = ({
 
   // ─── Pointer (mouse + touch) ───────────────────────────────────────────────
   const onPointerDown = (e) => {
+    // ── Mute button hit test (works in playing + shop states) ──────────────
+    if (game.current && (gameState === 'playing' || gameState === 'shop')) {
+      const w = window.innerWidth;
+      const btnX = w - MUTE_BTN_X_OFFSET - MUTE_BTN_SIZE;
+      const btnY = MUTE_BTN_Y;
+      if (
+        e.clientX >= btnX && e.clientX <= btnX + MUTE_BTN_SIZE &&
+        e.clientY >= btnY && e.clientY <= btnY + MUTE_BTN_SIZE
+      ) {
+        const nextMuted = !game.current.audio.muted;
+        game.current.audio.muted = nextMuted;
+        SoundManager.setMuted(nextMuted);
+        return;
+      }
+    }
+
     if (gameState !== 'playing' || !game.current) return;
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
       if (game.current.touchId === null) {

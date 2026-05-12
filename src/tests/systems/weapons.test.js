@@ -7,7 +7,7 @@
  *
  * Run:  npm run test:run -- src/tests/systems/weapons.test.js
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { updateWeapons } from '../../engine/systems/weapons';
 import { createTestState, createTestEnemy, createTestProjectile } from '../helpers';
 import { GAME_CONFIG } from '../../constants/gameConfig';
@@ -985,5 +985,50 @@ describe('edge cases', () => {
     updateWeapons(0.016, g);
     expect(g.projectiles[0].x).toBe(100);
     expect(g.projectiles[0].y).toBe(200);
+  });
+});
+
+/* ══════════════════════════════════════════════
+ * 7. Weapon fire sounds
+ * ══════════════════════════════════════════════ */
+describe('weapon fire sounds', () => {
+  let SoundManager;
+  let updateWeapons;
+
+  beforeEach(async () => {
+    ({ SoundManager } = await import('../../engine/audio'));
+    ({ updateWeapons } = await import('../../engine/systems/weapons'));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('plays "shoot" when autocannon fires', () => {
+    const spy = vi.spyOn(SoundManager, 'play');
+    const g = stateWithAutocannon();
+    updateWeapons(0.016, g);
+    expect(spy).toHaveBeenCalledWith('shoot');
+  });
+
+  it('plays "shoot_plasma" when plasma fires', () => {
+    const spy = vi.spyOn(SoundManager, 'play');
+    const g = stateWithPlasma();
+    updateWeapons(0.016, g);
+    expect(spy).toHaveBeenCalledWith('shoot_plasma');
+  });
+
+  it('plays "shoot_missile" when missiles fire', () => {
+    const spy = vi.spyOn(SoundManager, 'play');
+    const g = stateWithMissiles();
+    updateWeapons(0.016, g);
+    expect(spy).toHaveBeenCalledWith('shoot_missile');
+  });
+
+  it('does not play any sound when no weapon fires (cooldown active)', () => {
+    const spy = vi.spyOn(SoundManager, 'play');
+    const g = stateWithAutocannon({ cooldowns: { autocannon: 99, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 } });
+    updateWeapons(0.016, g);
+    expect(spy).not.toHaveBeenCalled();
   });
 });
