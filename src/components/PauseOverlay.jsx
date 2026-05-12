@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { SoundManager } from '../engine/audio';
 import SettingsOverlay from './SettingsOverlay';
 
-export default function PauseOverlay({ gameRef, startGame }) {
+export default function PauseOverlay({ gameRef, startGame, setPaused }) {
   const [showSettings, setShowSettings] = useState(false);
   const handleResume = () => {
     if (gameRef.current) {
       gameRef.current.paused = false;
     }
+    setPaused(false);
+    SoundManager.resume();
   };
 
   const handleRestart = () => {

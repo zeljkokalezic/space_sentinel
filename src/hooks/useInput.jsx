@@ -20,6 +20,8 @@ export const useInput = ({
   setGameState,
   setDevMode,
   startGame,
+  paused,
+  setPaused,
 }) => {
   // ─── Keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -36,9 +38,13 @@ export const useInput = ({
 
       if (key === 'escape' && !e.repeat) {
         if (statusRef.current === 'playing' && game.current) {
-          game.current.paused = !game.current.paused;
-          if (game.current.audio) {
-            SoundManager.setMuted(game.current.audio.muted);
+          const nextPaused = !game.current.paused;
+          game.current.paused = nextPaused;
+          setPaused(nextPaused);
+          if (nextPaused) {
+            SoundManager.pause();
+          } else {
+            SoundManager.resume();
           }
         }
         return;
@@ -69,7 +75,7 @@ export const useInput = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+   }, [setPaused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Pointer (mouse + touch) ───────────────────────────────────────────────
   const onPointerDown = (e) => {

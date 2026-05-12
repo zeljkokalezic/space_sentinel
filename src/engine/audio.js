@@ -465,6 +465,27 @@ class SoundManagerClass {
   }
 
   /**
+   * Pause the audio system (suspend AudioContext).
+   * Saves current state so resume() can restore it.
+   */
+  pause() {
+    if (!this.ctx) return;
+    this._pausedVolume = this._volume;
+    this._wasMuted = this._muted;
+    this.setMuted(true);
+    this.ctx.suspend();
+  }
+
+  /**
+   * Resume the audio system (resume AudioContext).
+   */
+  resume() {
+    if (!this.ctx) return;
+    this.ctx.resume();
+    this.setMuted(this._wasMuted ?? false);
+  }
+
+  /**
    * Stop the soundtrack system.
    */
   stopSoundtrack() {

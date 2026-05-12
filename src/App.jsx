@@ -25,6 +25,7 @@ export default function App() {
   const [uiLevels,        setUiLevels]        = useState(null);
   const [mapStateVersion, setMapStateVersion] = useState(0);
   const [devMode,         setDevMode]         = useState(false);
+  const [paused,          setPaused]          = useState(false);
 
   // ─── Mutable refs (shared across hooks) ─────────────────────────────────────
   const containerRef = useRef(null);
@@ -87,7 +88,7 @@ export default function App() {
   });
 
   const { onPointerDown, onPointerMove, onPointerUp } = useInput({
-    game, threeRef, gameState, statusRef, devMode, setGameState, setDevMode, startGame,
+    game, threeRef, gameState, statusRef, devMode, setGameState, setDevMode, startGame, paused, setPaused,
   });
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export default function App() {
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}
       {gameState === 'event'    && <EventScreen     gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}
       {gameState === 'dev'      && <DevMissionPicker onLaunch={launchDevMission} onExit={() => { setDevMode(false); setGameState('start'); }} />}
-      {gameState === 'playing' && game?.current?.paused && <PauseOverlay gameRef={game} startGame={startGame} />}
+      {gameState === 'playing' && paused && <PauseOverlay gameRef={game} startGame={startGame} setPaused={setPaused} />}
       {gameState === 'playing' && game?.current?.transitionTimer !== undefined && <PostMissionSummary game={game} visible={true} />}
       {gameState === 'playing' && <AchievementNotification game={game} visible={true} />}
     </div>
