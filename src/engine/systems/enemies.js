@@ -65,6 +65,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     // ── Enemy dies ──
     if (e.hp <= 0) {
       e.active = false;
+      if (g.stats) g.stats.enemiesDestroyed++;
       if (g.mission.type === 'kill') {
         g.mission.current++;
         if (g.mission.current >= g.mission.target) completeMission();

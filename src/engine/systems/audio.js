@@ -5,6 +5,11 @@
  * Detects transitions (new deaths, new pickups, new hits) by comparing
  * current game state against the previous frame stored in g.audio._prev.
  *
+ * Also manages procedural soundtrack intensity based on gameplay:
+ * - calm: Few enemies, high HP
+ * - tense: Many enemies or low HP
+ * - triumphant: Mission completion transition
+ *
  * @param {number} dt — Delta time (seconds)
  * @param {object} g — Game state
  */
@@ -17,6 +22,24 @@ function isPlaying(g) {
   if (!g.mission) return false;
   if (g.mission.completed) return false;
   return true;
+}
+
+/**
+ * Calculate soundtrack intensity from game state.
+ * @param {object} g — Game state
+ * @returns {'calm'|'tense'|'triumphant'}
+ */
+function calculateIntensity(g) {
+  const enemyCount = g.enemies?.filter(e => e.active).length || 0;
+  const hpPercent = g.player?.maxHp ? g.player.hp / g.player.maxHp : 1;
+
+  // Tense if many enemies or low HP
+  if (enemyCount >= 4 || hpPercent < 0.3) {
+    return 'tense';
+  }
+
+  // Calm otherwise
+  return 'calm';
 }
 
 /**
@@ -42,7 +65,7 @@ export const updateAudio = (dt, g) => {
   // Skip all audio when muted
   if (g.audio.muted) return;
 
-  // ── Continuous sounds: start engine + bg_drone once when playing ──
+  // ── Continuous sounds: start engine + soundtrack once when playing ──
   const playing = isPlaying(g);
 
   if (playing) {
@@ -50,13 +73,20 @@ export const updateAudio = (dt, g) => {
     if (!prevPlaying) {
       // Just transitioned into playing — start continuous sounds
       SoundManager.play('engine');
-      SoundManager.play('bg_drone');
+      SoundManager.startSoundtrack('calm');
+    }
+
+    // Update soundtrack intensity based on game state
+    const newIntensity = calculateIntensity(g);
+    const prevIntensity = g.audio._prev ? g.audio._prev.soundtrackIntensity : 'calm';
+    if (newIntensity !== prevIntensity) {
+      SoundManager.setSoundtrackIntensity(newIntensity);
     }
   } else {
     // Stopped playing — stop continuous sounds if they were running
     if (g.audio._prev && g.audio._prev.playing) {
       SoundManager.stop('engine');
-      SoundManager.stop('bg_drone');
+      SoundManager.stopSoundtrack();
     }
   }
 
@@ -136,4 +166,5 @@ export const updateAudio = (dt, g) => {
 
   // Playing state
   g.audio._prev.playing = playing;
+  g.audio._prev.soundtrackIntensity = SoundManager.getSoundtrackIntensity();
 };

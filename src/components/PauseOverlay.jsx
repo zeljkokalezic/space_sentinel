@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SoundManager } from '../engine/audio';
+import SettingsOverlay from './SettingsOverlay';
 
 export default function PauseOverlay({ gameRef, startGame }) {
+  const [showSettings, setShowSettings] = useState(false);
   const handleResume = () => {
     if (gameRef.current) {
       gameRef.current.paused = false;
@@ -35,6 +37,12 @@ export default function PauseOverlay({ gameRef, startGame }) {
             Resume
           </button>
           <button
+            onClick={() => setShowSettings(true)}
+            className="px-6 py-3 rounded-lg bg-purple-600/20 border border-purple-500/40 text-purple-300 hover:bg-purple-500/30 transition-colors font-medium"
+          >
+            Settings
+          </button>
+          <button
             onClick={handleRestart}
             className="px-6 py-3 rounded-lg bg-yellow-600/20 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/30 transition-colors font-medium"
           >
@@ -48,6 +56,7 @@ export default function PauseOverlay({ gameRef, startGame }) {
           </button>
         </div>
       </div>
+      {showSettings && <SettingsOverlay gameRef={gameRef} onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

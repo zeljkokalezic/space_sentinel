@@ -3,6 +3,8 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
+import { checkAchievements, saveAchievements, getAchievement } from '../achievements';
+import { autoSave } from '../saveManager';
 
 /**
 
@@ -47,6 +49,7 @@ export const checkMissionProgress = (dt, g, completeMission) => {
 
 /**
  * The actual mission completion logic: award scrap, update map, advance level.
+ * Also tracks persistent stats and checks achievements.
  * @param {object} g — Game state
  */
 export const createCompleteMission = (g) => {
@@ -56,6 +59,49 @@ export const createCompleteMission = (g) => {
     SoundManager.play('mission_complete');
     g.scrap += g.mission.reward;
     g.totalScrapEarned += g.mission.reward;
+
+    // Track persistent stats
+    if (!g.stats) {
+      g.stats = {
+        enemiesDestroyed: 0, totalScrap: 0,
+        surviveMissions: 0, escortMissions: 0,
+        defendMissions: 0, sabotageMissions: 0,
+        bossesDefeated: 0, upgradesMaxed: 0,
+      };
+    }
+    g.stats.totalScrap += g.mission.reward;
+    if (g.mission.type === 'survive') g.stats.surviveMissions++;
+    if (g.mission.type === 'escort') g.stats.escortMissions++;
+    if (g.mission.type === 'defend') g.stats.defendMissions++;
+    if (g.mission.type === 'sabotage') g.stats.sabotageMissions++;
+    if (g.mission.type === 'kill_boss') g.stats.bossesDefeated++;
+
+    // Check achievements
+    if (!g.achievements) {
+      g.achievements = { unlocked: new Set(), notifications: [] };
+    }
+    const result = checkAchievements(g.achievements.unlocked, {
+      ...g.stats,
+      level: g.level,
+      upgradesMaxed: countUpgradesMaxed(g.levels),
+    });
+    for (const id of result.newlyUnlocked) {
+      g.achievements.unlocked.add(id);
+      const def = getAchievement(id);
+      if (def) {
+        g.achievements.notifications.push({
+          id: def.id,
+          title: def.title,
+          description: def.description,
+          icon: def.icon,
+          timer: 6, // seconds to show
+        });
+      }
+    }
+    if (result.newlyUnlocked.length > 0) {
+      saveAchievements(g.achievements.unlocked);
+    }
+
     g.effects.push({
       type: 'mission_complete',
       x: window.innerWidth / 2,
@@ -65,6 +111,9 @@ export const createCompleteMission = (g) => {
     });
     g.mission.completed = true;
     g.transitionTimer = C.transition.duration;
+
+    // Auto-save on mission completion
+    autoSave(g);
 
     if (g.mission.type === 'kill_boss') g.isVictory = true;
 
@@ -81,6 +130,18 @@ export const createCompleteMission = (g) => {
     g.level++;
   };
 };
+
+/**
+ * Count how many upgrade types are at max level.
+ */
+function countUpgradesMaxed(levels) {
+  const MAX_LEVEL = 10;
+  let count = 0;
+  for (const key of Object.keys(levels)) {
+    if (levels[key] >= MAX_LEVEL) count++;
+  }
+  return count;
+}
 
 /**
  * Trigger game over: play the game_over sound.

@@ -68,6 +68,7 @@ export const generateMap = () => {
     }
 
     // Assign node types row by row to guarantee safe vertical distribution
+    let eliteAssigned = false;
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
             let node = grid[r][c];
@@ -94,7 +95,7 @@ export const generateMap = () => {
                  let isBeforeMidpoint = (r === Math.floor(rows / 2) - 1);
 
                 let rnum = Math.random();
-                 if (rnum > 0.90) node.type = 'elite';
+                 if (rnum > 0.90) { node.type = 'elite'; eliteAssigned = true; }
                  else if (rnum > 0.80) node.type = 'defend';
                  else if (rnum > 0.70) node.type = 'sabotage';
                  else if (rnum > 0.60) node.type = 'escort';
@@ -102,6 +103,19 @@ export const generateMap = () => {
                  else if (rnum > 0.22 && !hasShopParent && !isBeforeMidpoint) node.type = 'shop';
                  else if (rnum > 0.07) node.type = 'repair';
                  else node.type = 'combat';
+            }
+        }
+    }
+    
+    // Guarantee at least one elite node if none was assigned randomly
+    if (!eliteAssigned) {
+        for (let r = 2; r < rows - 2; r++) {
+            for (let c = 0; c < cols; c++) {
+                let node = grid[r][c];
+                if (node && node.type === 'combat') {
+                    node.type = 'elite';
+                    break;
+                }
             }
         }
     }

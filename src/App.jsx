@@ -7,14 +7,16 @@ import { setupCombatMission }      from './engine/missionSetup';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
 
-import MapOverlay    from './components/MapOverlay';
-import ShopOverlay   from './components/ShopOverlay';
-import StartScreen   from './components/StartScreen';
-import GameOverScreen from './components/GameOverScreen';
-import VictoryScreen from './components/VictoryScreen';
-import EventScreen   from './components/EventScreen';
-import DevMissionPicker from './components/DevMissionPicker';
-import PauseOverlay from './components/PauseOverlay';
+import MapOverlay             from './components/MapOverlay';
+import ShopOverlay            from './components/ShopOverlay';
+import StartScreen            from './components/StartScreen';
+import GameOverScreen         from './components/GameOverScreen';
+import VictoryScreen          from './components/VictoryScreen';
+import EventScreen            from './components/EventScreen';
+import DevMissionPicker       from './components/DevMissionPicker';
+import PauseOverlay           from './components/PauseOverlay';
+import PostMissionSummary     from './components/PostMissionSummary';
+import AchievementNotification from './components/AchievementNotification';
 
 export default function App() {
   // ─── React state ────────────────────────────────────────────────────────────
@@ -119,12 +121,14 @@ export default function App() {
       )}
 
       {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} />}
-      {gameState === 'start'    && <StartScreen    startGame={startGame} devMode={devMode} />}
+      {gameState === 'start'    && <StartScreen    startGame={startGame} devMode={devMode} gameRef={game} />}
       {gameState === 'gameover' && <GameOverScreen  gameRef={game} startGame={startGame} />}
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}
       {gameState === 'event'    && <EventScreen     gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}
       {gameState === 'dev'      && <DevMissionPicker onLaunch={launchDevMission} onExit={() => { setDevMode(false); setGameState('start'); }} />}
       {gameState === 'playing' && game?.current?.paused && <PauseOverlay gameRef={game} startGame={startGame} />}
+      {gameState === 'playing' && game?.current?.transitionTimer !== undefined && <PostMissionSummary game={game} visible={true} />}
+      {gameState === 'playing' && <AchievementNotification game={game} visible={true} />}
     </div>
   );
 }

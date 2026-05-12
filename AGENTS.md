@@ -131,3 +131,51 @@ When adding a new mission type, update ALL of the following:
 
 ## Deployment
 The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to build and publish to the `gh-pages` branch. This runs `npm run build` (via `predeploy`) then pushes `dist/` to the branch. Live site: https://zeljkokalezic.github.io/space_sentinel/
+
+## Audio System
+- **Module:** `engine/audio.js` — Procedural Web Audio API sound generation
+- **SoundManager:** Singleton with `play()`, `setMuted()`, `setVolume()`
+- **SFX Types:** shoot, enemy_shoot, player_hit, shield_hit, pickup, explosion, mission_complete, game_over
+- **Soundtrack:** `engine/soundtrack.js` — Ambient drone with oscillators + LFO modulation
+- **Mute Button:** Top-right HUD button (also in PauseOverlay)
+
+## Achievement System
+- **Module:** `engine/achievements.js` — 13 achievements tracking player milestones
+- **Persistence:** localStorage (`space_sentinel_achievements`)
+- **Checking:** Runs on mission completion via `checkAchievements()`
+- **Notifications:** `AchievementNotification.jsx` — Toast-style popups with 6s display timer
+- **Stats Tracked:** enemiesDestroyed, totalScrap, surviveMissions, escortMissions, defendMissions, sabotageMissions, bossesDefeated, upgradesMaxed, level
+- **Achievements:** first_blood, veteran, slayer, scavenger, millionaire, survivor, escort_expert, defender, saboteur, boss_slayer, level_10, level_25, upgrade_master
+
+## Save/Load System
+- **Module:** `engine/saveManager.js` — Persistent game progress
+- **Auto-save:** Triggers on every mission completion
+- **Storage:** localStorage (`space_sentinel_autosave` for auto, `space_sentinel_save` for manual)
+- **Continue Button:** Appears on StartScreen when auto-save exists
+- **Saved Data:** Player stats, scrap, level, upgrades, map state, achievements, persistent stats
+
+## Settings System
+- **Component:** `SettingsOverlay.jsx` — Accessed from Pause Menu
+- **Persistence:** localStorage (`space_sentinel_settings`)
+- **Audio:** Master volume, SFX volume, music volume sliders
+- **Gameplay:** Difficulty (easy/normal/hard)
+- **Display:** Particle quality (low/medium/high), FPS counter toggle, screen shake toggle
+- **Accessibility:** Colorblind mode (none/protanopia/deuteranopia/tritanopia), reduced motion, high contrast
+
+## Wave Patterns System
+- **Module:** `engine/spawner.js` — Wave-based enemy spawning with formation support
+- **Patterns:** single, spread, swarm, vee, box, circle, line, diamond, cross
+- **Wave Config:** `GAME_CONFIG.waves` defines wave composition with pattern, enemy types, and timing
+- **Formation Spawning:** `spawnWave()` places enemies in geometric patterns relative to spawn point
+
+## Performance Optimizations
+- **Spatial Culling:** `cleanup.js` removes entities beyond 3000 units from player
+- **Render Distance:** `renderer3d.js` skips rendering entities beyond 1800 units
+- **LOD:** Distant enemies (>1000 units) rendered at 80% scale
+- **Object Pooling:** `engine/pool.js` for reusable entity objects (projectiles, particles)
+
+## Post-Mission Summary
+- **Component:** `PostMissionSummary.jsx` — Shows mission stats during transition
+- **Stats Displayed:** Enemies destroyed, scrap earned, time elapsed, accuracy, mission grade
+- **Grade System:** S/A/B/C/D based on performance score
+- **Timing:** Displays during `transitionTimer` countdown before map screen

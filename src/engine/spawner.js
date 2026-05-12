@@ -6,8 +6,132 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 import { calculateDifficultyMultiplier } from './difficulty';
 
 /**
- * Spawn an enemy at a random position around the player.
+ * Wave pattern definitions for structured enemy spawning.
+ */
+const WAVE_PATTERNS = {
+  // Standard random spawn
+  random: {
+    count: 1,
+    interval: 1.0,
+  },
+  // Burst: spawn multiple enemies at once
+  burst: {
+    count: 3,
+    interval: 3.0,
+  },
+  // Circle: spawn enemies in a circle formation
+  circle: {
+    count: 5,
+    interval: 4.0,
+    formation: 'circle',
+  },
+  // V-formation: spawn enemies in a V pattern
+  vFormation: {
+    count: 4,
+    interval: 3.5,
+    formation: 'v',
+  },
+  // Swarm: spawn many fast enemies
+  swarm: {
+    count: 6,
+    interval: 5.0,
+    enemyType: 'interceptor',
+  },
+};
 
+/**
+ * Get the current wave pattern based on game time and level.
+ * @param {number} level - Current level
+ * @param {number} totalTime - Total mission time
+ * @returns {string} Wave pattern name
+ */
+function getWavePattern(level, totalTime) {
+  // Early game: mostly random
+  if (totalTime < 30) return 'random';
+
+  // Mid game: introduce patterns
+  if (totalTime < 90) {
+    const patterns = ['random', 'burst', 'circle'];
+    return patterns[Math.floor(Math.random() * patterns.length)];
+  }
+
+  // Late game: all patterns
+  const patterns = ['random', 'burst', 'circle', 'vFormation', 'swarm'];
+  return patterns[Math.floor(Math.random() * patterns.length)];
+}
+
+/**
+ * Spawn enemies in a specific pattern.
+ * @param {object} g - Game state
+ * @param {string} pattern - Wave pattern name
+ * @param {number} level - Current level
+ */
+function spawnWavePattern(g, pattern) {
+  const waveConfig = WAVE_PATTERNS[pattern] || WAVE_PATTERNS.random;
+  const C = GAME_CONFIG;
+  const diffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
+
+  for (let i = 0; i < waveConfig.count; i++) {
+    let x, y;
+
+    if (waveConfig.formation === 'circle') {
+      // Circle formation
+      const angle = (i / waveConfig.count) * Math.PI * 2;
+      const radius = C.enemies.spawnRadiusMin + (C.enemies.spawnRadiusMax - C.enemies.spawnRadiusMin) / 2;
+      x = g.player.x + Math.cos(angle) * radius;
+      y = g.player.y + Math.sin(angle) * radius;
+    } else if (waveConfig.formation === 'v') {
+      // V formation
+      const baseAngle = Math.random() * Math.PI * 2;
+      const spread = 0.3;
+      const angle = baseAngle + (i - waveConfig.count / 2) * spread;
+      const radius = C.enemies.spawnRadiusMin + i * 30;
+      x = g.player.x + Math.cos(angle) * radius;
+      y = g.player.y + Math.sin(angle) * radius;
+    } else {
+      // Random spawn
+      const angle = Math.random() * Math.PI * 2;
+      const spawnRadius = C.enemies.spawnRadiusMin + Math.random() * (C.enemies.spawnRadiusMax - C.enemies.spawnRadiusMin);
+      x = g.player.x + Math.cos(angle) * spawnRadius;
+      y = g.player.y + Math.sin(angle) * spawnRadius;
+    }
+
+    // Determine enemy type
+    const eliteBonus = Math.min(C.enemies.eliteBonusMax, g.level * C.enemies.eliteBonusBase + g.totalTime * C.enemies.eliteBonusTimeFactor);
+    const typeRoll = Math.random() + eliteBonus;
+
+    let type, hp, speed, radius, color, shield, maxShield, fireCooldown;
+
+    if (waveConfig.enemyType) {
+      // Forced type for swarm
+      type = waveConfig.enemyType;
+      hp = 15 * diffMult;
+      speed = 180 + Math.random() * 50;
+      radius = 12;
+      color = 0xeab308;
+      shield = 0;
+      maxShield = 0;
+      fireCooldown = 0;
+    } else if (typeRoll > 0.95) {
+      type = 'missile_boat'; hp = 60 * diffMult; speed = 30 + Math.random() * 20;  radius = 22; color = 0xd946ef; fireCooldown = 3.0; shield = 0; maxShield = 0;
+    } else if (typeRoll > 0.85) {
+      type = 'shielded';     hp = 40 * diffMult; speed = 50 + Math.random() * 30;  radius = 18; color = 0x3b82f6; maxShield = 80 * diffMult; shield = maxShield; fireCooldown = 0;
+    } else if (typeRoll > 0.70) {
+      type = 'shooter';      hp = 40 * diffMult; speed = 70 + Math.random() * 30;  radius = 16; color = 0xa855f7; fireCooldown = 1.5; shield = 0; maxShield = 0;
+    } else if (typeRoll > 0.60) {
+      type = 'heavy';        hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xf97316; fireCooldown = 0; shield = 0; maxShield = 0;
+    } else if (typeRoll > 0.40) {
+      type = 'interceptor';  hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xeab308; fireCooldown = 0; shield = 0; maxShield = 0;
+    } else {
+      type = 'fighter';      hp = 30 * diffMult; speed = 100 + Math.random() * 50; radius = 15; color = 0xef4444; fireCooldown = 0; shield = 0; maxShield = 0;
+    }
+
+    g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type, active: true, fireCooldown });
+  }
+}
+
+/**
+ * Generate a mission descriptor.
  * @param {number} level    - Current player level
  * @param {string} nodeType - 'boss' | 'elite' | 'kill' | 'collect' | 'survive'
  * @returns {{ type, target, current, title, reward }}
@@ -78,30 +202,15 @@ export const generateMission = (level, nodeType) => {
 };
 
 /**
- * Spawns a single enemy into g.enemies, positioned in a ring around the player.
+ * Spawns enemies using wave patterns based on game time.
  * @param {object} g - Live game state object
  */
-export const spawnEnemy = (g) => {
-  const C = GAME_CONFIG;
-  const angle = Math.random() * Math.PI * 2;
-  const spawnRadius = C.enemies.spawnRadiusMin + Math.random() * (C.enemies.spawnRadiusMax - C.enemies.spawnRadiusMin);
-  const x = g.player.x + Math.cos(angle) * spawnRadius;
-  const y = g.player.y + Math.sin(angle) * spawnRadius;
-
-  const diffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
-
-  // Scale enemy type rarity dynamically (more elites later in run)
-  const eliteBonus = Math.min(C.enemies.eliteBonusMax, g.level * C.enemies.eliteBonusBase + g.totalTime * C.enemies.eliteBonusTimeFactor);
-  const typeRoll = Math.random() + eliteBonus;
-
-  let type = 'fighter', hp = 30 * diffMult, speed = 100 + Math.random() * 50, radius = 15, color = 0xef4444;
-  let shield = 0, maxShield = 0, fireCooldown = 0;
-
-  if      (typeRoll > 0.95) { type = 'missile_boat'; hp = 60 * diffMult; speed = 30 + Math.random() * 20;  radius = 22; color = 0xd946ef; fireCooldown = 3.0; }
-  else if (typeRoll > 0.85) { type = 'shielded';     hp = 40 * diffMult; speed = 50 + Math.random() * 30;  radius = 18; color = 0x3b82f6; maxShield = 80 * diffMult; shield = maxShield; }
-  else if (typeRoll > 0.70) { type = 'shooter';      hp = 40 * diffMult; speed = 70 + Math.random() * 30;  radius = 16; color = 0xa855f7; fireCooldown = 1.5; }
-  else if (typeRoll > 0.60) { type = 'heavy';        hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xf97316; }
-  else if (typeRoll > 0.40) { type = 'interceptor';  hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xeab308; }
-
-  g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type, active: true, fireCooldown });
+export function spawnEnemy(g) {
+  const pattern = getWavePattern(g.level, g.totalTime);
+  spawnWavePattern(g, pattern);
 };
+
+/**
+ * Export wave patterns for testing.
+ */
+export { WAVE_PATTERNS, getWavePattern, spawnWavePattern };

@@ -59,15 +59,42 @@
  * @property {boolean} audio.muted — Whether audio is muted
  * @property {number} audio.volume — Master volume (0.0–1.0)
  * @property {number} [_cleanupTimer] — Internal cleanup interval timer
+ * @property {Object} [achievements] — Achievement tracking state
+ * @property {Set} achievements.unlocked — Unlocked achievement IDs
+ * @property {Array} achievements.notifications — Pending achievement notifications
+ * @property {Object} [stats] — Persistent game statistics
+ * @property {number} stats.enemiesDestroyed — Total enemies destroyed
+ * @property {number} stats.totalScrap — Total scrap earned
+ * @property {number} stats.surviveMissions — Survive missions completed
+ * @property {number} stats.escortMissions — Escort missions completed
+ * @property {number} stats.defendMissions — Defend missions completed
+ * @property {number} stats.sabotageMissions — Sabotage missions completed
+ * @property {number} stats.bossesDefeated — Bosses defeated
+ * @property {number} stats.upgradesMaxed — Number of upgrade types maxed
  */
 
 import { generateMap } from './mapGenerator';
+import { loadAchievements } from './achievements';
 
 /**
  * Creates a fresh game state object with all default values.
  * @returns {GameState}
  */
 export const createGameState = () => ({
+  achievements: {
+    unlocked: loadAchievements(),
+    notifications: [],
+  },
+  stats: {
+    enemiesDestroyed: 0,
+    totalScrap: 0,
+    surviveMissions: 0,
+    escortMissions: 0,
+    defendMissions: 0,
+    sabotageMissions: 0,
+    bossesDefeated: 0,
+    upgradesMaxed: 0,
+  },
   player: {
     x: 0, y: 0, vx: 0, vy: 0, radius: 38,
     hp: 300, maxHp: 300,

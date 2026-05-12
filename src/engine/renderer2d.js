@@ -211,7 +211,14 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.lineWidth=2; c.strokeStyle='#39ff14'; c.stroke();
   c.beginPath(); c.arc(rX,rY,rR-1,0,Math.PI*2); c.clip();
 
-  [0.33,0.66,1.0].forEach(f=>{ c.beginPath(); c.arc(rX,rY,rR*f,0,Math.PI*2); c.strokeStyle='rgba(57,255,20,0.15)'; c.lineWidth=1; c.stroke(); });
+  // Range rings with distance labels
+  [0.33,0.66,1.0].forEach((f)=>{
+    c.beginPath(); c.arc(rX,rY,rR*f,0,Math.PI*2); c.strokeStyle='rgba(57,255,20,0.15)'; c.lineWidth=1; c.stroke();
+    // Distance label
+    const dist = Math.round(rRange * f / 10) / 10;
+    c.fillStyle='rgba(57,255,20,0.3)'; c.font='8px monospace'; c.textAlign='left';
+    c.fillText(`${dist}k`, rX + rR * f + 2, rY - 4);
+  });
   c.strokeStyle='rgba(57,255,20,0.12)'; c.lineWidth=1;
   c.beginPath(); c.moveTo(rX-rR,rY); c.lineTo(rX+rR,rY); c.stroke();
   c.beginPath(); c.moveTo(rX,rY-rR); c.lineTo(rX,rY+rR); c.stroke();
@@ -276,6 +283,28 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
         const {px,py} = toR(s.x, s.y);
         c.fillStyle='#f97316';
         c.fillRect(px-3, py-3, 6, 6);
+      }
+    }
+  }
+
+  // Mission objective marker (for kill/collect missions, shows nearest enemy direction)
+  if (g.mission && !g.mission.completed && (g.mission.type === 'kill' || g.mission.type === 'collect')) {
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const e of g.enemies) {
+      if (!e.active) continue;
+      const d = Math.hypot(e.x - g.player.x, e.y - g.player.y);
+      if (d < nearestDist) { nearestDist = d; nearest = e; }
+    }
+    if (nearest && nearestDist <= rRange * 2) {
+      const {px, py} = toR(nearest.x, nearest.y);
+      // Only draw if within extended range
+      const markerDist = Math.hypot(px - rX, py - rY);
+      if (markerDist <= rR * 1.5) {
+        c.strokeStyle='#39ff14'; c.lineWidth=2;
+        c.beginPath(); c.arc(px, py, 6, 0, Math.PI * 2); c.stroke();
+        c.fillStyle='#39ff14'; c.font='bold 8px monospace'; c.textAlign='center';
+        c.fillText('OBJ', px, py - 10);
       }
     }
   }

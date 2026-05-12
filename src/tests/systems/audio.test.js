@@ -14,11 +14,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockPlay = vi.fn();
 const mockStop = vi.fn();
+const mockStartSoundtrack = vi.fn();
+const mockStopSoundtrack = vi.fn();
+const mockSetSoundtrackIntensity = vi.fn();
+const mockGetSoundtrackIntensity = vi.fn(() => 'calm');
 
 vi.doMock('../../engine/audio', () => ({
   SoundManager: {
     play: mockPlay,
     stop: mockStop,
+    startSoundtrack: mockStartSoundtrack,
+    stopSoundtrack: mockStopSoundtrack,
+    setSoundtrackIntensity: mockSetSoundtrackIntensity,
+    getSoundtrackIntensity: mockGetSoundtrackIntensity,
   },
 }));
 
@@ -76,27 +84,27 @@ describe('muted', () => {
     const g = buildState({
       mission: { type: 'kill', target: 5, current: 0 },
     });
-    // First frame — should start engine + bg_drone
+    // First frame — should start engine + soundtrack
     updateAudio(0.016, g);
     expect(mockPlay).toHaveBeenCalledWith('engine');
-    expect(mockPlay).toHaveBeenCalledWith('bg_drone');
+    expect(mockStartSoundtrack).toHaveBeenCalledWith('calm');
   });
 });
 
 /* ──────────────────────────────────────────────
- * 3. Continuous sounds (engine, bg_drone) start once
+ * 3. Continuous sounds (engine + soundtrack) start once
  * ────────────────────────────────────────────── */
 describe('continuous sounds', () => {
-  it('starts engine and bg_drone when a mission is active', () => {
+  it('starts engine and soundtrack when a mission is active', () => {
     const g = buildState({
       mission: { type: 'kill', target: 5, current: 0 },
     });
     updateAudio(0.016, g);
     expect(mockPlay).toHaveBeenCalledWith('engine');
-    expect(mockPlay).toHaveBeenCalledWith('bg_drone');
+    expect(mockStartSoundtrack).toHaveBeenCalledWith('calm');
   });
 
-  it('does not restart engine/bg_drone on subsequent frames', () => {
+  it('does not restart engine/soundtrack on subsequent frames', () => {
     const g = buildState({
       mission: { type: 'kill', target: 5, current: 0 },
     });
@@ -104,23 +112,23 @@ describe('continuous sounds', () => {
     vi.clearAllMocks();
     updateAudio(0.016, g);
     expect(mockPlay).not.toHaveBeenCalledWith('engine');
-    expect(mockPlay).not.toHaveBeenCalledWith('bg_drone');
+    expect(mockStartSoundtrack).not.toHaveBeenCalled();
   });
 
-  it('does not start engine/bg_drone when no mission', () => {
+  it('does not start engine/soundtrack when no mission', () => {
     const g = buildState({ mission: null });
     updateAudio(0.016, g);
     expect(mockPlay).not.toHaveBeenCalledWith('engine');
-    expect(mockPlay).not.toHaveBeenCalledWith('bg_drone');
+    expect(mockStartSoundtrack).not.toHaveBeenCalled();
   });
 
-  it('does not start engine/bg_drone when mission is completed', () => {
+  it('does not start engine/soundtrack when mission is completed', () => {
     const g = buildState({
       mission: { type: 'kill', target: 5, current: 5, completed: true },
     });
     updateAudio(0.016, g);
     expect(mockPlay).not.toHaveBeenCalledWith('engine');
-    expect(mockPlay).not.toHaveBeenCalledWith('bg_drone');
+    expect(mockStartSoundtrack).not.toHaveBeenCalled();
   });
 });
 

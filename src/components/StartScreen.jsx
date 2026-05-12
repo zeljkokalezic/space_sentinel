@@ -1,7 +1,15 @@
-import React from 'react';
-import { Rocket, Play, Crosshair, Bug } from 'lucide-react';
+import React, { useState } from 'react';
+import { Rocket, Play, Crosshair, Bug, Save } from 'lucide-react';
+import { hasSave, loadGame } from '../engine/saveManager';
 
-export default function StartScreen({ startGame, devMode }) {
+export default function StartScreen({ startGame, devMode, gameRef }) {
+  const [hasSavedGame] = useState(() => hasSave('auto'));
+
+  const handleContinue = () => {
+    if (gameRef?.current && loadGame(gameRef.current, 'auto')) {
+      startGame();
+    }
+  };
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 text-white z-50 backdrop-blur-md">
       {/* Dev mode badge */}
@@ -21,12 +29,20 @@ export default function StartScreen({ startGame, devMode }) {
           ? 'Dev mode active. Pick any mission type and difficulty freely. Press D to disable.'
           : 'You are the core. Defend yourself against endless waves. Gather scrap from fallen enemies to dynamically upgrade your ship systems. Survive.'}
       </p>
-      <button 
-        className="px-10 py-5 bg-blue-600 hover:bg-blue-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.6)] hover:scale-105 flex items-center gap-3" 
+    <button
+        className="px-10 py-5 bg-blue-600 hover:bg-blue-500 rounded-full font-black text-2xl transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.6)] hover:scale-105 flex items-center gap-3"
         onClick={startGame}
       >
         <Play className="w-8 h-8 fill-current" /> {devMode ? 'OPEN MISSION SELECTOR' : 'INITIALIZE SEQUENCE'}<span className="hidden md:inline">&nbsp;(SPACE)</span>
       </button>
+      {hasSavedGame && (
+        <button
+          className="mt-4 px-8 py-3 bg-green-600/80 hover:bg-green-500 rounded-full font-bold text-lg transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_35px_rgba(34,197,94,0.5)] hover:scale-105 flex items-center gap-2"
+          onClick={handleContinue}
+        >
+          <Save className="w-5 h-5" /> CONTINUE (Auto-Save)
+        </button>
+      )}
       <div className="mt-12 text-gray-400 flex flex-wrap justify-center gap-8 font-mono bg-gray-900/50 p-4 rounded-xl border border-gray-800">
         <div className="flex items-center gap-2">
           <span className="text-white border border-gray-600 px-2 rounded">W A S D</span> / <span className="text-white border border-gray-600 px-2 rounded">Drag</span> to Move

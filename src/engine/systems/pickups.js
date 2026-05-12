@@ -22,6 +22,7 @@ export const updatePickups = (dt, g, completeMission) => {
       if (Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.radius + p.radius) {
         g.scrap += p.value;
         g.totalScrapEarned += p.value;
+        if (g.stats) g.stats.totalScrap += p.value;
         p.active = false;
         if (g.mission && g.mission.type === 'collect') {
           g.mission.current += p.value;

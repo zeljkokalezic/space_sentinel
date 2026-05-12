@@ -164,16 +164,24 @@ export const draw3DFrame = (threeObj, g) => {
     turretsGroup.children.forEach(t => { if (t.userData.isAiming) t.rotation.z = (worldAim - Math.PI / 2) - pm.rotation.z; });
   }
 
-  // Pickups
+  // Pickups (with distance culling)
+  const renderDist = 1800;
+  const renderDistSq = renderDist * renderDist;
   for (let p of g.pickups) {
     if (!p.active) continue;
+    const dx = p.x - g.player.x;
+    const dy = p.y - g.player.y;
+    if (dx * dx + dy * dy > renderDistSq) continue;
     const m = getMesh(p, () => { const m = new THREE.Mesh(geoms.tetra, mats.pickup); m.scale.set(p.radius, p.radius, p.radius); return m; });
     m.position.set(p.x, p.y, 0); m.rotation.x += 0.05; m.rotation.y += 0.05;
   }
 
-  // Projectiles
+  // Projectiles (with distance culling)
   for (let p of g.projectiles) {
     if (!p.active) continue;
+    const dx = p.x - g.player.x;
+    const dy = p.y - g.player.y;
+    if (dx * dx + dy * dy > renderDistSq) continue;
     const m = getMesh(p, () => {
       const col = p.isEnemy ? 0xd946ef : 0xff0000;
       const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: col, wireframe: true }));
@@ -183,9 +191,13 @@ export const draw3DFrame = (threeObj, g) => {
     if (p.type === 'missile' || p.type === 'enemy_missile') { m.scale.set(p.radius*0.5, p.radius*2, p.radius*0.5); m.rotation.z = Math.atan2(p.vy, p.vx) - Math.PI/2; }
   }
 
-  // Enemies
+  // Enemies (with distance culling and LOD)
   for (let e of g.enemies) {
     if (!e.active) continue;
+    const dx = e.x - g.player.x;
+    const dy = e.y - g.player.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq > renderDistSq) continue;
     const m = getMesh(e, () => {
       const heavy = e.type === 'heavy';
       let geo = heavy ? new THREE.BoxGeometry(1,1,1) : geoms.cone;
@@ -198,6 +210,11 @@ export const draw3DFrame = (threeObj, g) => {
     });
     m.position.set(e.x, e.y, 0);
     m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
+    // LOD: reduce detail for distant enemies
+    const dist = Math.sqrt(distSq);
+    if (dist > 1000) {
+      m.scale.multiplyScalar(0.8);
+    }
   }
 
   // Escort drone

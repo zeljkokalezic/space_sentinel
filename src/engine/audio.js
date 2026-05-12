@@ -240,6 +240,131 @@ function playBgDrone(ctx, gainNode, now) {
   }};
 }
 
+/** soundtrack_calm — Gentle ambient pad (looping) */
+function _playSoundtrackCalm(ctx, gainNode, now) {
+  // Two detuned sine pads for ambient texture
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(110, now); // A2
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(164.81, now); // E3
+  const osc3 = ctx.createOscillator();
+  osc3.type = 'sine';
+  osc3.frequency.setValueAtTime(220, now); // A3
+
+  // Slow LFO for gentle movement
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(0.15, now);
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.setValueAtTime(3, now);
+  lfo.connect(lfoGain);
+  lfoGain.connect(osc1.frequency);
+
+  const subGain = ctx.createGain();
+  subGain.gain.setValueAtTime(0.3, now);
+  osc1.connect(subGain);
+  osc2.connect(subGain);
+  osc3.connect(subGain);
+  subGain.connect(gainNode);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc3.start(now);
+  lfo.start(now);
+
+  return { duration: Infinity, nodes: [osc1, osc2, osc3, lfo, lfoGain, subGain], stop: () => {
+    try { osc1.stop(); } catch { /* already stopped */ }
+    try { osc2.stop(); } catch { /* already stopped */ }
+    try { osc3.stop(); } catch { /* already stopped */ }
+    try { lfo.stop(); } catch { /* already stopped */ }
+  }};
+}
+
+/** soundtrack_tense — Pulsing rhythm with low bass (looping) */
+function _playSoundtrackTense(ctx, gainNode, now) {
+  // Low pulsing bass
+  const bass = ctx.createOscillator();
+  bass.type = 'sawtooth';
+  bass.frequency.setValueAtTime(55, now); // A1
+
+  // Pulsing LFO for rhythm
+  const pulseLfo = ctx.createOscillator();
+  pulseLfo.type = 'square';
+  pulseLfo.frequency.setValueAtTime(2, now); // 2Hz pulse
+  const pulseGain = ctx.createGain();
+  pulseGain.gain.setValueAtTime(0.4, now);
+  pulseLfo.connect(pulseGain);
+
+  // Dissonant pad
+  const pad = ctx.createOscillator();
+  pad.type = 'sine';
+  pad.frequency.setValueAtTime(146.83, now); // D3
+  const pad2 = ctx.createOscillator();
+  pad2.type = 'sine';
+  pad2.frequency.setValueAtTime(185, now); // F#3 (tritone tension)
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(400, now);
+  pulseGain.connect(filter.frequency);
+
+  const subGain = ctx.createGain();
+  subGain.gain.setValueAtTime(0.25, now);
+  bass.connect(filter);
+  pad.connect(filter);
+  pad2.connect(filter);
+  filter.connect(subGain);
+  subGain.connect(gainNode);
+
+  bass.start(now);
+  pad.start(now);
+  pad2.start(now);
+  pulseLfo.start(now);
+
+  return { duration: Infinity, nodes: [bass, pad, pad2, pulseLfo, pulseGain, filter, subGain], stop: () => {
+    try { bass.stop(); } catch { /* already stopped */ }
+    try { pad.stop(); } catch { /* already stopped */ }
+    try { pad2.stop(); } catch { /* already stopped */ }
+    try { pulseLfo.stop(); } catch { /* already stopped */ }
+  }};
+}
+
+/** soundtrack_triumphant — Bright ascending chords (looping) */
+function _playSoundtrackTriumphant(ctx, gainNode, now) {
+  // Bright major chord arpeggio
+  const notes = [261.63, 329.63, 392, 523.25]; // C4, E4, G4, C5
+  const oscs = [];
+  const subGain = ctx.createGain();
+  subGain.gain.setValueAtTime(0.2, now);
+  subGain.connect(gainNode);
+
+  for (const freq of notes) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.connect(subGain);
+    osc.start(now);
+    oscs.push(osc);
+  }
+
+  // Slow ascending LFO for uplifting feel
+  const lfo = ctx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(0.2, now);
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.setValueAtTime(10, now);
+  lfo.connect(lfoGain);
+  lfoGain.connect(oscs[0].frequency);
+  lfo.start(now);
+  oscs.push(lfo);
+
+  return { duration: Infinity, nodes: [...oscs, lfoGain, subGain], stop: () => {
+    oscs.forEach(o => { try { o.stop(); } catch { /* already stopped */ } });
+  }};
+}
+
 /** ui_click — Short blip */
 function playUiClick(ctx, gainNode, now) {
   const osc = ctx.createOscillator();
@@ -272,7 +397,7 @@ const SOUND_GENERATORS = {
   ui_click: playUiClick,
 };
 
-const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone']);
+const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);
 
 /* ────────────────────────────────────────────── */
 /*  SoundManager class                            */
@@ -285,6 +410,8 @@ class SoundManagerClass {
     this._muted = false;
     this._volume = 1;
     this._continuous = {}; // name -> { nodes, stopFn }
+    this._soundtrackIntensity = 'calm'; // 'calm' | 'tense' | 'triumphant'
+    this._soundtrackActive = false;
   }
 
   /**
@@ -301,6 +428,128 @@ class SoundManagerClass {
       this.masterGain.connect(this.ctx.destination);
     } catch {
       this.ctx = null; // creation failed
+    }
+  }
+
+  /**
+   * Set the soundtrack intensity level.
+   * Crossfades between intensity layers smoothly.
+   * @param {'calm'|'tense'|'triumphant'} intensity
+   */
+  setSoundtrackIntensity(intensity) {
+    if (intensity === this._soundtrackIntensity) return; // no change
+    if (!this.ctx) return;
+
+    const oldIntensity = this._soundtrackIntensity;
+    this._soundtrackIntensity = intensity;
+
+    const now = this.ctx.currentTime;
+    const crossfadeDuration = 1.5; // seconds
+
+    // Fade out old intensity layer
+    this._stopSoundtrackLayer(oldIntensity, now, crossfadeDuration);
+
+    // Fade in new intensity layer
+    this._startSoundtrackLayer(intensity, now, crossfadeDuration);
+  }
+
+  /**
+   * Start the soundtrack system.
+   * @param {'calm'|'tense'|'triumphant'} [initialIntensity='calm']
+   */
+  startSoundtrack(initialIntensity = 'calm') {
+    if (this._soundtrackActive) return;
+    this._soundtrackActive = true;
+    this._soundtrackIntensity = initialIntensity;
+    this._startSoundtrackLayer(initialIntensity, this.ctx?.currentTime, 0);
+  }
+
+  /**
+   * Stop the soundtrack system.
+   */
+  stopSoundtrack() {
+    if (!this._soundtrackActive) return;
+    this._soundtrackActive = false;
+    const now = this.ctx?.currentTime;
+    if (now) {
+      this._stopSoundtrackLayer(this._soundtrackIntensity, now, 1.0);
+    } else {
+      this._stopContinuous(`soundtrack_${this._soundtrackIntensity}`);
+    }
+    this._soundtrackIntensity = 'calm';
+  }
+
+  /**
+   * @returns {boolean} Whether the soundtrack is active.
+   */
+  isSoundtrackActive() {
+    return this._soundtrackActive;
+  }
+
+  /**
+   * @returns {'calm'|'tense'|'triumphant'} Current soundtrack intensity.
+   */
+  getSoundtrackIntensity() {
+    return this._soundtrackIntensity;
+  }
+
+  /**
+   * Start a soundtrack layer with optional fade-in.
+   * @param {'calm'|'tense'|'triumphant'} intensity
+   * @param {number} now - Current audio time
+   * @param {number} fadeDuration - Fade-in duration in seconds (0 for instant)
+   */
+  _startSoundtrackLayer(intensity, now, fadeDuration) {
+    const name = `soundtrack_${intensity}`;
+    const generator = SOUND_GENERATORS[name];
+    if (!generator || !this.ctx) return;
+
+    try {
+      const gainNode = this.ctx.createGain();
+      if (fadeDuration > 0) {
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(1, now + fadeDuration);
+      } else {
+        gainNode.gain.setValueAtTime(1, now);
+      }
+      gainNode.connect(this.masterGain);
+
+      const result = generator(this.ctx, gainNode, now);
+      if (!result) return;
+
+      this._continuous[name] = {
+        nodes: result.nodes,
+        gainNode,
+        stopFn: result.stop || null,
+      };
+    } catch {
+      // Silently ignore audio errors
+    }
+  }
+
+  /**
+   * Stop a soundtrack layer with optional fade-out.
+   * @param {'calm'|'tense'|'triumphant'} intensity
+   * @param {number} now - Current audio time
+   * @param {number} fadeDuration - Fade-out duration in seconds
+   */
+  _stopSoundtrackLayer(intensity, now, fadeDuration) {
+    const name = `soundtrack_${intensity}`;
+    const entry = this._continuous[name];
+    if (!entry) return;
+
+    try {
+      if (fadeDuration > 0 && this.ctx) {
+        entry.gainNode.gain.setValueAtTime(entry.gainNode.gain.value, now);
+        entry.gainNode.gain.linearRampToValueAtTime(0, now + fadeDuration);
+        setTimeout(() => {
+          this._stopContinuous(name);
+        }, fadeDuration * 1000 + 100);
+      } else {
+        this._stopContinuous(name);
+      }
+    } catch {
+      // Silently ignore
     }
   }
 
