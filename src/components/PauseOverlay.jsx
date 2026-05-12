@@ -4,6 +4,7 @@ import SettingsOverlay from './SettingsOverlay';
 
 export default function PauseOverlay({ gameRef, startGame, setPaused }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [muted, setMuted] = useState(gameRef?.current?.audio?.muted ?? false);
   const handleResume = () => {
     if (gameRef.current) {
       gameRef.current.paused = false;
@@ -16,15 +17,17 @@ export default function PauseOverlay({ gameRef, startGame, setPaused }) {
     if (gameRef.current) {
       gameRef.current.paused = false;
     }
+    setPaused(false);
     startGame();
   };
 
   const handleToggleMute = () => {
+    const nextMuted = !muted;
+    setMuted(nextMuted);
     if (gameRef.current?.audio) {
-      const nextMuted = !gameRef.current.audio.muted;
       gameRef.current.audio.muted = nextMuted;
-      SoundManager.setMuted(nextMuted);
     }
+    SoundManager.setMuted(nextMuted);
   };
 
   return (
@@ -54,7 +57,7 @@ export default function PauseOverlay({ gameRef, startGame, setPaused }) {
             onClick={handleToggleMute}
             className="px-6 py-3 rounded-lg bg-gray-600/20 border border-gray-500/40 text-gray-300 hover:bg-gray-500/30 transition-colors font-medium"
           >
-            {gameRef.current?.audio?.muted ? 'Unmute' : 'Mute'}
+            {muted ? 'Unmute' : 'Mute'}
           </button>
         </div>
       </div>

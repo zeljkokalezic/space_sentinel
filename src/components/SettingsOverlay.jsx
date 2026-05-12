@@ -58,14 +58,31 @@ function getDefaultSettings() {
  * @param {object} props.gameRef - Ref to game state
  * @param {function} props.onClose - Called when settings is dismissed
  */
-export default function SettingsOverlay({ onClose }) {
+export default function SettingsOverlay({ gameRef, onClose }) {
   const [settings, setSettings] = useState(loadSettings);
 
   useEffect(() => {
     // Apply settings on mount
     SoundManager.setVolume(settings.volume);
     SoundManager.setMuted(settings.volume === 0);
+    SoundManager.setSfxVolume(settings.sfxVolume ?? 0.7);
+    SoundManager.setMusicVolume(settings.musicVolume ?? 0.5);
+    if (gameRef?.current?.audio) {
+      gameRef.current.audio.volume = settings.volume;
+      gameRef.current.audio.muted = settings.volume === 0;
+    }
   }, []);
+
+  // Sync settings to game state when changed
+  useEffect(() => {
+    if (gameRef?.current) {
+      gameRef.current.settings = { ...settings };
+      if (gameRef.current.audio) {
+        gameRef.current.audio.volume = settings.volume;
+        gameRef.current.audio.muted = settings.volume === 0;
+      }
+    }
+  }, [settings, gameRef]);
 
   const handleVolumeChange = (val) => {
     const next = { ...settings, volume: val };
@@ -79,12 +96,14 @@ export default function SettingsOverlay({ onClose }) {
     const next = { ...settings, sfxVolume: val };
     setSettings(next);
     saveSettings(next);
+    SoundManager.setSfxVolume(val);
   };
 
   const handleMusicVolumeChange = (val) => {
     const next = { ...settings, musicVolume: val };
     setSettings(next);
     saveSettings(next);
+    SoundManager.setMusicVolume(val);
   };
 
   const handleDifficultyChange = (val) => {

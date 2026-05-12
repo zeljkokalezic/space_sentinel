@@ -455,6 +455,44 @@ describe('createGameState', () => {
   });
 
   /* ──────────────────────────────────────────────
+   * 13. Settings
+   * ────────────────────────────────────────────── */
+  describe('settings', () => {
+    it('has a settings object', () => {
+      expect(typeof state.settings).toBe('object');
+      expect(state.settings).not.toBeNull();
+    });
+
+    it('showFPS defaults to false', () => {
+      expect(state.settings.showFPS).toBe(false);
+    });
+
+    it('screenShake defaults to true', () => {
+      expect(state.settings.screenShake).toBe(true);
+    });
+
+    it('particlesQuality defaults to high', () => {
+      expect(state.settings.particlesQuality).toBe('high');
+    });
+
+    it('reducedMotion defaults to false', () => {
+      expect(state.settings.reducedMotion).toBe(false);
+    });
+
+    it('highContrast defaults to false', () => {
+      expect(state.settings.highContrast).toBe(false);
+    });
+
+    it('settings object is independent across calls', () => {
+      const s1 = createGameState();
+      const s2 = createGameState();
+      expect(s1.settings).not.toBe(s2.settings);
+      s1.settings.showFPS = true;
+      expect(s2.settings.showFPS).toBe(false);
+    });
+  });
+
+  /* ──────────────────────────────────────────────
    * 14. Other top-level fields
    * ────────────────────────────────────────────── */
   describe('other top-level fields', () => {

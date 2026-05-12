@@ -670,6 +670,22 @@ class SoundManagerClass {
   }
 
   /**
+   * Set SFX volume (0-1, clamped).
+   * @param {number} vol
+   */
+  setSfxVolume(vol) {
+    this._sfxVolume = Math.max(0, Math.min(1, vol));
+  }
+
+  /**
+   * Set music volume (0-1, clamped).
+   * @param {number} vol
+   */
+  setMusicVolume(vol) {
+    this._musicVolume = Math.max(0, Math.min(1, vol));
+  }
+
+  /**
    * @returns {number} Current volume (0-1).
    */
   getVolume() {

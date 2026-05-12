@@ -6,6 +6,11 @@
 // Radar sweep angle persists across frames
 let radarAngle = 0;
 
+// FPS tracking
+let fpsFrames = 0;
+let fpsLastTime = 0;
+let fpsValue = 60;
+
 // ── Mute button layout constants ──────────────────────────────────────────────
 export const MUTE_BTN_X_OFFSET = 20;   // px from right edge
 export const MUTE_BTN_Y        = 68;   // px from top (below the 60px top bar)
@@ -25,6 +30,17 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   canvasEl.width = w; canvasEl.height = h;
   const c = canvasEl.getContext('2d');
   c.clearRect(0, 0, w, h);
+
+  // ── FPS tracking ─────────────────────────────────────────────────────────────
+  fpsFrames++;
+  const now = performance.now();
+  if (fpsLastTime === 0) fpsLastTime = now; // lazy init on first frame
+  const elapsed = now - fpsLastTime;
+  if (elapsed >= 1000) {
+    fpsValue = Math.round(fpsFrames * 1000 / elapsed);
+    fpsFrames = 0;
+    fpsLastTime = now;
+  }
 
   // Top bar
   c.fillStyle='rgba(0,0,0,0.4)'; c.fillRect(0,0,w,60);
@@ -314,4 +330,15 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   const nA=-(Math.PI/2-pYaw)-Math.PI/2; c.fillStyle='#ef4444'; c.font='bold 9px monospace'; c.textAlign='center'; c.fillText('N',rX+Math.cos(nA)*(rR-6),rY+Math.sin(nA)*(rR-6)+4);
   c.font='bold 9px monospace'; c.fillStyle='rgba(57,255,20,0.5)'; c.textAlign='center'; c.fillText('TACTICAL',rX,rY+rR+14);
   c.restore();
+
+  // ── FPS display (overlay on top bar) ──────────────────────────────────────────
+  const showFPS = g.settings?.showFPS ?? false;
+  if (showFPS) {
+    c.fillStyle = 'rgba(0,0,0,0.6)';
+    c.fillRect(0, 0, 80, 24);
+    c.fillStyle = fpsValue >= 55 ? '#39ff14' : fpsValue >= 30 ? '#facc15' : '#ef4444';
+    c.font = 'bold 14px monospace';
+    c.textAlign = 'left';
+    c.fillText(`${fpsValue} FPS`, 8, 16);
+  }
 };

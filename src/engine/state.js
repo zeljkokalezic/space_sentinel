@@ -59,6 +59,12 @@
  * @property {boolean} audio.muted — Whether audio is muted
  * @property {number} audio.volume — Master volume (0.0–1.0)
  * @property {number} [_cleanupTimer] — Internal cleanup interval timer
+ * @property {Object} [settings] — Display/gameplay settings
+ * @property {boolean} settings.showFPS — Show FPS counter
+ * @property {boolean} settings.screenShake — Enable screen shake
+ * @property {string} settings.particlesQuality — 'low'|'medium'|'high'
+ * @property {boolean} settings.reducedMotion — Reduce animations
+ * @property {boolean} settings.highContrast — High contrast mode
  * @property {Object} [achievements] — Achievement tracking state
  * @property {Set} achievements.unlocked — Unlocked achievement IDs
  * @property {Array} achievements.notifications — Pending achievement notifications
@@ -124,6 +130,7 @@ export const createGameState = () => ({
   devMode: false,
   paused: false,
   audio: { muted: false, volume: 0.5 },
+  settings: { showFPS: false, screenShake: true, particlesQuality: 'high', reducedMotion: false, highContrast: false },
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
