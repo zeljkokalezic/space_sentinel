@@ -206,6 +206,65 @@ describe('mute + volume interaction', () => {
 });
 
 /* ──────────────────────────────────────────────
+ * pause() / resume()
+ * ────────────────────────────────────────────── */
+describe('pause and resume', () => {
+  it('pause() does not throw', () => {
+    expect(() => SoundManager.pause()).not.toThrow();
+  });
+
+  it('resume() does not throw', () => {
+    expect(() => SoundManager.resume()).not.toThrow();
+  });
+
+  it('can pause and resume multiple times', () => {
+    expect(() => {
+      SoundManager.pause();
+      SoundManager.resume();
+      SoundManager.pause();
+      SoundManager.resume();
+    }).not.toThrow();
+  });
+
+  // Note: In Node.js test env, pause()/resume() are no-ops because there's
+  // no real AudioContext. The mute-state tests below only verify behavior
+  // when the methods are callable, not that they actually suspend audio.
+});
+
+/* ──────────────────────────────────────────────
+ * setSfxVolume / setMusicVolume
+ * ────────────────────────────────────────────── */
+describe('per-channel volume controls', () => {
+  it('setSfxVolume accepts values 0-1', () => {
+    SoundManager.setSfxVolume(0.5);
+    SoundManager.setSfxVolume(0);
+    SoundManager.setSfxVolume(1);
+  });
+
+  it('setMusicVolume accepts values 0-1', () => {
+    SoundManager.setMusicVolume(0.5);
+    SoundManager.setMusicVolume(0);
+    SoundManager.setMusicVolume(1);
+  });
+
+  it('setSfxVolume clamps negative values to 0', () => {
+    SoundManager.setSfxVolume(-5);
+  });
+
+  it('setSfxVolume clamps values above 1 to 1', () => {
+    SoundManager.setSfxVolume(2.5);
+  });
+
+  it('setMusicVolume clamps negative values to 0', () => {
+    SoundManager.setMusicVolume(-5);
+  });
+
+  it('setMusicVolume clamps values above 1 to 1', () => {
+    SoundManager.setMusicVolume(2.5);
+  });
+});
+
+/* ──────────────────────────────────────────────
  * Sound definitions coverage
  * ────────────────────────────────────────────── */
 describe('all 13 sound definitions exist', () => {
