@@ -34,6 +34,16 @@ export const useInput = ({
         });
       }
 
+      if (key === 'escape' && !e.repeat) {
+        if (statusRef.current === 'playing' && game.current) {
+          game.current.paused = !game.current.paused;
+          if (game.current.audio) {
+            SoundManager.setMuted(game.current.audio.muted);
+          }
+        }
+        return;
+      }
+
       if (key === '`' && !e.repeat) {
         const currentGameState = statusRef.current;
         if (currentGameState === 'start' || currentGameState === 'gameover' || currentGameState === 'victory') {

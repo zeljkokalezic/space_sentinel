@@ -50,6 +50,7 @@
  * @property {number|null} [transitionTimer] — Post-mission countdown
  * @property {boolean} [isVictory] — Whether current transition is a victory
  * @property {boolean} [devMode] — Whether running in dev mode
+ * @property {boolean} [paused] — Whether the game is currently paused
  * @property {number} lastTime — Last frame timestamp (performance.now())
  * @property {number} [touchId] — Active touch pointer ID
  * @property {Object|null} [touchBase] — Touch joystick base position
@@ -94,6 +95,7 @@ export const createGameState = () => ({
   keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
   touchId: null, touchBase: null, touchCurrent: null,
   devMode: false,
+  paused: false,
   audio: { muted: false, volume: 0.5 },
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });

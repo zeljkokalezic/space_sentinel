@@ -14,6 +14,7 @@ import GameOverScreen from './components/GameOverScreen';
 import VictoryScreen from './components/VictoryScreen';
 import EventScreen   from './components/EventScreen';
 import DevMissionPicker from './components/DevMissionPicker';
+import PauseOverlay from './components/PauseOverlay';
 
 export default function App() {
   // ─── React state ────────────────────────────────────────────────────────────
@@ -123,6 +124,7 @@ export default function App() {
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}
       {gameState === 'event'    && <EventScreen     gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}
       {gameState === 'dev'      && <DevMissionPicker onLaunch={launchDevMission} onExit={() => { setDevMode(false); setGameState('start'); }} />}
+      {gameState === 'playing' && game?.current?.paused && <PauseOverlay gameRef={game} startGame={startGame} />}
     </div>
   );
 }

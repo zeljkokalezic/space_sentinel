@@ -67,6 +67,14 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `renderer3d.js`: Three.js scene setup and per-frame 3D rendering — `initThreeScene(containerEl)` returns scene object with camera, renderer, geometries cache, and materials. `draw3DFrame(threeObj, g)` handles chase camera following player, star field, player ship with dynamic turrets (mesh caching via Map), enemies, projectiles, particles, pickups, escort drone. `raycastToPlane()` and `projectToScreen()` for world/screen coordinate conversion. No React imports.
 - `renderer2d.js`: 2D HUD overlay rendering on canvas — `draw2DFrame(camera, g, canvasEl, statusRef, projectFn)`. Renders top bar (HP/shield/scrap), mission progress bar, radar display, and touch joystick. No React imports, no Three.js scene logic.
 
+## Pause Menu
+- **Key:** ESC toggles pause during gameplay
+- **State:** `g.paused` boolean in game state
+- **Behavior:** Pauses game loop (skips `updatePhysics`), shows PauseOverlay with Resume/Restart/Mute buttons
+- **Component:** `PauseOverlay.jsx` — renders when `gameState === 'playing'` and `g.paused` is true
+- **Input:** ESC key handler in `useInput.jsx` toggles `g.paused`
+- **Game Loop:** `useGameLoop.jsx` checks `!game.current?.paused` before calling `updatePhysics`
+
 ## Defend Mission Type
 - **Purpose:** Protect a stationary beacon from enemy attacks for a set duration
 - **State:** `g.beacon` object with `active`, `x`, `y`, `hp`, `maxHp`, `radius`, `color`

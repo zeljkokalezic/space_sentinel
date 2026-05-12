@@ -53,7 +53,7 @@ export const useGameLoop = ({
       game.current.lastTime = time;
       if (dt > 0.1) dt = 0.1;
 
-      if (statusRef.current === 'playing') {
+      if (statusRef.current === 'playing' && !game.current?.paused) {
         updatePhysics(dt, game.current, physicsCbs);
       }
 

@@ -84,6 +84,7 @@ export const createTestState = (overrides = {}) => {
     touchId: null,
     touchBase: null,
     touchCurrent: null,
+    paused: false,
     lastTime: FIXED_TIMESTAMP,
   };
 
