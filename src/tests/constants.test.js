@@ -14,8 +14,8 @@ describe('GAME_CONFIG', () => {
   it('has all required top-level sections', () => {
     const required = [
       'player', 'thrusters', 'magnet', 'weapons', 'shield',
-      'enemies', 'world', 'escort', 'cleanup', 'transition',
-      'projectile', 'particles',
+      'enemies', 'world', 'escort', 'beacon', 'sabotage',
+      'cleanup', 'transition', 'projectile', 'particles',
     ];
     for (const section of required) {
       expect(GAME_CONFIG[section]).toBeDefined();
@@ -89,6 +89,35 @@ describe('GAME_CONFIG', () => {
     ];
     for (const field of required) {
       expect(GAME_CONFIG.escort[field]).toBeDefined();
+    }
+  });
+
+  /* -------------------------------------------------------------- */
+  /*  6b. GAME_CONFIG.beacon fields                                 */
+  /* -------------------------------------------------------------- */
+
+  it('beacon has all required fields', () => {
+    const required = [
+      'baseHp', 'hpPerLevel', 'spawnSpread', 'radius', 'defenseRadius', 'color',
+    ];
+    for (const field of required) {
+      expect(GAME_CONFIG.beacon[field]).toBeDefined();
+    }
+  });
+
+  /* -------------------------------------------------------------- */
+  /*  6c. GAME_CONFIG.sabotage fields                               */
+  /* -------------------------------------------------------------- */
+
+  it('sabotage has all required fields', () => {
+    const required = [
+      'baseStructures', 'structuresPer2Levels', 'maxStructures',
+      'structureHp', 'hpPerLevel', 'structureRadius', 'fireCooldown',
+      'projectileDamage', 'projectileSpeed', 'spawnSpreadMin',
+      'spawnSpreadMax', 'protectRadius', 'color', 'scrapPerDestroy',
+    ];
+    for (const field of required) {
+      expect(GAME_CONFIG.sabotage[field]).toBeDefined();
     }
   });
 

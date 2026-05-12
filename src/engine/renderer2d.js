@@ -51,6 +51,8 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
     : g.mission.type==='defend'
     ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+    : g.mission.type==='sabotage'
+    ? `LEVEL ${g.level}: ${g.mission.title} [${g.mission.current} / ${g.mission.target}]`
     : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
   c.fillText(mTxt, w/2, 18);
 
@@ -104,6 +106,20 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.fillStyle='#22d3ee'; c.fillRect(bsp.x-25,bsp.y-25,50*Math.max(0,bc.hp/bc.maxHp),5);
       c.fillStyle='#22d3ee'; c.font='bold 10px monospace'; c.textAlign='center';
       c.fillText(`BEACON [${Math.ceil(bc.hp)}HP]`, bsp.x, bsp.y-30);
+    }
+  }
+
+  // Sabotage structure HP bars
+  if (g.sabotage && g.sabotage.active) {
+    for (const s of g.sabotage.structures) {
+      if (!s.active || s.hp <= 0) continue;
+      const ssp = projectFn(camera, s.x, s.y, 0);
+      if (ssp.visible) {
+        c.fillStyle='rgba(249,115,22,0.2)'; c.fillRect(ssp.x-25,ssp.y-25,50,5);
+        c.fillStyle='#f97316'; c.fillRect(ssp.x-25,ssp.y-25,50*Math.max(0,s.hp/s.maxHp),5);
+        c.fillStyle='#f97316'; c.font='bold 10px monospace'; c.textAlign='center';
+        c.fillText(`TURRET [${Math.ceil(s.hp)}HP]`, ssp.x, ssp.y-30);
+      }
     }
   }
 
@@ -179,6 +195,19 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.fillStyle='#22d3ee'; c.beginPath();
       c.moveTo(px,py-5); c.lineTo(px+4,py); c.lineTo(px,py+5); c.lineTo(px-4,py);
       c.closePath(); c.fill();
+    }
+  }
+
+  // Sabotage structures on radar
+  if (g.sabotage && g.sabotage.active) {
+    for (const s of g.sabotage.structures) {
+      if (!s.active || s.hp <= 0) continue;
+      const sd = Math.hypot(s.x-g.player.x, s.y-g.player.y);
+      if (sd <= rRange) {
+        const {px,py} = toR(s.x, s.y);
+        c.fillStyle='#f97316';
+        c.fillRect(px-3, py-3, 6, 6);
+      }
     }
   }
 

@@ -116,6 +116,23 @@ export const GAME_CONFIG = {
     color: 0x22d3ee,
   },
 
+  sabotage: {
+    baseStructures: 3,
+    structuresPer2Levels: 1,
+    maxStructures: 8,
+    structureHp: 80,
+    hpPerLevel: 25,
+    structureRadius: 25,
+    fireCooldown: 2.5,
+    projectileDamage: 15,
+    projectileSpeed: 300,
+    spawnSpreadMin: 600,
+    spawnSpreadMax: 1200,
+    protectRadius: 350,
+    color: 0xf97316,
+    scrapPerDestroy: 15,
+  },
+
   cleanup: {
     interval: 5.0,
   },

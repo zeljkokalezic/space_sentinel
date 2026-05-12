@@ -67,6 +67,17 @@ export const createTestState = (overrides = {}) => {
       evasionTimer: 0,
       respawnTimer: 0,
     },
+    beacon: {
+      active: false,
+      x: 0, y: 0,
+      hp: 0, maxHp: 0,
+      radius: 30,
+      color: 0x22d3ee,
+    },
+    sabotage: {
+      active: false,
+      structures: [],
+    },
     keys: {},
     mouse: { x: 0, y: 0, active: false },
     worldMouse: { x: 0, y: 0 },

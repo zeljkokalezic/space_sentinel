@@ -237,6 +237,24 @@ export const draw3DFrame = (threeObj, g) => {
     shieldMesh.position.set(g.beacon.x, g.beacon.y, 0);
   }
 
+  // Sabotage structures (enemy turrets)
+  if (g.sabotage && g.sabotage.active) {
+    for (const s of g.sabotage.structures) {
+      if (!s.active || s.hp <= 0) continue;
+      const key = 'sab_' + s.id;
+      if (!s.id) s.id = Math.random();
+      const sm = getMesh(key, () => {
+        const m = new THREE.Mesh(
+          new THREE.CylinderGeometry(s.radius, s.radius, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true })
+        );
+        return m;
+      });
+      sm.position.set(s.x, s.y, 0);
+      sm.rotation.y += 0.02;
+    }
+  }
+
   // Destination marker
   if (g.escort.active && g.escort.hp > 0) {
     const dest = g.escort;

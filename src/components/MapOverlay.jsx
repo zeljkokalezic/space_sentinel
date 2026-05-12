@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield } from 'lucide-react';
+import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb } from 'lucide-react';
 import { enterNodeMission } from '../engine/missionSetup';
 
 /**
@@ -28,22 +28,28 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
   });
 
   const getIcon = (type) => {
-    if (type === 'boss')   return <Skull className="w-8 h-8" />;
-    if (type === 'elite')  return <Activity className="w-6 h-6" />;
-    if (type === 'shop')   return <Wrench className="w-5 h-5" />;
-    if (type === 'repair') return <Heart className="w-5 h-5" />;
-    if (type === 'event')  return <AlertTriangle className="w-5 h-5" />;
+    if (type === 'boss')     return <Skull className="w-8 h-8" />;
+    if (type === 'elite')    return <Activity className="w-6 h-6" />;
+    if (type === 'shop')     return <Wrench className="w-5 h-5" />;
+    if (type === 'repair')   return <Heart className="w-5 h-5" />;
+    if (type === 'event')    return <AlertTriangle className="w-5 h-5" />;
+    if (type === 'escort')   return <Navigation className="w-5 h-5" />;
+    if (type === 'defend')   return <Shield className="w-5 h-5" />;
+    if (type === 'sabotage') return <Bomb className="w-5 h-5" />;
     return <Target className="w-5 h-5" />;
   };
 
   const getColor = (type, status) => {
     if (status === 'locked')  return 'border-gray-700 text-gray-600 bg-gray-900 shadow-none hover:border-gray-500';
     if (status === 'cleared') return 'border-green-600 text-green-500 bg-green-900/40 shadow-[0_0_10px_#16a34a]';
-    if (type === 'boss')   return 'border-red-500 text-red-500 bg-red-900/60 shadow-[0_0_20px_#ef4444]';
-    if (type === 'elite')  return 'border-purple-500 text-purple-400 bg-purple-900/60 shadow-[0_0_15px_#a855f7]';
-    if (type === 'shop')   return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
-    if (type === 'repair') return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
-    if (type === 'event')  return 'border-yellow-500 text-yellow-400 bg-yellow-900/60 shadow-[0_0_15px_#eab308]';
+    if (type === 'boss')     return 'border-red-500 text-red-500 bg-red-900/60 shadow-[0_0_20px_#ef4444]';
+    if (type === 'elite')    return 'border-purple-500 text-purple-400 bg-purple-900/60 shadow-[0_0_15px_#a855f7]';
+    if (type === 'shop')     return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
+    if (type === 'repair')   return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
+    if (type === 'event')    return 'border-yellow-500 text-yellow-400 bg-yellow-900/60 shadow-[0_0_15px_#eab308]';
+    if (type === 'escort')   return 'border-pink-400 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#f472b6]';
+    if (type === 'defend')   return 'border-cyan-400 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#22d3ee]';
+    if (type === 'sabotage') return 'border-amber-500 text-amber-400 bg-amber-900/60 shadow-[0_0_15px_#f59e0b]';
     return 'border-cyan-500 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#06b6d4]';
   };
 
@@ -105,6 +111,7 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
         <div className="flex items-center gap-3"><AlertTriangle className="w-5 h-5 text-yellow-400"/> <span className="text-gray-300 font-bold">Unknown Anomaly</span></div>
         <div className="flex items-center gap-3"><Wrench       className="w-5 h-5 text-blue-400"   /> <span className="text-gray-300 font-bold">Systems Shop</span></div>
         <div className="flex items-center gap-3"><Heart        className="w-5 h-5 text-pink-400"   /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
+        <div className="flex items-center gap-3"><Bomb         className="w-5 h-5 text-amber-400"   /> <span className="text-gray-300 font-bold">Sabotage Turrets</span></div>
         <div className="flex items-center gap-3"><Skull        className="w-5 h-5 text-red-500"    /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
       </div>
 
@@ -141,7 +148,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
             {isAvailable && n.type === 'shop'   && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-blue-400 bg-black/60 px-2 py-1 rounded">SYSTEM SHOP</div>}
             {isAvailable && n.type === 'event'  && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-bold text-yellow-400 bg-black/60 px-2 py-1 rounded border border-yellow-500/50">ANOMALY</div>}
             {isAvailable && n.type === 'boss'   && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
-            {isAvailable && n.type === 'elite'  && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
+            {isAvailable && n.type === 'elite'     && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
+            {isAvailable && n.type === 'sabotage'  && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-amber-400 bg-black/60 px-2 py-1 rounded">SABOTAGE</div>}
           </div>
         );
       })}

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateMap } from '../engine/mapGenerator';
 
-const VALID_TYPES = ['combat', 'event', 'shop', 'repair', 'elite', 'boss', 'defend', 'escort'];
+const VALID_TYPES = ['combat', 'event', 'shop', 'repair', 'elite', 'boss', 'defend', 'escort', 'sabotage'];
 const GUARANTEED_TYPES = ['combat', 'event', 'shop', 'repair', 'elite', 'boss']; // defend is random, not guaranteed
 const ROWS = 15;
 const COLS = 5;

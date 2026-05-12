@@ -21,6 +21,7 @@ import { updatePickups } from './systems/pickups';
 import { updateParticles, updateEffects } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
+import { updateSabotage } from './systems/sabotage';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
@@ -98,6 +99,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Beacon mission logic ────────────────────────────────────────────────────
   if (updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)) return;
+
+  // ─── Sabotage mission logic ──────────────────────────────────────────────────
+  if (updateSabotage(dt, g, currentDiffMult, completeMission)) return;
 
   // ─── Pool cleanup (every 5 seconds) ──────────────────────────────────────────
   cleanup(dt, g);

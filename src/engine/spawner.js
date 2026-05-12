@@ -34,10 +34,10 @@ export const generateMission = (level, nodeType) => {
 
   // If nodeType explicitly specifies a mission type, use it directly.
   // Only randomise when nodeType is 'combat' (normal map generation).
-  if (['kill', 'collect', 'survive', 'escort', 'defend'].includes(nodeType)) {
+  if (['kill', 'collect', 'survive', 'escort', 'defend', 'sabotage'].includes(nodeType)) {
     t = nodeType;
   } else {
-    const types = ['kill', 'survive', 'collect', 'escort', 'defend'];
+    const types = ['kill', 'survive', 'collect', 'escort', 'defend', 'sabotage'];
     t = types[Math.floor(Math.random() * types.length)];
     if (level === 1) t = 'kill';
     if (level === 2) t = 'collect';
@@ -59,6 +59,12 @@ export const generateMission = (level, nodeType) => {
     target = 30 + level * 10;
     title = `Defend the Beacon for ${target} Seconds`;
     reward = 100 + level * 30;
+    return { type: t, target, current: 0, title, reward };
+  } else if (t === 'sabotage') {
+    const cfg = GAME_CONFIG.sabotage;
+    target = Math.min(cfg.maxStructures, cfg.baseStructures + Math.floor(level / 2) * cfg.structuresPer2Levels);
+    title = `Destroy ${target} Enemy Structures`;
+    reward = 120 + level * 35;
     return { type: t, target, current: 0, title, reward };
   } else {
     // Escort mission — protect a drone as it travels to a destination

@@ -22,7 +22,7 @@ Contains purely functional, isolated React GUI Overlays that render safely on to
 - `StartScreen.jsx`: The initial sequence trigger. Props: `startGame`, `devMode`.
 - `ShopOverlay.jsx`: Renders all system upgrades from `UPGRADE_DATA` with cost calculation, max-level detection, and affordance checking. Props: `uiScrap`, `uiLevels`, `buyUpgrade`, `setGameState`.
 - `EventScreen.jsx`: Renders interactive narrative encounters. Manages its own internal state for the selected random event from `EVENTS_DATA`. Executes choice callbacks then syncs UI state. Props: `gameRef`, `setGameState`, `setUiScrap`, `setUiLevels`.
-- `DevMissionPicker.jsx`: Full-featured development mission selector. Supports 6 mission types (kill, collect, survive, escort, elite hunt, boss rush) with adjustable difficulty levels 1-20. Each mission type has color-coded cards with icons. Props: `onLaunch`, `onExit`.
+- `DevMissionPicker.jsx`: Full-featured development mission selector. Supports 7 mission types (kill, collect, survive, escort, defend, sabotage, elite hunt, boss rush) with adjustable difficulty levels 1-20. Each mission type has color-coded cards with icons. Props: `onLaunch`, `onExit`.
 - `VictoryScreen.jsx`: Handles end-of-sector boss clears. Props: `gameRef`, `startGame`.
 - `GameOverScreen.jsx`: Handles hull-breach resets. Props: `gameRef`, `startGame`.
 
@@ -36,12 +36,13 @@ Static data designed to be completely safely modifiable without touching core ga
 Standalone simulation and rendering algorithms detached from React state.
 
 #### Core modules
-- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, keys, mouse, worldMouse). Defines the `GameState` typedef.
+- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, keys, mouse, worldMouse). Defines the `GameState` typedef.
 - `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row.
 - `combat.js`: Low-level combat utilities — `getNearestEnemy(x, y, enemies)` (pure), `fireProjectile(g, x, y, angle, speed, damage, type, pierceCount)` (mutates `g.projectiles`), `createParticles(g, x, y, count, color, speed, life)` (mutates `g.particles`). No React imports.
-- `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` (pushes to `g.enemies`), `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive types). No React imports.
+- `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` (pushes to `g.enemies`), `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage types). No React imports.
 - `escortSetup.js`: Reusable escort mission initialization — `setupEscort(g, level)` initializes escort drone state; `resetEscort(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `beaconSetup.js`: Reusable defend mission beacon initialization — `setupBeacon(g, level)` initializes beacon state; `resetBeacon(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
+- `sabotageSetup.js`: Reusable sabotage mission structure initialization — `setupSabotage(g, level)` spawns turret structures; `resetSabotage(g)` clears them. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `missionSetup.js`: Shared combat mission initialization — `setupCombatMission(g, mission, level)` resets per-mission state (player position, arrays, cooldowns); `enterNodeMission(g, level, nodeType)` generates + sets up a mission in one call. Used by both MapOverlay and App.jsx to avoid duplication.
 
 #### Physics (simulation)
@@ -59,6 +60,7 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `mission.js`: Mission logic — `updateTransition(dt, g, cbs)`, `createCompleteMission(g)`, `checkMissionProgress(g, dt)`. Mission completion detection, rewards calculation, map progression, and transition timer.
 - `escort.js`: Escort drone — `updateEscort(dt, g, diffMult)`. Escort drone movement, evasion behavior, collision, and mission progress checks.
 - `beacon.js`: Beacon defense — `updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)`. Beacon HP management, enemy projectile/ram collision, defense radius targeting, and mission completion checks.
+- `sabotage.js`: Sabotage turrets — `updateSabotage(dt, g, currentDiffMult, completeMission, setGameState)`. Structure firing at player, player projectile collision with structures, enemy targeting bias toward structures, and mission completion when all structures destroyed.
 
 #### Rendering
 - `renderer.js`: **Barrel module** — re-exports from renderer3d.js and renderer2d.js. Provides `drawFrame(threeObj, g, canvasEl, statusRef)` which calls both 3D and 2D renderers.
@@ -83,6 +85,41 @@ Each system receives explicit parameters (not reading from global state) and mut
   - 3D: Wireframe tetrahedron + shield ring (cyan, 0x22d3ee)
   - 2D: HP bar + "BEACON [X HP]" label + radar diamond marker
 - **Mission completion:** Survive until defend timer reaches target duration
+
+## Sabotage Mission Type
+- **Purpose:** Destroy N enemy turret structures scattered across the map
+- **State:** `g.sabotage` object with `active`, `structures` array (each: `x`, `y`, `hp`, `maxHp`, `radius`, `fireCooldown`, `active`)
+- **Config:** `GAME_CONFIG.sabotage` with `baseStructures`, `structuresPer2Levels`, `maxStructures`, `structureHp`, `hpPerLevel`, `structureRadius`, `fireCooldown`, `projectileDamage`, `projectileSpeed`, `spawnSpreadMin`, `spawnSpreadMax`, `protectRadius`, `color`, `scrapPerDestroy`
+- **Setup:** `sabotageSetup.js` — `setupSabotage(g, level)`, `resetSabotage(g)`
+- **System:** `systems/sabotage.js` — `updateSabotage(dt, g, currentDiffMult, completeMission, setGameState)`
+- **Gameplay mechanics:**
+  - Structures spawn in a ring around player at mission start (count scales with level, capped at 8)
+  - Each structure fires projectiles at the player on a fixed cooldown
+  - Player projectiles damage structures; destroyed structures spawn particles + scrap pickup
+  - Enemies within protectRadius target structures instead of player
+  - All structures destroyed completes the mission
+  - Structure HP scales with level (structureHp + level * hpPerLevel)
+- **Rendering:**
+  - 3D: Octagonal wireframe cylinder (orange, 0xf97316) with slow rotation
+  - 2D: HP bar + "TURRET [X HP]" label + radar square marker
+- **Mission completion:** Destroy all structures
+
+## Adding New Mission Types — Checklist
+When adding a new mission type, update ALL of the following:
+1. `src/constants/gameConfig.js` — Add config block with all magic numbers
+2. `src/engine/state.js` — Add state property + default factory + JSDoc
+3. `src/engine/*Setup.js` — Create setup/reset functions (e.g., `sabotageSetup.js`)
+4. `src/engine/systems/*.js` — Create system update function
+5. `src/engine/physics.js` — Wire system into game loop
+6. `src/engine/missionSetup.js` — Add setup/reset routing + mutual reset logic
+7. `src/engine/spawner.js` — Add to `generateMission()` + mission type array
+8. `src/engine/mapGenerator.js` — Add to random node distribution weights
+9. `src/engine/renderer3d.js` + `renderer2d.js` — Add 3D visuals + 2D HUD rendering
+10. `src/App.jsx` — Add to `launchDevMission()` `nodeTypeMap`
+11. `src/components/DevMissionPicker.jsx` — Add to `MISSION_TYPES` array + `COLOR_MAP`
+12. `AGENTS.md` — Document the new mission type
+13. Tests — Update existing test files + create dedicated system/setup tests
+14. Run `npm test -- --run` (all pass) + `npm run build` (success)
 
 ## Deployment
 The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to build and publish to the `gh-pages` branch. This runs `npm run build` (via `predeploy`) then pushes `dist/` to the branch. Live site: https://zeljkokalezic.github.io/space_sentinel/

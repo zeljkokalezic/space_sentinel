@@ -7,6 +7,7 @@
 import { generateMission } from './spawner';
 import { setupEscort, resetEscort } from './escortSetup';
 import { setupBeacon, resetBeacon } from './beaconSetup';
+import { setupSabotage, resetSabotage } from './sabotageSetup';
 
 /**
  * Set up a combat mission on the game state.
@@ -29,12 +30,19 @@ export const setupCombatMission = (g, mission, level) => {
   if (mission.type === 'escort') {
     setupEscort(g, level);
     resetBeacon(g);
+    resetSabotage(g);
   } else if (mission.type === 'defend') {
     setupBeacon(g, level);
     resetEscort(g);
+    resetSabotage(g);
+  } else if (mission.type === 'sabotage') {
+    setupSabotage(g, level);
+    resetEscort(g);
+    resetBeacon(g);
   } else {
     resetEscort(g);
     resetBeacon(g);
+    resetSabotage(g);
   }
 };
 

@@ -43,6 +43,7 @@
  * @property {Object} cooldowns — Weapon/system cooldown timers
  * @property {Object} escort — Escort drone state
  * @property {Object} beacon — Beacon state for defend missions
+ * @property {Object} sabotage — Sabotage state (enemy structures to destroy)
  * @property {Object} keys — Keyboard input state
  * @property {Object} mouse — Mouse input state
  * @property {Object} worldMouse — Mouse position in world coords
@@ -86,6 +87,7 @@ export const createGameState = () => ({
   cooldowns: { autocannon: 0, plasma: 0, missiles: 0, pointDefense: 0, shieldRegen: 0 },
   escort: createDefaultEscort(),
   beacon: createDefaultBeacon(),
+  sabotage: createDefaultSabotage(),
   keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
   touchId: null, touchBase: null, touchCurrent: null,
   devMode: false,
@@ -117,4 +119,12 @@ export const createDefaultBeacon = () => ({
   hp: 0, maxHp: 0,
   radius: 30,
   color: 0x22d3ee,
+});
+
+/**
+ * @returns {Object} Default sabotage state (enemy structures to destroy)
+ */
+export const createDefaultSabotage = () => ({
+  active: false,
+  structures: [], // { x, y, hp, maxHp, radius, fireCooldown, active }
 });

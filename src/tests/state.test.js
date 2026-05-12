@@ -326,6 +326,22 @@ describe('createGameState', () => {
       expect(s2.escort.active).toBe(false);
     });
 
+    it('beacon objects are independent', () => {
+      const s1 = createGameState();
+      const s2 = createGameState();
+      expect(s1.beacon).not.toBe(s2.beacon);
+      s1.beacon.active = true;
+      expect(s2.beacon.active).toBe(false);
+    });
+
+    it('sabotage objects are independent', () => {
+      const s1 = createGameState();
+      const s2 = createGameState();
+      expect(s1.sabotage).not.toBe(s2.sabotage);
+      s1.sabotage.active = true;
+      expect(s2.sabotage.active).toBe(false);
+    });
+
     it('stars arrays are independent', () => {
       const s1 = createGameState();
       const s2 = createGameState();
@@ -382,6 +398,36 @@ describe('createGameState', () => {
 
   /* ──────────────────────────────────────────────
    * 12. Other top-level fields
+   * ────────────────────────────────────────────── */
+  describe('beacon defaults', () => {
+    it('active is false', () => {
+      expect(state.beacon.active).toBe(false);
+    });
+
+    it('position defaults to origin', () => {
+      expect(state.beacon.x).toBe(0);
+      expect(state.beacon.y).toBe(0);
+    });
+
+    it('hp and maxHp are 0', () => {
+      expect(state.beacon.hp).toBe(0);
+      expect(state.beacon.maxHp).toBe(0);
+    });
+  });
+
+  describe('sabotage defaults', () => {
+    it('active is false', () => {
+      expect(state.sabotage.active).toBe(false);
+    });
+
+    it('structures is an empty array', () => {
+      expect(Array.isArray(state.sabotage.structures)).toBe(true);
+      expect(state.sabotage.structures.length).toBe(0);
+    });
+  });
+
+  /* ──────────────────────────────────────────────
+   * 13. Other top-level fields
    * ────────────────────────────────────────────── */
   describe('other top-level fields', () => {
     it('spawnCooldown is 2', () => {
