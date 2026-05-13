@@ -173,17 +173,17 @@ describe('fireProjectile', () => {
     expect(p.target).not.toBe(enemyInactive);
   });
 
-  it('missile type target is undefined when no active enemies exist', () => {
+  it('missile type target is null when no active enemies exist', () => {
     g.enemies = [];
     fireProjectile(g, 0, 0, 0, 500, 10, 'missile');
-    expect(g.projectiles[0].target).toBeUndefined();
+    expect(g.projectiles[0].target).toBeNull();
   });
 
-  it('missile type target is undefined when all enemies are inactive', () => {
+  it('missile type target is null when all enemies are inactive', () => {
     g.enemies = [createTestEnemy(10, 10)];
     g.enemies[0].active = false;
     fireProjectile(g, 0, 0, 0, 500, 10, 'missile');
-    expect(g.projectiles[0].target).toBeUndefined();
+    expect(g.projectiles[0].target).toBeNull();
   });
 
   it('enemy_missile type sets target to g.player', () => {

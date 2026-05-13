@@ -62,7 +62,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.fillText(`TIME: ${Math.floor(g.totalTime/60)}:${Math.floor(g.totalTime%60).toString().padStart(2,'0')}`, w/2, 50);
 
   // Mission bar
-  const mBarW=300, mProg=Math.max(0,Math.min(1,g.mission.current/g.mission.target));
+  const mBarW=300, mProg=g.mission.target>0?Math.max(0,Math.min(1,g.mission.current/g.mission.target)):0;
   c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(w/2-mBarW/2,10,mBarW,10);
   c.fillStyle='#39ff14'; c.fillRect(w/2-mBarW/2,10,mBarW*mProg,10);
   c.fillStyle='#fff'; c.font='bold 16px sans-serif'; c.textAlign='center';

@@ -13,13 +13,6 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
   const beacon = g.beacon;
   const cfg = GAME_CONFIG.beacon;
 
-  // Timer progress — defend for target seconds
-  g.mission.current += dt;
-  if (g.mission.current >= g.mission.target) {
-    completeMission();
-    return false;
-  }
-
   // Enemy projectile collision with beacon
   for (let p of g.projectiles) {
     if (!p.active || !p.isEnemy) continue;
@@ -39,9 +32,13 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
     const dx = beacon.x - e.x;
     const dy = beacon.y - e.y;
     if (Math.hypot(dx, dy) < beacon.radius + e.radius) {
-      beacon.hp -= 15;
-      e.hp -= 20;
-      createParticles(g, e.x, e.y, 0x22d3ee, 5);
+      e._beaconRamCooldown = (e._beaconRamCooldown || 0) - dt;
+      if (e._beaconRamCooldown <= 0) {
+        beacon.hp -= 15;
+        e.hp -= 20;
+        createParticles(g, e.x, e.y, 0x22d3ee, 5);
+        e._beaconRamCooldown = 1.0;
+      }
     }
   }
 
@@ -55,7 +52,8 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
         vx: (Math.random()-0.5)*200,
         vy: (Math.random()-0.5)*200,
         life: 1.5,
-        color: '#22d3ee',
+        active: true,
+        color: 0x22d3ee,
       });
     }
     setGameState('gameover');

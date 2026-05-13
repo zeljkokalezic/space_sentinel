@@ -78,10 +78,12 @@ export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
           createParticles(g, s.x, s.y, cfg.color, 20);
           // Drop scrap
           g.pickups.push({
+            id: Math.random(),
             x: s.x + (Math.random() - 0.5) * 30,
             y: s.y + (Math.random() - 0.5) * 30,
-            scrap: cfg.scrapPerDestroy,
+            value: cfg.scrapPerDestroy,
             active: true,
+            radius: 6,
           });
         }
       }

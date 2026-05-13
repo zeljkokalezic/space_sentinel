@@ -34,7 +34,9 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
   let target = null;
   if (type === 'missile') {
     const active = g.enemies.filter(e => e.active);
-    target = active[Math.floor(Math.random() * active.length)];
+    if (active.length > 0) {
+      target = active[Math.floor(Math.random() * active.length)];
+    }
   } else if (type === 'enemy_missile') {
     target = g.player;
   }

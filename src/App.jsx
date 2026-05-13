@@ -67,7 +67,7 @@ export default function App() {
 
   // ─── Upgrade purchase ──────────────────────────────────────────────────────
   const buyUpgrade = (key, cost) => {
-    if (uiScrap < cost) return;
+    if (game.current.scrap < cost) return;
     setUiScrap(prev => prev - cost);
     game.current.scrap -= cost;
     setUiLevels(prev => {

@@ -6,7 +6,6 @@ import { createParticles } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 
 /**
-
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  * @param {number} currentDiffMult — Difficulty multiplier
@@ -21,8 +20,8 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
 
   // ── Handle respawn (drone destroyed but has lives left) ──
   if (esc.hp <= 0 && esc.lives > 0) {
-    esc.respawnTimer = C.escort.respawnTimer;
     esc.lives--;
+    esc.respawnTimer = C.escort.respawnTimer;
     esc.hp = esc.maxHp;
   }
 
@@ -37,13 +36,6 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     const dx = esc.targetX - esc.x;
     const dy = esc.targetY - esc.y;
     const distToTarget = Math.hypot(dx, dy);
-
-    // Update mission progress (distance-based)
-    if (esc.startDist > 0) {
-      const traveled = esc.startDist - distToTarget;
-      g.mission.current = Math.max(0, traveled);
-      g.mission.target = esc.startDist;
-    }
 
     if (distToTarget > C.escort.destinationThreshold) {
       const moveAngle = Math.atan2(dy, dx);
@@ -85,11 +77,40 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     esc.x = Math.max(-C.escort.worldBounds, Math.min(C.escort.worldBounds, esc.x));
     esc.y = Math.max(-C.escort.worldBounds, Math.min(C.escort.worldBounds, esc.y));
 
+    // Recompute distance after all movement (movement + evasion + clamping)
+    const finalDist = Math.hypot(esc.targetX - esc.x, esc.targetY - esc.y);
+
+    // Update mission progress (distance-based) using recomputed distance
+    if (esc.startDist > 0) {
+      const traveled = esc.startDist - finalDist;
+      g.mission.current = Math.max(0, traveled);
+      g.mission.target = esc.startDist;
+    }
+
     // Check if drone reached destination
-    if (distToTarget <= C.escort.destinationThreshold) {
+    if (finalDist <= C.escort.destinationThreshold) {
       completeMission();
     }
   }
+
+  // ── Helper: handle escort death ──
+  const handleEscortDeath = () => {
+    createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
+    g.effects.push({
+      type: 'mission_complete',
+      x: window.innerWidth / 2,
+      y: Math.max(100, window.innerHeight / 4),
+      text: esc.lives > 0 ? `DRONE DESTROYED! ${esc.lives} LIVES LEFT` : 'DRONE DESTROYED!',
+      life: 2.5,
+    });
+    if (esc.lives <= 0) {
+      esc.active = false;
+      g.player.hp = 0;
+      setGameState('gameover');
+      return true;
+    }
+    return false;
+  };
 
   // ── Enemy projectiles hitting escort drone ──
   if (esc.hp > 0 && esc.respawnTimer <= 0) {
@@ -100,23 +121,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
         p.active = false;
         createParticles(g, p.x, p.y, 0x22d3ee, 5);
         g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
-        if (esc.hp <= 0) {
-          createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
-          esc.lives--;
-          g.effects.push({
-            type: 'mission_complete',
-            x: window.innerWidth / 2,
-            y: Math.max(100, window.innerHeight / 4),
-            text: esc.lives > 0 ? `DRONE DESTROYED! ${esc.lives} LIVES LEFT` : 'DRONE DESTROYED!',
-            life: 2.5,
-          });
-          if (esc.lives <= 0) {
-            esc.active = false;
-            g.player.hp = 0;
-            setGameState('gameover');
-            return true;
-          }
-        }
+        if (esc.hp <= 0 && handleEscortDeath()) return true;
       }
     }
   }
@@ -129,23 +134,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
         esc.hp -= C.escort.ramDamage;
         createParticles(g, esc.x, esc.y, 0x22d3ee, 10);
         g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: C.escort.ramDamage.toString(), life: 0.8 });
-        if (esc.hp <= 0) {
-          createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
-          esc.lives--;
-          g.effects.push({
-            type: 'mission_complete',
-            x: window.innerWidth / 2,
-            y: Math.max(100, window.innerHeight / 4),
-            text: esc.lives > 0 ? `DRONE DESTROYED! ${esc.lives} LIVES LEFT` : 'DRONE DESTROYED!',
-            life: 2.5,
-          });
-          if (esc.lives <= 0) {
-            esc.active = false;
-            g.player.hp = 0;
-            setGameState('gameover');
-            return true;
-          }
-        }
+        if (esc.hp <= 0 && handleEscortDeath()) return true;
       }
     }
   }

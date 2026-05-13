@@ -721,13 +721,16 @@ describe('escort death and respawn', () => {
     const completeMission = vi.fn();
     const setGameState = vi.fn();
 
+    // With the refactored escort.js, lives are decremented in the respawn handler
+    // at the top of the function on the next frame. To test gameover in a single
+    // call, set lives=0 so handleEscortDeath sees esc.lives <= 0 immediately.
     const g = createEscortState({
       escort: {
         x: 0,
         y: 0,
         hp: 10,
         maxHp: 100,
-        lives: 1,
+        lives: 0,
         targetX: 500,
         targetY: 0,
         startDist: 500,
@@ -763,13 +766,15 @@ describe('escort death and respawn', () => {
     const completeMission = vi.fn();
     const setGameState = vi.fn();
 
+    // Same logic as projectile test: set lives=0 so handleEscortDeath sees
+    // esc.lives <= 0 immediately when the escort is killed by ram.
     const g = createEscortState({
       escort: {
         x: 0,
         y: 0,
         hp: 10,
         maxHp: 100,
-        lives: 1,
+        lives: 0,
         targetX: 500,
         targetY: 0,
         startDist: 500,
@@ -949,14 +954,14 @@ describe('mission progress tracking', () => {
       },
     });
 
-    // First call: progress calculated before movement, so it's 0
+    // First call: escort moves 10 units, mission.current updated after movement
     updateEscort(0.1, g, 1, vi.fn(), vi.fn());
 
-    // Second call: escort has moved 10 units toward target, traveled = startDist - newDist
+    // Second call: escort moves another 10 units, mission.current updated after movement
     updateEscort(0.1, g, 1, vi.fn(), vi.fn());
 
     // Escort moved ~20 units toward target total (2 calls * 100 * 0.1)
-    expect(g.mission.current).toBeCloseTo(10); // first call's movement reflected in second call's progress
+    expect(g.mission.current).toBeCloseTo(20); // finalDist after both calls = ~480, traveled = 500 - 480 = 20
     expect(g.mission.target).toBe(500);
   });
 

@@ -122,11 +122,8 @@ export const updateAudio = (dt, g) => {
     const shieldHit = prevShield !== undefined && g.player.shield < prevShield;
     const hpHit = prevHp !== undefined && g.player.hp < prevHp;
 
-    if (shieldHit) {
-      SoundManager.play('shield_hit');
-    } else if (hpHit) {
-      SoundManager.play('player_hit');
-    }
+    if (shieldHit) SoundManager.play('shield_hit');
+    if (hpHit) SoundManager.play('player_hit');
   }
 
   // ── Store current frame state as _prev for next frame ──

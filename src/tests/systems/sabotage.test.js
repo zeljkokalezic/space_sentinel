@@ -364,8 +364,10 @@ describe('structure destruction', () => {
     updateSabotage(0.1, g, 1, vi.fn());
 
     expect(g.pickups.length).toBeGreaterThan(0);
-    expect(g.pickups[0].scrap).toBe(cfg.scrapPerDestroy);
+    expect(g.pickups[0].value).toBe(cfg.scrapPerDestroy);
     expect(g.pickups[0].active).toBe(true);
+    expect(g.pickups[0].id).toBeDefined();
+    expect(g.pickups[0].radius).toBeDefined();
   });
 
   it('damage effect is pushed on hit', () => {

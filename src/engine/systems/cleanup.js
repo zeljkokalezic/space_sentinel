@@ -1,5 +1,4 @@
 /**
-/**
  * systems/cleanup.js — Dead entity pool cleanup with proper timer.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';

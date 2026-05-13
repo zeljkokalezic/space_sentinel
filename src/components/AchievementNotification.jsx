@@ -110,6 +110,8 @@ export default function AchievementNotification({ game, visible }) {
   const dismissNotification = (index) => {
     if (game.current.achievements.notifications) {
       game.current.achievements.notifications.splice(index, 1);
+      // Force re-render by creating new array reference
+      game.current.achievements.notifications = [...game.current.achievements.notifications];
     }
   };
 

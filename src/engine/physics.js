@@ -79,7 +79,7 @@ export const updatePhysics = (dt, g, cbs) => {
   for (let k in g.cooldowns) g.cooldowns[k] -= dt;
 
   // ─── Weapons firing ───────────────────────────────────────────────────────────
-  updateWeapons(dt, g);
+  updateWeapons(dt, g, completeMission);
 
   // ─── Projectile simulation ────────────────────────────────────────────────────
   updateProjectiles(dt, g, setGameState);

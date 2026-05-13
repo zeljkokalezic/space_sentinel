@@ -294,7 +294,7 @@ describe('player hit detection', () => {
     expect(mockPlay).toHaveBeenCalledWith('player_hit');
   });
 
-  it('plays shield_hit over player_hit when both shield and hp decrease', () => {
+  it('plays both shield_hit and player_hit when both shield and hp decrease', () => {
     const g = buildState({
       mission: { type: 'kill', target: 5, current: 0 },
       player: { ...buildState().player, hp: 300, shield: 20 },
@@ -306,7 +306,7 @@ describe('player hit detection', () => {
     g.player.hp = 280;
     updateAudio(0.016, g);
     expect(mockPlay).toHaveBeenCalledWith('shield_hit');
-    expect(mockPlay).not.toHaveBeenCalledWith('player_hit');
+    expect(mockPlay).toHaveBeenCalledWith('player_hit');
   });
 
   it('does not play player_hit when hp/shield unchanged', () => {

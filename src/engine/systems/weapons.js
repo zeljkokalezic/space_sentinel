@@ -1,15 +1,16 @@
 /**
  * systems/weapons.js — Player weapon firing logic (autocannon, plasma, missiles, pointDefense).
  */
-import { fireProjectile, getNearestEnemy } from '../combat';
+import { fireProjectile, getNearestEnemy, createParticles } from '../combat';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 
 /**
  * @param {number} dt — Delta time
  * @param {object} g — Game state
+ * @param {function} completeMission — Mission completion callback
  */
-export const updateWeapons = (dt, g) => {
+export const updateWeapons = (dt, g, completeMission) => {
   const C = GAME_CONFIG;
   const hasTarget = g.levels.autoAim > 0
     ? (getNearestEnemy(g.player.x, g.player.y, g.enemies) !== null)
@@ -88,6 +89,21 @@ export const updateWeapons = (dt, g) => {
           g.effects.push({ type: 'laser', source: g.player, target: e, life: 0.1 });
           g.effects.push({ type: 'dmg', x: e.x, y: e.y, text: Math.ceil(dmg).toString(), life: 0.8 });
           hits++;
+          if (e.hp <= 0) {
+            e.active = false;
+            if (g.stats) g.stats.enemiesDestroyed++;
+            if (g.mission?.type === 'kill') {
+              g.mission.current++;
+              if (g.mission.current >= g.mission.target) completeMission();
+            } else if (g.mission?.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
+              g.mission.current++;
+              if (g.mission.current >= g.mission.target) completeMission();
+            }
+            createParticles(g, e.x, e.y, e.color, 15);
+            const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
+            g.pickups.push({ x: e.x, y: e.y, value: val, active: true, radius: 6, id: Math.random() });
+            SoundManager.play('explosion');
+          }
           if (hits >= maxHits) break;
         }
       }

@@ -9,7 +9,7 @@
  *   - game: Mutable game state ref
  *   - visible: Whether to show the overlay
  */
-import React, { useMemo } from 'react';
+import React from 'react';
 
 /**
  * Calculate performance rating based on mission stats.
@@ -57,20 +57,16 @@ function formatTime(seconds) {
 }
 
 export default function PostMissionSummary({ game, visible }) {
-  const stats = useMemo(() => {
-    if (!game.current) return null;
-    const g = game.current;
-    return {
-      missionType: g.mission?.type || 'unknown',
-      enemiesDestroyed: g.mission?.current || 0,
-      totalTime: g.totalTime || 0,
-      playerHpPercent: Math.max(0, (g.player?.hp || 0) / (g.player?.maxHp || 100) * 100),
-      scrapEarned: g.mission?.reward || 0,
-      level: g.level || 1,
-    };
-  }, [game.current]);
-  
-  if (!visible || !stats) return null;
+  if (!visible || !game?.current) return null;
+  const g = game.current;
+  const stats = {
+    missionType: g.mission?.type || 'unknown',
+    enemiesDestroyed: g.mission?.current || 0,
+    totalTime: g.totalTime || 0,
+    playerHpPercent: Math.max(0, (g.player?.hp || 0) / (g.player?.maxHp || 100) * 100),
+    scrapEarned: g.mission?.reward || 0,
+    level: g.level || 1,
+  };
   
   const rating = calculateRating(stats);
   

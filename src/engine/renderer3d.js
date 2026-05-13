@@ -210,10 +210,14 @@ export const draw3DFrame = (threeObj, g) => {
     });
     m.position.set(e.x, e.y, 0);
     m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
-    // LOD: reduce detail for distant enemies
+    // LOD: reduce detail for distant enemies (toggle — apply only once)
     const dist = Math.sqrt(distSq);
-    if (dist > 1000) {
+    if (dist > 1000 && !m.userData.lodApplied) {
       m.scale.multiplyScalar(0.8);
+      m.userData.lodApplied = true;
+    } else if (dist <= 1000 && m.userData.lodApplied) {
+      m.scale.multiplyScalar(1.25);
+      m.userData.lodApplied = false;
     }
   }
 
@@ -258,8 +262,8 @@ export const draw3DFrame = (threeObj, g) => {
   if (g.sabotage && g.sabotage.active) {
     for (const s of g.sabotage.structures) {
       if (!s.active || s.hp <= 0) continue;
-      const key = 'sab_' + s.id;
       if (!s.id) s.id = Math.random();
+      const key = 'sab_' + s.id;
       const sm = getMesh(key, () => {
         const m = new THREE.Mesh(
           new THREE.CylinderGeometry(s.radius, s.radius, 8, 8),
@@ -305,7 +309,7 @@ export const draw3DFrame = (threeObj, g) => {
     if (e.type !== 'laser') continue;
     const m = getMesh(e, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser));
     if (e.source && e.target) m.geometry.setFromPoints([new THREE.Vector3(e.source.x,e.source.y,0), new THREE.Vector3(e.target.x,e.target.y,0)]);
-    m.material.opacity = e.life * 10;
+    m.material.opacity = Math.min(1, e.life * 10);
   }
 
   // Cleanup dead objects

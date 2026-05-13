@@ -338,10 +338,10 @@ describe('missile firing', () => {
     expect(g.projectiles[0].target).toBe(enemy);
   });
 
-  it('missile target is undefined when no active enemies', () => {
+  it('missile target is null when no active enemies', () => {
     const g = stateWithMissiles();
     updateWeapons(0.016, g);
-    expect(g.projectiles[0].target).toBeUndefined();
+    expect(g.projectiles[0].target).toBeNull();
   });
 
   it('sets cooldown after firing', () => {

@@ -20,7 +20,6 @@ export const useInput = ({
   setGameState,
   setDevMode,
   startGame,
-  paused,
   setPaused,
 }) => {
   // ─── Keyboard ──────────────────────────────────────────────────────────────
@@ -75,7 +74,7 @@ export const useInput = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-   }, [setPaused]); // eslint-disable-line react-hooks/exhaustive-deps
+   }, [setPaused, startGame]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Pointer (mouse + touch) ───────────────────────────────────────────────
   const onPointerDown = (e) => {

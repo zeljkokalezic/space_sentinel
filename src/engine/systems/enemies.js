@@ -75,7 +75,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       }
       createParticles(g, e.x, e.y, e.color, 15);
       const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
-      g.pickups.push({ x: e.x, y: e.y, value: val, active: true, radius: 6 });
+      g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 });
     }
   }
 };
