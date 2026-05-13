@@ -149,13 +149,13 @@ describe('pause', () => {
       // Mock browser globals needed by engine modules
       globalThis.window = { innerWidth: 1920, innerHeight: 1080 };
       // Mock localStorage for auto-save in mission completion
-      const store = {};
+     const store = {};
       Object.defineProperty(globalThis, 'localStorage', {
         value: {
           getItem: (key) => store[key] ?? null,
           setItem: (key, val) => { store[key] = String(val); },
           removeItem: (key) => { delete store[key]; },
-          clear: () => { store = {}; },
+          clear: () => { for (const k of Object.keys(store)) delete store[k]; },
         },
         writable: true,
         configurable: true,

@@ -39,14 +39,14 @@ beforeEach(() => {
     configurable: true,
   });
   // Mock localStorage for auto-save in mission completion
-  const store = {};
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: {
-      getItem: (key) => store[key] ?? null,
-      setItem: (key, val) => { store[key] = String(val); },
-      removeItem: (key) => { delete store[key]; },
-      clear: () => { store = {}; },
-    },
+     const store = {};
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: {
+          getItem: (key) => store[key] ?? null,
+          setItem: (key, val) => { store[key] = String(val); },
+          removeItem: (key) => { delete store[key]; },
+          clear: () => { for (const k of Object.keys(store)) delete store[k]; },
+        },
     writable: true,
     configurable: true,
   });

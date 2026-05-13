@@ -71,7 +71,7 @@ export default function SettingsOverlay({ gameRef, onClose }) {
       gameRef.current.audio.volume = settings.volume;
       gameRef.current.audio.muted = settings.volume === 0;
     }
-  }, []);
+  }, [gameRef, settings.musicVolume, settings.sfxVolume, settings.volume]);
 
   // Sync settings to game state when changed
   useEffect(() => {

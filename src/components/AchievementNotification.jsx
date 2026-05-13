@@ -36,7 +36,7 @@ function AchievementToast({ notification, onDismiss }) {
       clearTimeout(dismiss);
       clearInterval(tick);
     };
-  }, []);
+  }, [notification.timer, onDismiss]);
 
   return (
     <div
