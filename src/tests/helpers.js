@@ -213,3 +213,36 @@ export const createTestPickup = (x, y, value = 1) => ({
  * @returns {number}
  */
 export const getFixedTimestamp = () => FIXED_TIMESTAMP;
+
+/**
+ * In-memory localStorage mock for Node test environment.
+ */
+let storage = {};
+
+/**
+ * Set up a mock localStorage on globalThis.
+ * Call this in a `beforeEach` block in any test file that imports
+ * modules using localStorage (saveManager, mission auto-save, etc.).
+ */
+export const setupLocalStorageMock = () => {
+  storage = {};
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (key) => storage[key] ?? null,
+      setItem: (key, val) => { storage[key] = String(val); },
+      removeItem: (key) => { delete storage[key]; },
+      clear: () => { storage = {}; },
+    },
+    writable: true,
+    configurable: true,
+  });
+};
+
+/**
+ * Remove the localStorage mock and restore undefined.
+ * Call this in an `afterEach` block.
+ */
+export const clearLocalStorageMock = () => {
+  delete globalThis.localStorage;
+  storage = {};
+};

@@ -3,14 +3,22 @@
  *
  * Run:  npx vitest run src/tests/physics.test.js
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { updatePhysics } from '../engine/physics';
-import { createTestState, createTestEnemy } from './helpers';
+import { createTestState, createTestEnemy, setupLocalStorageMock, clearLocalStorageMock } from './helpers';
 import { GAME_CONFIG } from '../constants/gameConfig';
 
 /* ── mock browser globals ───────────────────────────────── */
 // mission.js and escort.js reference `window`
 globalThis.window = { innerWidth: 1920, innerHeight: 1080 };
+
+beforeEach(() => {
+  setupLocalStorageMock();
+});
+
+afterEach(() => {
+  clearLocalStorageMock();
+});
 
 /* ── helpers ────────────────────────────────────────────── */
 
