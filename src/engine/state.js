@@ -68,6 +68,7 @@
  * @property {Object} [achievements] — Achievement tracking state
  * @property {Set} achievements.unlocked — Unlocked achievement IDs
  * @property {Array} achievements.notifications — Pending achievement notifications
+ * @property {number} [achievementVersion] — Bumps when notifications change (triggers React render)
  * @property {Object} [stats] — Persistent game statistics
  * @property {number} stats.enemiesDestroyed — Total enemies destroyed
  * @property {number} stats.totalScrap — Total scrap earned
@@ -91,6 +92,7 @@ export const createGameState = () => ({
     unlocked: loadAchievements(),
     notifications: [],
   },
+  achievementVersion: 0,
   stats: {
     enemiesDestroyed: 0,
     totalScrap: 0,

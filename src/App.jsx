@@ -24,6 +24,7 @@ export default function App() {
   const [uiScrap,         setUiScrap]         = useState(0);
   const [uiLevels,        setUiLevels]        = useState(null);
   const [mapStateVersion, setMapStateVersion] = useState(0);
+  const [notificationVersion, setNotificationVersion] = useState(0);
   const [devMode,         setDevMode]         = useState(false);
   const [paused,          setPaused]          = useState(false);
 
@@ -83,7 +84,7 @@ export default function App() {
 
   // ─── Hooks ──────────────────────────────────────────────────────────────────
   const { threeRef, statusRef } = useGameLoop({
-    containerRef, canvasRef, game, gameState, setGameState, setMapStateVersion, devMode,
+    containerRef, canvasRef, game, gameState, setGameState, setMapStateVersion, setNotificationVersion, devMode,
   });
 
   const { onPointerDown, onPointerMove, onPointerUp } = useInput({
@@ -128,7 +129,7 @@ export default function App() {
       {gameState === 'dev'      && <DevMissionPicker onLaunch={launchDevMission} onExit={() => { setDevMode(false); setGameState('start'); }} />}
       {gameState === 'playing' && paused && <PauseOverlay gameRef={game} startGame={startGame} setPaused={setPaused} />}
       {gameState === 'playing' && game?.current?.transitionTimer !== undefined && <PostMissionSummary game={game} visible={true} />}
-      {gameState === 'playing' && <AchievementNotification game={game} visible={true} />}
+      {gameState === 'playing' && <AchievementNotification game={game} visible={true} notificationVersion={notificationVersion} onBumpNotification={setNotificationVersion} />}
     </div>
   );
 }

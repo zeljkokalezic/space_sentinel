@@ -19,6 +19,7 @@ export const useGameLoop = ({
   gameState,
   setGameState,
   setMapStateVersion,
+  setNotificationVersion,
   devMode,
 }) => {
   const threeRef = useRef(null);
@@ -38,7 +39,7 @@ export const useGameLoop = ({
       setGameState(state);
     }
   };
-  const physicsCbs = { setGameState: devAwareSetState, setMapStateVersion };
+  const physicsCbs = { setGameState: devAwareSetState, setMapStateVersion, setNotificationVersion };
 
   useEffect(() => {
     const containerEl = containerRef.current;

@@ -86,6 +86,7 @@ export const createTestState = (overrides = {}) => {
     touchCurrent: null,
     paused: false,
     lastTime: FIXED_TIMESTAMP,
+    achievementVersion: 0,
   };
 
   // Deep-merge player overrides if provided

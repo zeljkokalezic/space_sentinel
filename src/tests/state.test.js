@@ -516,5 +516,9 @@ describe('createGameState', () => {
       expect(typeof state.lastTime).toBe('number');
       expect(state.lastTime).toBeGreaterThan(0);
     });
+
+    it('achievementVersion starts at 0', () => {
+      expect(state.achievementVersion).toBe(0);
+    });
   });
 });

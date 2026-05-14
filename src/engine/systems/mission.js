@@ -98,6 +98,7 @@ export const createCompleteMission = (g) => {
       }
     }
     if (result.newlyUnlocked.length > 0) {
+      g.achievementVersion++;
       saveAchievements(g.achievements.unlocked);
     }
 

@@ -26,7 +26,13 @@ import { updateAudio } from './systems/audio';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
-  const { setGameState } = cbs;
+  const { setGameState, setNotificationVersion } = cbs;
+
+  // Signal React when achievement notifications change
+  if (setNotificationVersion && g.achievementVersion !== g._lastNotifVersion) {
+    g._lastNotifVersion = g.achievementVersion;
+    setNotificationVersion(g.achievementVersion);
+  }
 
   // ─── Transition timer (runs after mission complete, before returning to map) ───
   if (updateTransition(dt, g, cbs)) return;

@@ -3,6 +3,10 @@
  *
  * Displays a toast-style notification when an achievement is unlocked.
  * Fades in from the right, shows for 6 seconds, then fades out.
+ *
+ * Re-renders are driven by `notificationVersion` (bumped by the physics loop
+ * when new notifications are pushed, and by the component on dismiss).
+ * No polling required.
  */
 import { useEffect, useState } from 'react';
 
@@ -96,27 +100,21 @@ function AchievementToast({ notification, onDismiss }) {
 /**
  * AchievementNotification component.
  * Renders a stack of achievement notifications.
- * Uses polling to detect new notifications pushed by the game loop.
+ *
  * @param {object} props
  * @param {object} props.game - Game ref
  * @param {boolean} props.visible - Whether to show notifications
+ * @param {number} props.notificationVersion - Bumped by physics loop on new notifications
+ * @param {function} props.onBumpNotification - Call to bump version (used on dismiss)
  */
-export default function AchievementNotification({ game, visible }) {
-  const [items, setItems] = useState([]);
+export default function AchievementNotification({ game, visible, notificationVersion, onBumpNotification }) {
+  if (!visible) {
+    return null;
+  }
 
-  // Poll for notification changes from game loop
-  useEffect(() => {
-    if (!visible) return;
-    const id = setInterval(() => {
-      const live = game.current?.achievements?.notifications;
-      if (live && live.length !== items.length) {
-        setItems([...live]);
-      }
-    }, 250);
-    return () => clearInterval(id);
-  }, [game, visible, items.length]);
+  const notifications = game.current?.achievements?.notifications || [];
 
-  if (!visible || items.length === 0) {
+  if (notifications.length === 0) {
     return null;
   }
 
@@ -124,9 +122,10 @@ export default function AchievementNotification({ game, visible }) {
     const live = game.current?.achievements?.notifications;
     if (!live) return;
     live.splice(index, 1);
-    setItems([...live]);
+    onBumpNotification(v => v + 1);
   };
 
+  // Force key change on version bump so new toasts get fresh fade-in state
   return (
     <div style={{
       position: 'absolute',
@@ -138,9 +137,9 @@ export default function AchievementNotification({ game, visible }) {
       zIndex: 1000,
       pointerEvents: 'none',
     }}>
-      {items.map((notif, i) => (
+      {notifications.map((notif, i) => (
         <AchievementToast
-          key={notif.id + '-' + i}
+          key={notificationVersion + '-' + notif.id + '-' + i}
           notification={notif}
           onDismiss={() => dismissNotification(i)}
         />
