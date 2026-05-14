@@ -87,6 +87,23 @@ export const createTestState = (overrides = {}) => {
     paused: false,
     lastTime: FIXED_TIMESTAMP,
     achievementVersion: 0,
+    combo: { count: 0, timer: 0, multiplier: 1 },
+    powerups: [],
+    activeBuffs: {},
+    boss: {
+      active: false,
+      x: 0, y: 0,
+      hp: 0, maxHp: 0,
+      phase: 1,
+      attackTimer: 0,
+      chargeTimer: 0,
+      chargeTarget: { x: 0, y: 0 },
+      isCharging: false,
+      radius: 60,
+      speed: 60,
+      fireCooldown: 1.5,
+      spiralAngle: 0,
+    },
   };
 
   // Deep-merge player overrides if provided
@@ -94,8 +111,13 @@ export const createTestState = (overrides = {}) => {
     base.player = { ...base.player, ...overrides.player };
   }
 
-  // Spread top-level overrides, but exclude 'player' since we already merged it
-  const { player: _playerOverride, ...restOverrides } = overrides;
+  // Deep-merge boss overrides if provided
+  if (overrides.boss) {
+    base.boss = { ...base.boss, ...overrides.boss };
+  }
+
+  // Spread top-level overrides, but exclude 'player' and 'boss' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 
@@ -203,6 +225,63 @@ export const createTestPickup = (x, y, value = 1) => ({
   value,
   active: true,
   radius: 6,
+});
+
+/**
+ * Create a test power-up object.
+ *
+ * @param {number} x       — World X position
+ * @param {number} y       — World Y position
+ * @param {string} [type]  — Power-up type (default 'rapidFire')
+ * @returns {object} Power-up
+ */
+export const createTestPowerup = (x, y, type = 'rapidFire') => {
+  const GAME_CONFIG = {
+    powerups: {
+      types: {
+        rapidFire:   { duration: 10, color: '#fbbf24', icon: '⚡' },
+        shieldBoost: { duration: 15, color: '#3b82f6', icon: '🛡' },
+        damageSurge: { duration: 12, color: '#ef4444', icon: '💥' },
+        timeSlow:    { duration: 8,  color: '#a855f7', icon: '⏱' },
+        nuke:        { duration: 0,  color: '#ffffff', icon: '☢' },
+        repair:      { duration: 0,  color: '#22c55e', icon: '❤' },
+      },
+    },
+  };
+  const cfg = GAME_CONFIG.powerups.types[type] || GAME_CONFIG.powerups.types.rapidFire;
+  return {
+    id: Math.random(),
+    x,
+    y,
+    type,
+    active: true,
+    radius: 10,
+    color: cfg.color,
+  };
+};
+
+/**
+ * Create a test boss object.
+ *
+ * @param {number} x       — World X position
+ * @param {number} y       — World Y position
+ * @param {number} [hp]    — Boss HP (default 1500)
+ * @param {number} [phase] — Boss phase (default 1)
+ * @returns {object} Boss state
+ */
+export const createTestBoss = (x = 500, y = 500, hp = 1500, phase = 1) => ({
+  active: true,
+  x, y,
+  hp, maxHp: 1500,
+  phase,
+  attackTimer: 1.5,
+  chargeTimer: 5,
+  chargeTarget: { x: 0, y: 0 },
+  isCharging: false,
+  radius: 60,
+  speed: 60,
+  fireCooldown: 1.5,
+  spiralAngle: 0,
 });
 
 /**

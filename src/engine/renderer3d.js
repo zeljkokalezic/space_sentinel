@@ -176,6 +176,22 @@ export const draw3DFrame = (threeObj, g) => {
     m.position.set(p.x, p.y, 0); m.rotation.x += 0.05; m.rotation.y += 0.05;
   }
 
+  // Power-ups
+  for (let pu of g.powerups) {
+    if (!pu.active) continue;
+    const dx = pu.x - g.player.x;
+    const dy = pu.y - g.player.y;
+    if (dx * dx + dy * dy > renderDistSq) continue;
+    const m = getMesh(pu, () => {
+      const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: pu.color ? parseInt(pu.color.slice(1), 16) : 0xfbbf24, wireframe: true }));
+      m.scale.set(pu.radius, pu.radius, pu.radius);
+      return m;
+    });
+    m.position.set(pu.x, pu.y, Math.sin(g.totalTime * 3 + pu.id * 10) * 5);
+    m.rotation.x += 0.05;
+    m.rotation.y += 0.05;
+  }
+
   // Projectiles (with distance culling)
   for (let p of g.projectiles) {
     if (!p.active) continue;

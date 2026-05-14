@@ -198,6 +198,40 @@ function playGameOver(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** combo_milestone — Ascending chime */
+function playComboMilestone(ctx, gainNode, now) {
+  const notes = [880, 1108.73, 1318.51] // A5, C#6, E6
+  const oscs = []
+  for (let i = 0; i < notes.length; i++) {
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(notes[i], now)
+    osc.connect(gainNode)
+    osc.start(now + i * 0.06)
+    osc.stop(now + i * 0.06 + 0.15)
+    oscs.push(osc)
+  }
+  const dur = applyEnvelope(gainNode, 0.01, 0.1, 0.2, now)
+  return { duration: dur, nodes: oscs }
+}
+
+/** powerup_pickup — Bright ascending sparkle */
+function playPowerupPickup(ctx, gainNode, now) {
+  const notes = [1046.5, 1318.51, 1567.98, 2093] // C6, E6, G6, C7
+  const oscs = [];
+  for (let i = 0; i < notes.length; i++) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(notes[i], now);
+    osc.connect(gainNode);
+    osc.start(now + i * 0.04);
+    osc.stop(now + i * 0.04 + 0.12);
+    oscs.push(osc);
+  }
+  const dur = applyEnvelope(gainNode, 0.005, 0.1, 0.25, now);
+  return { duration: dur, nodes: oscs };
+}
+
 /** engine — Continuous low rumble drone (looping) */
 function playEngine(ctx, gainNode, now) {
   const osc1 = ctx.createOscillator();
@@ -377,6 +411,33 @@ function playUiClick(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** boss_phase_change — Deep rising alarm tone */
+function playBossPhaseChange(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(100, now);
+  osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+  osc.frequency.exponentialRampToValueAtTime(200, now + 0.6);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.7);
+  const dur = applyEnvelope(gainNode, 0.02, 0.2, 0.4, now);
+  return { duration: dur, nodes: [osc] };
+}
+
+/** enemy_shoot — Harsh electronic blast */
+function playEnemyShoot(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(440, now);
+  osc.frequency.exponentialRampToValueAtTime(110, now + 0.1);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.12);
+  const dur = applyEnvelope(gainNode, 0.005, 0.02, 0.08, now);
+  return { duration: dur, nodes: [osc] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -392,9 +453,13 @@ const SOUND_GENERATORS = {
   player_hit: playPlayerHit,
   mission_complete: playMissionComplete,
   game_over: playGameOver,
+  combo_milestone: playComboMilestone,
+  powerup_pickup: playPowerupPickup,
   engine: playEngine,
   bg_drone: playBgDrone,
   ui_click: playUiClick,
+  boss_phase_change: playBossPhaseChange,
+  enemy_shoot: playEnemyShoot,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

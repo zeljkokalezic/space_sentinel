@@ -2,6 +2,7 @@
  * renderer2d.js — 2D HUD overlay rendering on canvas.
  * No React imports. No Three.js scene logic.
  */
+import { GAME_CONFIG } from '../constants/gameConfig';
 
 // Radar sweep angle persists across frames
 let radarAngle = 0;
@@ -30,6 +31,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   canvasEl.width = w; canvasEl.height = h;
   const c = canvasEl.getContext('2d');
   c.clearRect(0, 0, w, h);
+  const C = GAME_CONFIG;
 
   // ── FPS tracking ─────────────────────────────────────────────────────────────
   fpsFrames++;
@@ -51,6 +53,41 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.fillText(`HULL: ${Math.ceil(g.player.hp)} / ${g.player.maxHp}`, 230, 25);
   c.fillStyle='#facc15'; c.font='bold 24px monospace'; c.textAlign='right';
   c.fillText(`SCRAP: ${g.scrap}`, w-20, 35);
+
+  // Combo counter
+  if (g.combo && g.combo.count > 0) {
+    const comboColors = { 1: '#ffffff', 1.5: '#fbbf24', 2: '#f97316', 3: '#ef4444' }
+    const comboColor = comboColors[g.combo.multiplier] || '#ffffff'
+    c.fillStyle = comboColor
+    c.font = 'bold 24px monospace'
+    c.textAlign = 'center'
+    c.fillText(`${g.combo.count}x COMBO`, w / 2, 60)
+    // Timer bar
+    const barWidth = 120
+    const barHeight = 6
+    const timerRatio = g.combo.timer / 3
+    c.fillStyle = 'rgba(255,255,255,0.3)'
+    c.fillRect(w / 2 - barWidth / 2, 68, barWidth, barHeight)
+    c.fillStyle = comboColor
+    c.fillRect(w / 2 - barWidth / 2, 68, barWidth * timerRatio, barHeight)
+  }
+
+  // Active buff indicators
+  if (g.activeBuffs) {
+    let buffY = 85;
+    for (const [type, buff] of Object.entries(g.activeBuffs)) {
+      if (buff.timer > 0) {
+        const cfg = C.powerups?.types?.[type];
+        if (cfg) {
+          c.fillStyle = cfg.color;
+          c.font = 'bold 11px monospace';
+          c.textAlign = 'left';
+          c.fillText(`${cfg.icon} ${type.toUpperCase()} ${Math.ceil(buff.timer)}s`, 20, buffY);
+          buffY += 16;
+        }
+      }
+    }
+  }
 
   // Dev mode badge
   if (g.devMode) {
@@ -208,6 +245,31 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     }
   }
 
+  // Boss HP bar (full width, below top bar)
+  if (g.boss && g.boss.active && g.boss.hp > 0) {
+    const boss = g.boss;
+    const barW = 400;
+    const barH = 16;
+    const barX = w / 2 - barW / 2;
+    const barY = 75;
+
+    // Background
+    c.fillStyle = 'rgba(0,0,0,0.6)';
+    c.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+
+    // HP bar
+    c.fillStyle = '#7f1d1d';
+    c.fillRect(barX, barY, barW, barH);
+    c.fillStyle = '#dc2626';
+    c.fillRect(barX, barY, barW * Math.max(0, boss.hp / boss.maxHp), barH);
+
+    // Phase indicator
+    c.fillStyle = '#ffffff';
+    c.font = 'bold 12px monospace';
+    c.textAlign = 'center';
+    c.fillText(`BOSS [${Math.ceil(boss.hp)}HP] PHASE ${boss.phase}`, w / 2, barY + barH + 14);
+  }
+
   // Effects (damage numbers, mission banner)
   for (let e of g.effects) {
     if (e.type==='dmg') {
@@ -256,6 +318,16 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   for (let p of g.pickups) {
     if (!p.active||Math.hypot(p.x-g.player.x,p.y-g.player.y)>rRange) continue;
     const{px,py}=toR(p.x,p.y); c.fillStyle='#facc15'; c.beginPath(); c.moveTo(px,py-4); c.lineTo(px+3,py); c.lineTo(px,py+4); c.lineTo(px-3,py); c.closePath(); c.fill();
+  }
+
+  // Power-ups on radar
+  if (g.powerups) {
+    for (const pu of g.powerups) {
+      if (!pu.active || Math.hypot(pu.x - g.player.x, pu.y - g.player.y) > rRange) continue;
+      const {px, py} = toR(pu.x, pu.y);
+      c.fillStyle = pu.color || '#fbbf24';
+      c.beginPath(); c.arc(px, py, 3, 0, Math.PI * 2); c.fill();
+    }
   }
 
   // Escort drone on radar

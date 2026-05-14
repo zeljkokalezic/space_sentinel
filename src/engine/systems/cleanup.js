@@ -24,6 +24,7 @@ export const cleanup = (dt, g) => {
     g.projectiles = g.projectiles.filter(p => p.active);
     g.particles   = g.particles.filter(p => p.active);
     g.pickups     = g.pickups.filter(p => p.active);
+    g.powerups    = g.powerups.filter(p => p.active);
     g.effects     = g.effects.filter(e => e.life > 0);
     
     // Spatial culling: remove entities far from player

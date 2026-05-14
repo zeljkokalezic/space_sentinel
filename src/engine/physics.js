@@ -18,10 +18,12 @@ import { updateWeapons } from './systems/weapons';
 import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
+import { updatePowerups } from './systems/powerups';
 import { updateParticles, updateEffects } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
+import { updateBoss } from './systems/boss';
 import { updateAudio } from './systems/audio';
 import { cleanup } from './systems/cleanup';
 
@@ -98,6 +100,9 @@ export const updatePhysics = (dt, g, cbs) => {
   // ─── Pickup magnet ────────────────────────────────────────────────────────────
   updatePickups(dt, g, completeMission);
 
+  // ─── Power-up pickup & buff management ──────────────────────────────────────
+  updatePowerups(dt, g);
+
   // ─── Particles ────────────────────────────────────────────────────────────────
   updateParticles(dt, g);
 
@@ -112,6 +117,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Sabotage mission logic ──────────────────────────────────────────────────
   if (updateSabotage(dt, g, currentDiffMult, completeMission)) return;
+
+  // ─── Boss fight logic ────────────────────────────────────────────────────────
+  if (updateBoss(dt, g, currentDiffMult, completeMission, setGameState)) return;
 
   // ─── Pool cleanup (every 5 seconds) ──────────────────────────────────────────
   cleanup(dt, g);

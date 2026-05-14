@@ -78,6 +78,27 @@
  * @property {number} stats.sabotageMissions — Sabotage missions completed
  * @property {number} stats.bossesDefeated — Bosses defeated
  * @property {number} stats.upgradesMaxed — Number of upgrade types maxed
+ * @property {Object} combo — Combo/kill streak state
+ * @property {number} combo.count — Current combo count
+ * @property {number} combo.timer — Remaining combo timer (seconds)
+ * @property {number} combo.multiplier — Current scrap multiplier (1-3)
+ * @property {Array} powerups — Active power-up drops
+ * @property {Object} activeBuffs — Active temporary buffs { type: { timer, applied } }
+ * @property {Object} boss — Boss fight state
+ * @property {boolean} boss.active — Whether boss is active
+ * @property {number} boss.x — Boss world X position
+ * @property {number} boss.y — Boss world Y position
+ * @property {number} boss.hp — Current boss HP
+ * @property {number} boss.maxHp — Maximum boss HP
+ * @property {number} boss.phase — Current phase (1-3)
+ * @property {number} boss.attackTimer — Attack cooldown timer
+ * @property {number} boss.chargeTimer — Charge attack timer
+ * @property {Object} boss.chargeTarget — Current charge target {x, y}
+ * @property {boolean} boss.isCharging — Whether boss is currently charging
+ * @property {number} boss.radius — Boss collision radius
+ * @property {number} boss.speed — Boss movement speed
+ * @property {number} boss.fireCooldown — Time between attacks
+ * @property {number} boss.spiralAngle — Current spiral shot angle
  */
 
 import { generateMap } from './mapGenerator';
@@ -132,6 +153,10 @@ export const createGameState = () => ({
   devMode: false,
   paused: false,
   audio: { muted: false, volume: 0.5 },
+  combo: { count: 0, timer: 0, multiplier: 1 },
+  powerups: [],
+  activeBuffs: {},
+  boss: createDefaultBoss(),
   settings: { showFPS: false, screenShake: true, particlesQuality: 'high', reducedMotion: false, highContrast: false },
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
@@ -169,4 +194,22 @@ export const createDefaultBeacon = () => ({
 export const createDefaultSabotage = () => ({
   active: false,
   structures: [], // { x, y, hp, maxHp, radius, fireCooldown, active }
+});
+
+/**
+ * @returns {Object} Default boss state
+ */
+export const createDefaultBoss = () => ({
+  active: false,
+  x: 0, y: 0,
+  hp: 0, maxHp: 0,
+  phase: 1,
+  attackTimer: 0,
+  chargeTimer: 0,
+  chargeTarget: { x: 0, y: 0 },
+  isCharging: false,
+  radius: 60,
+  speed: 60,
+  fireCooldown: 1.5,
+  spiralAngle: 0,
 });

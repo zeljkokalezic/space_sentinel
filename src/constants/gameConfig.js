@@ -150,4 +150,46 @@ export const GAME_CONFIG = {
     speedMin: 50,
     speedMax: 100,
   },
+
+  combo: {
+    timerDuration: 3.0,
+    milestones: [
+      { count: 0, mult: 1 },
+      { count: 5, mult: 1.5 },
+      { count: 10, mult: 2 },
+      { count: 15, mult: 3 },
+    ],
+  },
+
+  powerups: {
+    dropChance: 0.05,
+    types: {
+      rapidFire:    { duration: 10, color: '#fbbf24', icon: '⚡' },
+      shieldBoost:  { duration: 15, color: '#3b82f6', icon: '🛡' },
+      damageSurge:  { duration: 12, color: '#ef4444', icon: '💥' },
+      timeSlow:     { duration: 8,  color: '#a855f7', icon: '⏱' },
+      nuke:         { duration: 0,  color: '#ffffff', icon: '☢' },
+      repair:       { duration: 0,  color: '#22c55e', icon: '❤' },
+    },
+  },
+
+  boss: {
+    baseHp: 1500,
+    hpPerLevel: 200,
+    radius: 60,
+    baseSpeed: 60,
+    speedPerLevel: 3,
+    fireCooldown: 1.5,
+    chargeCooldown: 5,
+    chargeSpeed: 300,
+    projectileDamage: 20,
+    projectileSpeed: 400,
+    ramDamage: 40,
+    phaseThresholds: [1, 0.66, 0.33],
+    phaseSpeedMult: [1, 1.3, 1.6],
+    phaseFireMult: [1, 1.5, 2],
+    scrapReward: 500,
+    guaranteedDrops: ['shieldBoost', 'damageSurge'],
+    color: '#dc2626',
+  },
 };

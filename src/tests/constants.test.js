@@ -122,14 +122,14 @@ describe('GAME_CONFIG', () => {
   });
 
   /* -------------------------------------------------------------- */
-  /*  7. All numeric values are positive numbers                    */
+  /*  7. All numeric values are non-negative finite numbers         */
   /* -------------------------------------------------------------- */
 
   function assertPositiveNumbers(obj, path = '') {
     for (const [key, value] of Object.entries(obj)) {
       const currentPath = path ? `${path}.${key}` : key;
       if (typeof value === 'number') {
-        expect(value, `GAME_CONFIG.${currentPath}`).toBeGreaterThan(0);
+        expect(value, `GAME_CONFIG.${currentPath}`).toBeGreaterThanOrEqual(0);
         expect(Number.isFinite(value), `GAME_CONFIG.${currentPath} is finite`).toBe(true);
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         assertPositiveNumbers(value, currentPath);
@@ -137,7 +137,7 @@ describe('GAME_CONFIG', () => {
     }
   }
 
-  it('all numeric values are positive finite numbers', () => {
+  it('all numeric values are non-negative finite numbers', () => {
     assertPositiveNumbers(GAME_CONFIG);
   });
 
