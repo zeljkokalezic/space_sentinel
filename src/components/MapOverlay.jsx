@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb } from 'lucide-react';
 import { enterNodeMission } from '../engine/missionSetup';
 
@@ -13,10 +13,8 @@ import { enterNodeMission } from '../engine/missionSetup';
  *   setMapStateVersion — React state setter (forces re-render after repairs)
  *   mapStateVersion — number (consumed only to trigger re-renders, not used directly)
  */
+// eslint-disable-next-line no-unused-vars
 export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels, setMapStateVersion, mapStateVersion }) {
-  // Force re-render when mapStateVersion changes (e.g. after repair node)
-  useEffect(() => {}, [mapStateVersion]);
-
   if (!game || !game.map) return null;
 
   const { nodes, edges, currentNodeId } = game.map;

@@ -7,7 +7,6 @@ import { checkAchievements, saveAchievements, getAchievement } from '../achievem
 import { autoSave } from '../saveManager';
 
 /**
-
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
  * @param {number} dt — Delta time
  * @param {object} g — Game state

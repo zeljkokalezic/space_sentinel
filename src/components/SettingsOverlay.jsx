@@ -11,10 +11,14 @@ import { SoundManager } from '../engine/audio';
  * Load settings from localStorage.
  * @returns {object} Settings object
  */
-function loadSettings() {
+// eslint-disable-next-line react-refresh/only-export-components
+export function loadSettings() {
   try {
     const data = localStorage.getItem('space_sentinel_settings');
-    if (data) return JSON.parse(data);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
   } catch {
     // ignore
   }
@@ -25,7 +29,8 @@ function loadSettings() {
  * Save settings to localStorage.
  * @param {object} settings
  */
-function saveSettings(settings) {
+// eslint-disable-next-line react-refresh/only-export-components
+export function saveSettings(settings) {
   try {
     localStorage.setItem('space_sentinel_settings', JSON.stringify(settings));
   } catch {
@@ -37,7 +42,8 @@ function saveSettings(settings) {
  * Default settings.
  * @returns {object}
  */
-function getDefaultSettings() {
+// eslint-disable-next-line react-refresh/only-export-components
+export function getDefaultSettings() {
   return {
     volume: 0.5,
     sfxVolume: 0.7,

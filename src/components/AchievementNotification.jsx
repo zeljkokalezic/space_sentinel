@@ -96,23 +96,35 @@ function AchievementToast({ notification, onDismiss }) {
 /**
  * AchievementNotification component.
  * Renders a stack of achievement notifications.
+ * Uses polling to detect new notifications pushed by the game loop.
  * @param {object} props
  * @param {object} props.game - Game ref
  * @param {boolean} props.visible - Whether to show notifications
  */
 export default function AchievementNotification({ game, visible }) {
-  if (!visible || !game?.current?.achievements?.notifications?.length) {
+  const [items, setItems] = useState([]);
+
+  // Poll for notification changes from game loop
+  useEffect(() => {
+    if (!visible) return;
+    const id = setInterval(() => {
+      const live = game.current?.achievements?.notifications;
+      if (live && live.length !== items.length) {
+        setItems([...live]);
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, [game, visible, items.length]);
+
+  if (!visible || items.length === 0) {
     return null;
   }
 
-  const notifications = game.current.achievements.notifications;
-
   const dismissNotification = (index) => {
-    if (game.current.achievements.notifications) {
-      game.current.achievements.notifications.splice(index, 1);
-      // Force re-render by creating new array reference
-      game.current.achievements.notifications = [...game.current.achievements.notifications];
-    }
+    const live = game.current?.achievements?.notifications;
+    if (!live) return;
+    live.splice(index, 1);
+    setItems([...live]);
   };
 
   return (
@@ -126,7 +138,7 @@ export default function AchievementNotification({ game, visible }) {
       zIndex: 1000,
       pointerEvents: 'none',
     }}>
-      {notifications.map((notif, i) => (
+      {items.map((notif, i) => (
         <AchievementToast
           key={notif.id + '-' + i}
           notification={notif}

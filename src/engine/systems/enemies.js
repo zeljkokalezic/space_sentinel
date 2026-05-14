@@ -7,7 +7,6 @@ import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
 /**
-
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  * @param {number} currentDiffMult — Difficulty multiplier
@@ -66,12 +65,14 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     if (e.hp <= 0) {
       e.active = false;
       if (g.stats) g.stats.enemiesDestroyed++;
-      if (g.mission.type === 'kill') {
-        g.mission.current++;
-        if (g.mission.current >= g.mission.target) completeMission();
-      } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
-        g.mission.current++;
-        if (g.mission.current >= g.mission.target) completeMission();
+      if (g.mission) {
+        if (g.mission.type === 'kill') {
+          g.mission.current++;
+          if (g.mission.current >= g.mission.target) completeMission();
+        } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
+          g.mission.current++;
+          if (g.mission.current >= g.mission.target) completeMission();
+        }
       }
       createParticles(g, e.x, e.y, e.color, 15);
       const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);

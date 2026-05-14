@@ -8,7 +8,7 @@ import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles } from '../combat';
 
 export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameState) => {
-  if (!g.beacon || !g.beacon.active || g.mission.completed) return false;
+  if (!g.beacon || !g.beacon.active || g.mission?.completed) return false;
 
   const beacon = g.beacon;
   const cfg = GAME_CONFIG.beacon;

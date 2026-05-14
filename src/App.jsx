@@ -67,16 +67,15 @@ export default function App() {
 
   // ─── Upgrade purchase ──────────────────────────────────────────────────────
   const buyUpgrade = (key, cost) => {
-    if (game.current.scrap < cost) return;
-    setUiScrap(prev => prev - cost);
-    game.current.scrap -= cost;
-    setUiLevels(prev => {
-      const nextLevel = prev[key] + 1;
-      game.current.levels[key] = nextLevel;
-      if (key === 'hull')   { game.current.player.maxHp += 50; game.current.player.hp += 50; }
-      if (key === 'shield') { game.current.player.maxShield = nextLevel * 20; game.current.player.shield = game.current.player.maxShield; }
-      return { ...prev, [key]: nextLevel };
-    });
+    const g = game.current;
+    if (g.scrap < cost) return;
+    g.scrap -= cost;
+    const nextLevel = g.levels[key] + 1;
+    g.levels[key] = nextLevel;
+    if (key === 'hull')   { g.player.maxHp += 50; g.player.hp += 50; }
+    if (key === 'shield') { g.player.maxShield = nextLevel * 20; g.player.shield = g.player.maxShield; }
+    setUiScrap(g.scrap);
+    setUiLevels({ ...g.levels });
   };
 
   // ─── Init game state on mount ──────────────────────────────────────────────
