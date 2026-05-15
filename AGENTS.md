@@ -208,3 +208,11 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Rendering:** 3D: orange wireframe box (smaller than boss), 2D: HP bar + "MINI-BOSS" label
 - **Map overlay:** Skull icon with orange border for miniboss nodes
 - **Dev picker:** `kill_miniboss` mission type with yellow card
+
+## Ship Customization (Skins)
+- **Purpose:** Visual-only ship skins purchasable with scrap in shop
+- **Data:** `src/constants/skins.js` — `SHIP_SKINS` array with 5 entries (id, name, hullColor, accentColor, engineGlow, cost)
+- **State:** `g.shipSkin` (active skin index), `g.unlockedSkins` (boolean array, derived from SHIP_SKINS.cost === 0)
+- **Shop:** `ShopOverlay.jsx` shows skin cards with color preview; buy/equip via `buySkin(index)` in App.jsx
+- **Rendering:** `renderer3d.js` applies skin colors per-frame: hullColor to ship mesh, accentColor to shield, engineGlow to thruster exhaust meshes
+- **Default skin (index 0) always unlocked, cost 0**
