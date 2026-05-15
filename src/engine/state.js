@@ -84,6 +84,12 @@
  * @property {number} combo.multiplier — Current scrap multiplier (1-3)
  * @property {Array} powerups — Active power-up drops
  * @property {Object} activeBuffs — Active temporary buffs { type: { timer, applied } }
+ * @property {Object} waveAnnounce — Wave announcement state
+ * @property {boolean} waveAnnounce.active — Whether announcement is active
+ * @property {number} waveAnnounce.wave — Upcoming wave number shown in announcement (starts at 2)
+ * @property {number} waveAnnounce.timer — Remaining announcement time (seconds)
+ * @property {number} waveCount — Total waves completed (0 = first wave in progress)
+ * @property {number} enemiesSpawnedThisWave — Enemies spawned in current wave
  * @property {Object} boss — Boss fight state
  * @property {boolean} boss.active — Whether boss is active
  * @property {number} boss.x — Boss world X position
@@ -99,10 +105,28 @@
  * @property {number} boss.speed — Boss movement speed
  * @property {number} boss.fireCooldown — Time between attacks
  * @property {number} boss.spiralAngle — Current spiral shot angle
+ * @property {Object} miniboss — Mini-boss fight state (same structure as boss)
+ * @property {boolean} miniboss.active
+ * @property {number} miniboss.x — Mini-boss world X position
+ * @property {number} miniboss.y — Mini-boss world Y position
+ * @property {number} miniboss.hp — Current mini-boss HP
+ * @property {number} miniboss.maxHp — Maximum mini-boss HP
+ * @property {number} miniboss.phase — Current phase (1-3)
+ * @property {number} miniboss.attackTimer — Attack cooldown timer
+ * @property {number} miniboss.chargeTimer — Charge attack timer
+ * @property {Object} miniboss.chargeTarget — Current charge target {x, y}
+ * @property {boolean} miniboss.isCharging — Whether mini-boss is currently charging
+ * @property {number} miniboss.radius — Mini-boss collision radius (40)
+ * @property {number} miniboss.speed — Mini-boss movement speed
+ * @property {number} miniboss.fireCooldown — Time between attacks
+ * @property {number} miniboss.spiralAngle — Current spiral shot angle
+ * @property {number} shipSkin — Active skin index (0-4)
+ * @property {boolean[]} unlockedSkins — Which skins are unlocked
  */
 
 import { generateMap } from './mapGenerator';
 import { loadAchievements } from './achievements';
+import { SHIP_SKINS } from '../constants/skins';
 
 /**
  * Creates a fresh game state object with all default values.
@@ -156,8 +180,14 @@ export const createGameState = () => ({
   combo: { count: 0, timer: 0, multiplier: 1 },
   powerups: [],
   activeBuffs: {},
+  waveAnnounce: { active: false, wave: 1, timer: 0 },
+  waveCount: 0,
+  enemiesSpawnedThisWave: 0,
   boss: createDefaultBoss(),
+  miniboss: createDefaultMiniboss(),
   settings: { showFPS: false, screenShake: true, particlesQuality: 'high', reducedMotion: false, highContrast: false },
+  shipSkin: 0,
+  unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -210,6 +240,24 @@ export const createDefaultBoss = () => ({
   isCharging: false,
   radius: 60,
   speed: 60,
+  fireCooldown: 1.5,
+  spiralAngle: 0,
+});
+
+/**
+ * @returns {Object} Default mini-boss state
+ */
+export const createDefaultMiniboss = () => ({
+  active: false,
+  x: 0, y: 0,
+  hp: 0, maxHp: 0,
+  phase: 1,
+  attackTimer: 0,
+  chargeTimer: 0,
+  chargeTarget: { x: 0, y: 0 },
+  isCharging: false,
+  radius: 40,
+  speed: 50,
   fireCooldown: 1.5,
   spiralAngle: 0,
 });

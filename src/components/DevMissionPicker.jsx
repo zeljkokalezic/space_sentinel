@@ -16,6 +16,7 @@ const MISSION_TYPES = [
   { id: 'sabotage',   label: 'Sabotage',   icon: Bomb,      color: 'amber',  desc: 'Destroy enemy turret structures' },
   { id: 'kill_elite', label: 'Elite Hunt', icon: Activity,  color: 'purple', desc: 'Destroy elite-tier enemies' },
   { id: 'kill_boss',  label: 'Boss Rush',  icon: Skull,     color: 'red',    desc: 'Fight the Sentinel Core boss' },
+  { id: 'kill_miniboss', label: 'Mini-Boss', icon: Skull,   color: 'yellow', desc: 'Fight a mini-boss (scaled boss)' },
 ];
 
 const COLOR_MAP = {
@@ -27,6 +28,7 @@ const COLOR_MAP = {
   amber:  { border: 'border-amber-500', bg: 'bg-amber-900/40',  text: 'text-amber-400',   glow: 'shadow-[0_0_15px_#f59e0b]' },
   purple: { border: 'border-purple-500', bg: 'bg-purple-900/40', text: 'text-purple-400',  glow: 'shadow-[0_0_15px_#a855f7]' },
   red:    { border: 'border-red-500',   bg: 'bg-red-900/40',    text: 'text-red-400',     glow: 'shadow-[0_0_15px_#ef4444]' },
+  yellow: { border: 'border-yellow-500', bg: 'bg-yellow-900/40', text: 'text-yellow-400',  glow: 'shadow-[0_0_15px_#eab308]' },
 };
 
 function MissionCard({ mission, selected, onClick }) {

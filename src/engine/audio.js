@@ -438,6 +438,45 @@ function playEnemyShoot(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** wave_announce — Ascending tone sweep signaling incoming wave */
+function playWaveAnnounce(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(300, now);
+  osc.frequency.exponentialRampToValueAtTime(900, now + 0.4);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.5);
+  const dur = applyEnvelope(gainNode, 0.02, 0.15, 0.25, now);
+  return { duration: dur, nodes: [osc] };
+}
+
+/** countdown_beep — Short high beep for countdown (2, 1) */
+function playCountdownBeep(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, now);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.1);
+  const dur = applyEnvelope(gainNode, 0.005, 0.03, 0.06, now);
+  return { duration: dur, nodes: [osc] };
+}
+
+/** wave_start — Sharp attack sound signaling wave has begun */
+function playWaveStart(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(660, now);
+  osc.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+  osc.frequency.exponentialRampToValueAtTime(440, now + 0.2);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.25);
+  const dur = applyEnvelope(gainNode, 0.005, 0.05, 0.15, now);
+  return { duration: dur, nodes: [osc] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -460,6 +499,9 @@ const SOUND_GENERATORS = {
   ui_click: playUiClick,
   boss_phase_change: playBossPhaseChange,
   enemy_shoot: playEnemyShoot,
+  wave_announce: playWaveAnnounce,
+  countdown_beep: playCountdownBeep,
+  wave_start: playWaveStart,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

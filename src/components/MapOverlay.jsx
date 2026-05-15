@@ -10,11 +10,13 @@ import { enterNodeMission } from '../engine/missionSetup';
  *   setGameState    — React state setter
  *   setUiScrap      — React state setter
  *   setUiLevels     — React state setter
+ *   setUiShipSkin   — React state setter (active skin index)
+ *   setUiUnlockedSkins — React state setter (unlocked skins array)
  *   setMapStateVersion — React state setter (forces re-render after repairs)
  *   mapStateVersion — number (consumed only to trigger re-renders, not used directly)
  */
 // eslint-disable-next-line no-unused-vars
-export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels, setMapStateVersion, mapStateVersion }) {
+export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels, setUiShipSkin, setUiUnlockedSkins, setMapStateVersion, mapStateVersion }) {
   if (!game || !game.map) return null;
 
   const { nodes, edges, currentNodeId } = game.map;
@@ -30,6 +32,7 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
 
   const getIcon = (type) => {
     if (type === 'boss')     return <Skull className="w-8 h-8" />;
+    if (type === 'miniboss') return <Skull className="w-6 h-6" />;
     if (type === 'elite')    return <Activity className="w-6 h-6" />;
     if (type === 'shop')     return <Wrench className="w-5 h-5" />;
     if (type === 'repair')   return <Heart className="w-5 h-5" />;
@@ -44,6 +47,7 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
     if (status === 'locked')  return 'border-gray-700 text-gray-600 bg-gray-900 shadow-none hover:border-gray-500';
     if (status === 'cleared') return 'border-green-600 text-green-500 bg-green-900/40 shadow-[0_0_10px_#16a34a]';
     if (type === 'boss')     return 'border-red-500 text-red-500 bg-red-900/60 shadow-[0_0_20px_#ef4444]';
+    if (type === 'miniboss') return 'border-orange-500 text-orange-500 bg-orange-900/60 shadow-[0_0_18px_#f97316]';
     if (type === 'elite')    return 'border-purple-500 text-purple-400 bg-purple-900/60 shadow-[0_0_15px_#a855f7]';
     if (type === 'shop')     return 'border-blue-500 text-blue-400 bg-blue-900/60 shadow-[0_0_15px_#3b82f6]';
     if (type === 'repair')   return 'border-pink-500 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#ec4899]';
@@ -72,6 +76,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
       unlockNext();
       setUiScrap(game.scrap);
       setUiLevels({ ...game.levels });
+      if (setUiShipSkin) setUiShipSkin(game.shipSkin ?? 0);
+      if (setUiUnlockedSkins) setUiUnlockedSkins([...game.unlockedSkins]);
       setGameState('shop');
     } else if (n.type === 'repair') {
       n.status = 'cleared';

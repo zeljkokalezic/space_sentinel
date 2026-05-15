@@ -192,4 +192,21 @@ export const GAME_CONFIG = {
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     color: '#dc2626',
   },
+
+  miniboss: {
+    hpPercent: 0.4,
+    damagePercent: 0.5,
+    radius: 40,
+    baseSpeed: 50,
+    speedPerLevel: 2,
+    scrapReward: 100,
+    spawnInterval: 3,
+    color: 0xf97316,
+    colorHex: '#f97316',
+  },
+
+  waveAnnouncer: {
+    enemiesPerWave: 10,
+    announcementDuration: 2,
+  },
 };

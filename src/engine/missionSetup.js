@@ -9,6 +9,7 @@ import { setupEscort, resetEscort } from './escortSetup';
 import { setupBeacon, resetBeacon } from './beaconSetup';
 import { setupSabotage, resetSabotage } from './sabotageSetup';
 import { setupBoss, resetBoss } from './bossSetup';
+import { setupMiniboss, resetMiniboss } from './minibossSetup';
 
 /**
  * Set up a combat mission on the game state.
@@ -33,27 +34,39 @@ export const setupCombatMission = (g, mission, level) => {
     resetBeacon(g);
     resetSabotage(g);
     resetBoss(g);
+    resetMiniboss(g);
   } else if (mission.type === 'defend') {
     setupBeacon(g, level);
     resetEscort(g);
     resetSabotage(g);
     resetBoss(g);
+    resetMiniboss(g);
   } else if (mission.type === 'sabotage') {
     setupSabotage(g, level);
     resetEscort(g);
     resetBeacon(g);
     resetBoss(g);
+    resetMiniboss(g);
   } else if (mission.type === 'kill_boss') {
     setupBoss(g, level);
     resetEscort(g);
     resetBeacon(g);
     resetSabotage(g);
+    resetMiniboss(g);
+    g.mission = { ...mission, current: 0, target: 1 };
+  } else if (mission.type === 'kill_miniboss') {
+    setupMiniboss(g, level);
+    resetEscort(g);
+    resetBeacon(g);
+    resetSabotage(g);
+    resetBoss(g);
     g.mission = { ...mission, current: 0, target: 1 };
   } else {
     resetEscort(g);
     resetBeacon(g);
     resetSabotage(g);
     resetBoss(g);
+    resetMiniboss(g);
   }
 };
 

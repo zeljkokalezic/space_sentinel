@@ -4,6 +4,7 @@
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { calculateDifficultyMultiplier } from './difficulty';
+import { SoundManager } from './audio';
 
 /**
  * Wave pattern definitions for structured enemy spawning.
@@ -148,6 +149,14 @@ export const generateMission = (level, nodeType) => {
     return { type: t, target, current: 0, title, reward };
   }
 
+  if (nodeType === 'miniboss') {
+    t = 'kill_miniboss';
+    target = 1;
+    title = `Destroy the Mini-Boss`;
+    reward = GAME_CONFIG.miniboss.scrapReward + level * 20;
+    return { type: t, target, current: 0, title, reward };
+  }
+
   if (nodeType === 'elite') {
     t = 'kill_elite';
     target = 3 + Math.floor(level / 3);
@@ -203,11 +212,36 @@ export const generateMission = (level, nodeType) => {
 
 /**
  * Spawns enemies using wave patterns based on game time.
+ * Tracks cumulative enemies spawned and triggers wave announcements.
  * @param {object} g - Live game state object
  */
 export function spawnEnemy(g) {
+  // Skip spawning if wave announcement is active
+  if (g.waveAnnounce && g.waveAnnounce.active) return;
+
   const pattern = getWavePattern(g.level, g.totalTime);
   spawnWavePattern(g, pattern);
+
+  // Track wave progress (only if waveAnnounce state exists)
+  if (g.waveAnnounce) {
+    const waveConfig = WAVE_PATTERNS[pattern] || WAVE_PATTERNS.random;
+    g.enemiesSpawnedThisWave += waveConfig.count;
+
+    // Check if wave threshold reached
+    const enemiesPerWave = GAME_CONFIG.waveAnnouncer.enemiesPerWave;
+    if (g.enemiesSpawnedThisWave >= enemiesPerWave) {
+      g.waveCount++;
+      g.enemiesSpawnedThisWave = 0;
+
+      // Skip announcement for first wave (waveCount === 1)
+      if (g.waveCount > 1) {
+        g.waveAnnounce.active = true;
+        g.waveAnnounce.wave = g.waveCount;
+        g.waveAnnounce.timer = GAME_CONFIG.waveAnnouncer.announcementDuration;
+        SoundManager.play('wave_announce');
+      }
+    }
+  }
 };
 
 /**

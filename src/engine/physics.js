@@ -24,7 +24,9 @@ import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
 import { updateBoss } from './systems/boss';
+import { updateMiniboss } from './systems/miniboss';
 import { updateAudio } from './systems/audio';
+import { updateWaveAnnounce } from './systems/waveAnnounce';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
@@ -49,11 +51,14 @@ export const updatePhysics = (dt, g, cbs) => {
   g.totalTime += dt;
   g.spawnCooldown -= dt;
 
+  // Wave announcement countdown (blocks spawning while active)
+  updateWaveAnnounce(dt, g);
+
   const C = GAME_CONFIG;
   const currentDiffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
   const currentSpawnRate = Math.max(0.1, C.enemies.baseSpawnRate - (g.level * C.enemies.spawnRateLevelDecay) - (g.totalTime * C.enemies.spawnRateTimeDecay));
 
-  if (g.spawnCooldown <= 0) {
+  if (g.spawnCooldown <= 0 && !(g.waveAnnounce && g.waveAnnounce.active)) {
     spawnEnemy(g);
     g.spawnCooldown = currentSpawnRate + Math.random() * C.enemies.spawnCooldownVariance;
   }
@@ -120,6 +125,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Boss fight logic ────────────────────────────────────────────────────────
   if (updateBoss(dt, g, currentDiffMult, completeMission, setGameState)) return;
+
+  // ─── Mini-boss fight logic ───────────────────────────────────────────────────
+  if (updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)) return;
 
   // ─── Pool cleanup (every 5 seconds) ──────────────────────────────────────────
   cleanup(dt, g);

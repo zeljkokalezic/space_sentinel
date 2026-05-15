@@ -168,6 +168,23 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Wave Config:** `GAME_CONFIG.waves` defines wave composition with pattern, enemy types, and timing
 - **Formation Spawning:** `spawnWave()` places enemies in geometric patterns relative to spawn point
 
+## Wave Announcer System
+- **Purpose:** Visual and audio announcement between enemy spawn waves
+- **Config:** `GAME_CONFIG.waveAnnouncer` — `enemiesPerWave: 10`, `announcementDuration: 2`
+- **State:** `g.waveAnnounce` — `{ active, wave, timer }`; `g.waveCount` (total waves completed); `g.enemiesSpawnedThisWave` (counter)
+- **System:** `engine/systems/waveAnnounce.js` — `updateWaveAnnounce(dt, g)` decrements timer, plays countdown beeps at integer boundaries (2, 1), plays wave_start on completion
+- **Audio:** Three new sounds in `engine/audio.js`:
+  - `wave_announce` — ascending tone sweep (not used by system; available for manual trigger)
+  - `countdown_beep` — short 880Hz sine beep for countdown digits
+  - `wave_start` — sharp square-wave attack sound when wave begins
+- **Visual:** `engine/renderer2d.js` renders "WAVE N" centered on screen with red glow + white text, countdown digit below, fade in/out based on timer progress
+- **Behavior:**
+  - Every 10 enemies spawned = 1 wave completed
+  - First wave (waveCount === 1) has NO announcement — enemies spawn immediately
+  - From wave 2 onward: 2-second announcement blocks spawning, shows "WAVE N" text, plays countdown beeps at 2s and 1s, plays wave_start sound when countdown ends
+  - spawnCooldown continues decrementing during announcement but spawnEnemy is skipped
+- **Backwards Compatible:** Both `updateWaveAnnounce` and `spawnEnemy` guard against missing `g.waveAnnounce` state for test compatibility
+
 ## Performance Optimizations
 - **Spatial Culling:** `cleanup.js` removes entities beyond 3000 units from player
 - **Render Distance:** `renderer3d.js` skips rendering entities beyond 1800 units
@@ -179,3 +196,15 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Stats Displayed:** Enemies destroyed, scrap earned, time elapsed, accuracy, mission grade
 - **Grade System:** S/A/B/C/D based on performance score
 - **Timing:** Displays during `transitionTimer` countdown before map screen
+
+## Mini-Boss System
+- **Purpose:** Scaled-down boss fight every 3 levels as intermediate challenge
+- **State:** `g.miniboss` object with same structure as `g.boss` (active, x, y, hp, maxHp, phase, attackTimer, chargeTimer, chargeTarget, isCharging, radius, speed, fireCooldown, spiralAngle)
+- **Config:** `GAME_CONFIG.miniboss` with `hpPercent: 0.4`, `damagePercent: 0.5`, `radius: 40`, `baseSpeed: 50`, `speedPerLevel: 2`, `scrapReward: 100`, `spawnInterval: 3`, `color: 0xf97316`
+- **Setup:** `minibossSetup.js` — `setupMiniboss(g, level)`, `resetMiniboss(g)`
+- **System:** `systems/miniboss.js` — `updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)`
+- **Map integration:** `miniboss` node type placed every 3 levels in mapGenerator.js
+- **Mission type:** `kill_miniboss` routed in missionSetup.js and spawner.js
+- **Rendering:** 3D: orange wireframe box (smaller than boss), 2D: HP bar + "MINI-BOSS" label
+- **Map overlay:** Skull icon with orange border for miniboss nodes
+- **Dev picker:** `kill_miniboss` mission type with yellow card

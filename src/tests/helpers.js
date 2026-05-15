@@ -104,6 +104,20 @@ export const createTestState = (overrides = {}) => {
       fireCooldown: 1.5,
       spiralAngle: 0,
     },
+    miniboss: {
+      active: false,
+      x: 0, y: 0,
+      hp: 0, maxHp: 0,
+      phase: 1,
+      attackTimer: 0,
+      chargeTimer: 0,
+      chargeTarget: { x: 0, y: 0 },
+      isCharging: false,
+      radius: 40,
+      speed: 50,
+      fireCooldown: 1.5,
+      spiralAngle: 0,
+    },
   };
 
   // Deep-merge player overrides if provided
@@ -116,8 +130,13 @@ export const createTestState = (overrides = {}) => {
     base.boss = { ...base.boss, ...overrides.boss };
   }
 
-  // Spread top-level overrides, but exclude 'player' and 'boss' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, ...restOverrides } = overrides;
+  // Deep-merge miniboss overrides if provided
+  if (overrides.miniboss) {
+    base.miniboss = { ...base.miniboss, ...overrides.miniboss };
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 
@@ -280,6 +299,30 @@ export const createTestBoss = (x = 500, y = 500, hp = 1500, phase = 1) => ({
   isCharging: false,
   radius: 60,
   speed: 60,
+  fireCooldown: 1.5,
+  spiralAngle: 0,
+});
+
+/**
+ * Create a test mini-boss object.
+ *
+ * @param {number} x       — World X position
+ * @param {number} y       — World Y position
+ * @param {number} [hp]    — Mini-boss HP (default 600, ~40% of full boss)
+ * @param {number} [phase] — Mini-boss phase (default 1)
+ * @returns {object} Mini-boss state
+ */
+export const createTestMiniboss = (x = 500, y = 500, hp = 600, phase = 1) => ({
+  active: true,
+  x, y,
+  hp, maxHp: 600,
+  phase,
+  attackTimer: 1.5,
+  chargeTimer: 5,
+  chargeTarget: { x: 0, y: 0 },
+  isCharging: false,
+  radius: 40,
+  speed: 50,
   fireCooldown: 1.5,
   spiralAngle: 0,
 });

@@ -3,6 +3,7 @@
  * No React imports. Receives plain objects / DOM refs.
  */
 import * as THREE from 'three';
+import { SHIP_SKINS } from '../constants/skins';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,10 @@ export const draw3DFrame = (threeObj, g) => {
     const wing = new THREE.Mesh(new THREE.BoxGeometry(80, 20, 10), mats.player); wing.position.set(0, -10, -5); group.add(wing);
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 10), mats.player); bridge.position.set(0, 10, 10); group.add(bridge);
     const shield = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mats.shield); shield.scale.set(42, 42, 42); shield.name = 'shield'; group.add(shield);
+    // Engine glow (thruster exhaust)
+    const egMat = new THREE.MeshBasicMaterial({ color: 0x39ff14, transparent: true, opacity: 0.7 });
+    const egL = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), egMat.clone()); egL.scale.set(4, 6, 4); egL.name = 'engineL'; egL.position.set(-30, -15, -5); group.add(egL);
+    const egR = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), egMat.clone()); egR.scale.set(4, 6, 4); egR.name = 'engineR'; egR.position.set(30, -15, -5); group.add(egR);
     const turrets = new THREE.Group(); turrets.name = 'turrets'; group.add(turrets);
     return group;
   });
@@ -115,6 +120,26 @@ export const draw3DFrame = (threeObj, g) => {
 
   const shieldMesh = pm.children.find(c => c.name === 'shield');
   if (shieldMesh) { shieldMesh.visible = g.player.maxShield > 0; shieldMesh.material.opacity = Math.max(0.1, 0.5 * (g.player.shield / g.player.maxShield)); }
+
+  // Apply active skin colors to player mesh
+  const skinIdx = Math.max(0, Math.min(g.shipSkin ?? 0, SHIP_SKINS.length - 1));
+  const skin = SHIP_SKINS[skinIdx];
+  const updateMaterials = (obj, color) => {
+    if (obj.material) obj.material.color.setHex(color);
+    if (obj.children) obj.children.forEach(c => updateMaterials(c, color));
+  };
+  pm.children.forEach(child => {
+    if (child.name === 'shield') return; // shield handled separately
+    if (child.name === 'engineL' || child.name === 'engineR') {
+      // Engine glow uses skin.engineGlow
+      if (child.material) child.material.color.setHex(skin.engineGlow);
+      return;
+    }
+    updateMaterials(child, skin.hullColor);
+  });
+  if (shieldMesh && shieldMesh.material) {
+    shieldMesh.material.color.setHex(skin.accentColor);
+  }
 
   // Dynamic turrets
   const turretsGroup = pm.children.find(c => c.name === 'turrets');
@@ -289,6 +314,64 @@ export const draw3DFrame = (threeObj, g) => {
       });
       sm.position.set(s.x, s.y, 0);
       sm.rotation.y += 0.02;
+    }
+  }
+
+  // Boss (large red wireframe box)
+  if (g.boss && g.boss.active && g.boss.hp > 0) {
+    const boss = g.boss;
+    const bdx = boss.x - g.player.x;
+    const bdy = boss.y - g.player.y;
+    if (bdx * bdx + bdy * bdy <= renderDistSq) {
+      const bm = getMesh(boss, () => {
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xdc2626, wireframe: true })
+        );
+        body.scale.set(boss.radius * 2, boss.radius * 2, boss.radius * 2);
+        group.add(body);
+        // Inner glow
+        const inner = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xff4444, wireframe: true, transparent: true, opacity: 0.5 })
+        );
+        inner.scale.set(boss.radius * 1.2, boss.radius * 1.2, boss.radius * 1.2);
+        group.add(inner);
+        return group;
+      });
+      bm.position.set(boss.x, boss.y, 0);
+      bm.rotation.y += 0.01;
+      bm.rotation.x += 0.005;
+    }
+  }
+
+  // Mini-boss (medium orange wireframe box)
+  if (g.miniboss && g.miniboss.active && g.miniboss.hp > 0) {
+    const mb = g.miniboss;
+    const mdx = mb.x - g.player.x;
+    const mdy = mb.y - g.player.y;
+    if (mdx * mdx + mdy * mdy <= renderDistSq) {
+      const mm = getMesh(mb, () => {
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true })
+        );
+        body.scale.set(mb.radius * 2, mb.radius * 2, mb.radius * 2);
+        group.add(body);
+        // Inner glow
+        const inner = new THREE.Mesh(
+          new THREE.BoxGeometry(1, 1, 1),
+          new THREE.MeshBasicMaterial({ color: 0xfb923c, wireframe: true, transparent: true, opacity: 0.5 })
+        );
+        inner.scale.set(mb.radius * 1.2, mb.radius * 1.2, mb.radius * 1.2);
+        group.add(inner);
+        return group;
+      });
+      mm.position.set(mb.x, mb.y, 0);
+      mm.rotation.y += 0.01;
+      mm.rotation.x += 0.005;
     }
   }
 

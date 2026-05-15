@@ -270,6 +270,31 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.fillText(`BOSS [${Math.ceil(boss.hp)}HP] PHASE ${boss.phase}`, w / 2, barY + barH + 14);
   }
 
+  // Mini-boss HP bar (below boss bar, orange theme)
+  if (g.miniboss && g.miniboss.active && g.miniboss.hp > 0) {
+    const mb = g.miniboss;
+    const barW = 350;
+    const barH = 14;
+    const barX = w / 2 - barW / 2;
+    const barY = g.boss && g.boss.active && g.boss.hp > 0 ? 105 : 75;
+
+    // Background
+    c.fillStyle = 'rgba(0,0,0,0.6)';
+    c.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+
+    // HP bar
+    c.fillStyle = '#7c2d12';
+    c.fillRect(barX, barY, barW, barH);
+    c.fillStyle = '#f97316';
+    c.fillRect(barX, barY, barW * Math.max(0, mb.hp / mb.maxHp), barH);
+
+    // Label
+    c.fillStyle = '#fdba74';
+    c.font = 'bold 11px monospace';
+    c.textAlign = 'center';
+    c.fillText(`MINI-BOSS [${Math.ceil(mb.hp)}HP] PHASE ${mb.phase}`, w / 2, barY + barH + 13);
+  }
+
   // Effects (damage numbers, mission banner)
   for (let e of g.effects) {
     if (e.type==='dmg') {
@@ -280,6 +305,52 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.fillStyle=`rgba(250,204,21,${Math.min(1,e.life)})`; c.font='bold 36px monospace'; c.textAlign='center';
       c.fillText(e.text, w/2, h/3+Math.sin(e.life*Math.PI)*10);
     }
+  }
+
+  // ── Wave Announcement ────────────────────────────────────────────────────────
+  if (g.waveAnnounce && g.waveAnnounce.active && GAME_CONFIG.waveAnnouncer) {
+    const announce = g.waveAnnounce;
+    const duration = GAME_CONFIG.waveAnnouncer.announcementDuration;
+    const progress = 1 - (announce.timer / duration); // 0 at start, 1 at end
+    // Fade in quickly, hold, fade out at end
+    let alpha = 1;
+    if (progress < 0.15) alpha = progress / 0.15;
+    else if (progress > 0.85) alpha = (1 - progress) / 0.15;
+    alpha = Math.max(0, Math.min(1, alpha));
+
+    const waveText = `WAVE ${announce.wave}`;
+    const fontSize = 72;
+
+    // Text shadow for glow effect
+    c.save();
+    c.font = `bold ${fontSize}px monospace`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+
+    // Outer glow
+    c.shadowColor = '#ef4444';
+    c.shadowBlur = 30;
+    c.fillStyle = `rgba(239,68,68,${alpha * 0.6})`;
+    c.fillText(waveText, w / 2, h / 2 - 20);
+
+    // Main text
+    c.shadowBlur = 15;
+    c.shadowColor = '#ffffff';
+    c.fillStyle = `rgba(255,255,255,${alpha})`;
+    c.fillText(waveText, w / 2, h / 2 - 20);
+
+    // Countdown indicator
+    const remaining = Math.ceil(announce.timer);
+    if (remaining > 0) {
+      const countdownSize = 36;
+      c.font = `bold ${countdownSize}px monospace`;
+      c.shadowBlur = 10;
+      c.shadowColor = '#facc15';
+      c.fillStyle = `rgba(250,204,21,${alpha * 0.8})`;
+      c.fillText(`${remaining}`, w / 2, h / 2 + 30);
+    }
+
+    c.restore();
   }
 
   // ── Tactical Radar ───────────────────────────────────────────────────────────

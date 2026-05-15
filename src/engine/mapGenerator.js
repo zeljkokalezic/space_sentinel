@@ -120,6 +120,31 @@ export const generateMap = () => {
         }
     }
 
+    // Place mini-boss nodes at rows that are multiples of spawnInterval (rows 4, 8, 12)
+    // Mini-bosses appear every 3 levels, between regular nodes and the final boss
+    const spawnInterval = 3;
+    for (let r = spawnInterval; r < rows - 2; r += spawnInterval) {
+        // Find a combat node on this row to convert to mini-boss
+        let placed = false;
+        for (let c = 0; c < cols && !placed; c++) {
+            let node = grid[r][c];
+            if (node && node.type === 'combat') {
+                node.type = 'miniboss';
+                placed = true;
+            }
+        }
+        // If no combat node available, convert an elite node
+        if (!placed) {
+            for (let c = 0; c < cols && !placed; c++) {
+                let node = grid[r][c];
+                if (node && node.type === 'elite') {
+                    node.type = 'miniboss';
+                    placed = true;
+                }
+            }
+        }
+    }
+
     let nodes = [];
     for (let r = 0; r < rows; r++) {
          for (let c = 0; c < cols; c++) {

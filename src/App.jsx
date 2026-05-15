@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createGameState }      from './engine/state';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
+import { SHIP_SKINS }              from './constants/skins';
 
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
@@ -23,6 +24,8 @@ export default function App() {
   const [gameState,       setGameState]       = useState('start');
   const [uiScrap,         setUiScrap]         = useState(0);
   const [uiLevels,        setUiLevels]        = useState(null);
+  const [uiShipSkin,      setUiShipSkin]      = useState(0);
+  const [uiUnlockedSkins, setUiUnlockedSkins] = useState(() => SHIP_SKINS.map(s => s.cost === 0));
   const [mapStateVersion, setMapStateVersion] = useState(0);
   const [notificationVersion, setNotificationVersion] = useState(0);
   const [devMode,         setDevMode]         = useState(false);
@@ -55,6 +58,7 @@ export default function App() {
       sabotage: 'sabotage',
       kill_elite: 'elite',
       kill_boss: 'boss',
+      kill_miniboss: 'miniboss',
     };
     const nodeType = nodeTypeMap[type] || 'kill';
     const mission = generateMission(level, nodeType);
@@ -77,6 +81,28 @@ export default function App() {
     if (key === 'shield') { g.player.maxShield = nextLevel * 20; g.player.shield = g.player.maxShield; }
     setUiScrap(g.scrap);
     setUiLevels({ ...g.levels });
+  };
+
+  // ─── Ship skin purchase / equip ─────────────────────────────────────────────
+  const buySkin = (index) => {
+    const g = game.current;
+    if (!g || index < 0 || index >= SHIP_SKINS.length) return;
+    if (g.unlockedSkins[index]) {
+      // Already owned — just equip
+      g.shipSkin = index;
+      setUiShipSkin(index);
+      return;
+    }
+    const skinCost = SHIP_SKINS[index]?.cost ?? 0;
+    if (g.scrap < skinCost) return;
+    g.scrap -= skinCost;
+    const newUnlocked = [...g.unlockedSkins];
+    newUnlocked[index] = true;
+    g.unlockedSkins = newUnlocked;
+    g.shipSkin = index;
+    setUiScrap(g.scrap);
+    setUiShipSkin(index);
+    setUiUnlockedSkins([...g.unlockedSkins]);
   };
 
   // ─── Init game state on mount ──────────────────────────────────────────────
@@ -116,12 +142,14 @@ export default function App() {
           setGameState={setGameState}
           setUiScrap={setUiScrap}
           setUiLevels={setUiLevels}
+          setUiShipSkin={setUiShipSkin}
+          setUiUnlockedSkins={setUiUnlockedSkins}
           setMapStateVersion={setMapStateVersion}
           mapStateVersion={mapStateVersion}
         />
       )}
 
-      {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} />}
+      {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} uiShipSkin={uiShipSkin} uiUnlockedSkins={uiUnlockedSkins} buySkin={buySkin} />}
       {gameState === 'start'    && <StartScreen    startGame={startGame} devMode={devMode} gameRef={game} />}
       {gameState === 'gameover' && <GameOverScreen  gameRef={game} startGame={startGame} />}
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}

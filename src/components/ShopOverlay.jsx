@@ -1,8 +1,9 @@
 import React from 'react';
 import { Map as MapIcon } from 'lucide-react';
 import { UPGRADE_DATA } from '../constants/upgrades';
+import { SHIP_SKINS } from '../constants/skins';
 
-export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameState }) {
+export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameState, uiShipSkin, uiUnlockedSkins, buySkin }) {
   return (
     <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-40 backdrop-blur-sm">
       <div className="bg-gray-900/95 border border-blue-500/50 rounded-xl p-6 w-full max-w-5xl shadow-2xl shadow-blue-900/30 overflow-y-auto max-h-screen">
@@ -50,6 +51,67 @@ export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameStat
             )
           })}
         </div>
+
+        {/* ─── Ship Skins Section ─────────────────────────────────────────── */}
+        <div className="mt-10 border-t border-gray-700 pt-8">
+          <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-300 mb-2">SHIP SKINS</h2>
+          <p className="text-gray-400 mb-6">Customize the look of your battleship. Visual only — no stat changes.</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {SHIP_SKINS.map((skin, index) => {
+              const isUnlocked = uiUnlockedSkins?.[index] ?? false;
+              const isEquipped = uiShipSkin === index;
+              const canAfford = uiScrap >= skin.cost;
+
+              return (
+                <div
+                  key={skin.id}
+                  onClick={() => {
+                    if (isUnlocked) {
+                      buySkin(index); // equip
+                    } else if (canAfford) {
+                      buySkin(index); // buy + equip
+                    }
+                  }}
+                  className={`relative p-4 rounded-xl border flex flex-col items-center transition-all duration-200
+                    ${isEquipped
+                      ? 'border-purple-400 bg-purple-900/30 shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                      : isUnlocked
+                        ? 'border-gray-500/50 bg-gray-800/40 hover:bg-gray-700/50 hover:scale-[1.02] cursor-pointer'
+                        : canAfford
+                          ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-800/40 hover:scale-[1.02] cursor-pointer'
+                          : 'border-gray-700 bg-gray-800/40 opacity-60'}`}
+                >
+                  {/* Color preview box */}
+                  <div className="w-full aspect-square rounded-lg mb-3 flex items-center justify-center relative overflow-hidden"
+                    style={{ background: `linear-gradient(135deg, #111 0%, #1a1a2e 100%)` }}>
+                    {/* Hull preview */}
+                    <div className="w-8 h-12 rounded-sm" style={{ backgroundColor: '#' + skin.hullColor.toString(16).padStart(6, '0') }} />
+                    {/* Accent glow */}
+                    <div className="absolute inset-0 rounded-lg" style={{ boxShadow: `inset 0 0 20px ${'#' + skin.accentColor.toString(16).padStart(6, '0')}40` }} />
+                    {/* Engine glow indicator */}
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full" style={{ backgroundColor: '#' + skin.engineGlow.toString(16).padStart(6, '0'), boxShadow: `0 0 8px ${'#' + skin.engineGlow.toString(16).padStart(6, '0')}` }} />
+                  </div>
+
+                  <h3 className="font-bold text-sm text-white text-center">{skin.name}</h3>
+
+                  {/* Status badge */}
+                  {isEquipped && (
+                    <div className="mt-2 px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">EQUIPPED</div>
+                  )}
+                  {!isEquipped && isUnlocked && (
+                    <div className="mt-2 px-3 py-1 bg-green-700 text-green-200 text-xs font-bold rounded-full">OWNED</div>
+                  )}
+                  {!isUnlocked && (
+                    <div className={`mt-2 font-bold text-sm flex items-center gap-1 ${canAfford ? 'text-yellow-400' : 'text-red-400'}`}>
+                      <div className="w-2.5 h-2.5 bg-current rounded-sm"></div> {skin.cost}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="mt-8 flex justify-center">
           <button className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-xl rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-transform hover:scale-105 flex items-center gap-3" onClick={() => setGameState('map')}>
             <MapIcon className="w-6 h-6 stroke-current" /> RETURN TO MAP<span className="hidden md:inline">&nbsp;(SPACE)</span>
