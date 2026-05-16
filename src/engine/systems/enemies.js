@@ -2,7 +2,7 @@
  * systems/enemies.js — Enemy AI movement, firing, collision.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, killEnemy } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
@@ -63,48 +63,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
 
    // ── Enemy dies ──
     if (e.hp <= 0) {
-      e.active = false
-      if (g.stats) g.stats.enemiesDestroyed++
-      if (g.mission) {
-        if (g.mission.type === 'kill') {
-          g.mission.current++
-          if (g.mission.current >= g.mission.target) completeMission()
-        } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
-          g.mission.current++
-          if (g.mission.current >= g.mission.target) completeMission()
-        }
-      }
-      createParticles(g, e.x, e.y, e.color, 15)
-      // ── Combo increment ──
-      if (g.combo) {
-        const comboConfig = C.combo
-        g.combo.count++
-        g.combo.timer = comboConfig.timerDuration
-        let mult = comboConfig.milestones[0].mult
-        for (const m of comboConfig.milestones) {
-          if (g.combo.count >= m.count) mult = m.mult
-        }
-        g.combo.multiplier = mult
-        if (g.combo.count === 5 || g.combo.count === 10 || g.combo.count === 15) {
-          SoundManager.play('combo_milestone')
-        }
-      }
-      // ── Power-up drop ──
-      if (Math.random() < C.powerups.dropChance) {
-        const types = Object.keys(C.powerups.types);
-        const type = types[Math.floor(Math.random() * types.length)];
-        g.powerups.push({
-          id: Math.random(),
-          x: e.x + (Math.random() - 0.5) * 20,
-          y: e.y + (Math.random() - 0.5) * 20,
-          type,
-          active: true,
-          radius: 10,
-          color: C.powerups.types[type].color,
-        });
-      }
-      const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1)
-      g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 })
+      killEnemy(g, e, completeMission);
     }
   }
 };

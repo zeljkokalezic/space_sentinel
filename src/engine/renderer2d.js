@@ -111,7 +111,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
         if (h.empActive && pdist < h.radius) {
           warnText = `⚡ EMP — Weapons disabled`;
           warnColor = '#eab308';
-        } else if (pdist < h.radius && h.timer <= h.cooldown) {
+        } else if (pdist < h.radius && !h.empActive && h.timer > 0) {
           warnText = `⚡ EMP CHARGING ${Math.ceil(h.timer)}s`;
           warnColor = 'rgba(234,179,8,0.7)';
         }

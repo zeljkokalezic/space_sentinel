@@ -7,7 +7,7 @@
  * @returns {boolean} true if player died (gameover)
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, killEnemy } from '../combat';
 
 export const updateEnvironmentalHazards = (dt, g) => {
   // Guard for backwards compatibility with tests
@@ -89,7 +89,7 @@ const updateAsteroid = (dt, h, g) => {
     if (ppDist < radius + (p.radius || 3)) {
       p.active = false;
       // Spawn impact particles
-      createParticles(g, p.x, p.y, 3, '#6b7280', 80, 0.5);
+      createParticles(g, p.x, p.y, 0x6b7280, 3);
     }
   }
 };
@@ -158,7 +158,7 @@ const updatePlasmaStorm = (dt, h, g) => {
       h.x = Math.cos(angle) * dist;
       h.y = Math.sin(angle) * dist;
       const dirAngle = Math.atan2(-h.y, -h.x) + (Math.random() - 0.5) * 0.5;
-      const speed = 60 + g.level * 2;
+      const speed = GAME_CONFIG.environmentalHazards.plasmaStorm.moveSpeed + g.level * 2;
       h.vx = Math.cos(dirAngle) * speed;
       h.vy = Math.sin(dirAngle) * speed;
       h.timer = 25;
@@ -196,7 +196,7 @@ const updatePlasmaStorm = (dt, h, g) => {
     }
     // Spawn ambient particles inside storm
     if (Math.random() < 0.3) {
-      createParticles(g, h.x + (Math.random() - 0.5) * radius, h.y + (Math.random() - 0.5) * radius, 1, '#a855f7', 60, 0.4);
+      createParticles(g, h.x + (Math.random() - 0.5) * radius, h.y + (Math.random() - 0.5) * radius, 0xa855f7, 1);
     }
   }
 
@@ -210,32 +210,7 @@ const updatePlasmaStorm = (dt, h, g) => {
       const damage = damagePerSecond * 2 * dt;
       e.hp -= damage;
       if (e.hp <= 0) {
-        e.active = false;
-        createParticles(g, e.x, e.y, 8, '#a855f7', 100, 0.8);
-        // Track kill for persistent stats
-        if (g.stats) g.stats.enemiesDestroyed++;
-        // Track mission progress (same flow as enemies.js)
-        if (g.mission) {
-          if (g.mission.type === 'kill') {
-            g.mission.current++;
-          } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
-            g.mission.current++;
-          }
-        }
-        // Award scrap pickup (same as normal enemy death)
-        const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
-        g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 });
-        // Combo increment
-        if (g.combo) {
-          const comboConfig = GAME_CONFIG.combo;
-          g.combo.count++;
-          g.combo.timer = comboConfig.timerDuration;
-          let mult = comboConfig.milestones[0].mult;
-          for (const m of comboConfig.milestones) {
-            if (g.combo.count >= m.count) mult = m.mult;
-          }
-          g.combo.multiplier = mult;
-        }
+        killEnemy(g, e, null);
       }
     }
   }

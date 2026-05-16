@@ -1,12 +1,17 @@
 /**
- * Unit tests for combat.js — getNearestEnemy, fireProjectile, createParticles.
+ * Unit tests for combat.js — getNearestEnemy, fireProjectile, createParticles, killEnemy.
  *
  * Run:  npm test -- --run
  */
-import { describe, it, expect, vi } from 'vitest';
-import { getNearestEnemy, fireProjectile, createParticles } from '../engine/combat';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getNearestEnemy, fireProjectile, createParticles, killEnemy } from '../engine/combat';
 import { createTestState, createTestEnemy } from './helpers';
 import { GAME_CONFIG } from '../constants/gameConfig';
+
+// Mock SoundManager to prevent audio errors in test environment
+vi.mock('../engine/audio', () => ({
+  SoundManager: { play: vi.fn() },
+}));
 
 /* ──────────────────────────────────────────────
  * getNearestEnemy(x, y, enemies)
@@ -348,5 +353,231 @@ describe('createParticles', () => {
     const blues = g.particles.slice(3, 6);
     for (const p of reds) expect(p.color).toBe(0xff0000);
     for (const p of blues) expect(p.color).toBe(0x0000ff);
+  });
+});
+
+/* ──────────────────────────────────────────────
+ * killEnemy(g, e, completeMission)
+ * ────────────────────────────────────────────── */
+describe('killEnemy', () => {
+  let g;
+  let enemy;
+
+  beforeEach(() => {
+    g = createTestState({
+      stats: { enemiesDestroyed: 0 },
+      combo: { count: 0, timer: 0, multiplier: 1 },
+      powerups: [],
+      pickups: [],
+      particles: [],
+      mission: null,
+    });
+    enemy = createTestEnemy(100, 200);
+  });
+
+  it('sets e.active = false', () => {
+    expect(enemy.active).toBe(true);
+    killEnemy(g, enemy, null);
+    expect(enemy.active).toBe(false);
+  });
+
+  it('increments g.stats.enemiesDestroyed', () => {
+    expect(g.stats.enemiesDestroyed).toBe(0);
+    killEnemy(g, enemy, null);
+    expect(g.stats.enemiesDestroyed).toBe(1);
+  });
+
+  it('does not crash when g.stats is undefined', () => {
+    delete g.stats;
+    expect(() => killEnemy(g, enemy, null)).not.toThrow();
+  });
+
+  it('increments mission.current for kill type mission', () => {
+    g.mission = { type: 'kill', current: 3, target: 5, completed: false };
+    killEnemy(g, enemy, null);
+    expect(g.mission.current).toBe(4);
+  });
+
+  it('calls completeMission when kill target reached', () => {
+    g.mission = { type: 'kill', current: 4, target: 5, completed: false };
+    const completeMission = vi.fn();
+    killEnemy(g, enemy, completeMission);
+    expect(completeMission).toHaveBeenCalled();
+  });
+
+  it('does not call completeMission when kill target not reached', () => {
+    g.mission = { type: 'kill', current: 2, target: 5, completed: false };
+    const completeMission = vi.fn();
+    killEnemy(g, enemy, completeMission);
+    expect(completeMission).not.toHaveBeenCalled();
+  });
+
+  it('increments mission.current for kill_elite with elite enemy type', () => {
+    g.mission = { type: 'kill_elite', current: 0, target: 3, completed: false };
+    const eliteEnemy = createTestEnemy(100, 200, 'missile_boat');
+    killEnemy(g, eliteEnemy, null);
+    expect(g.mission.current).toBe(1);
+  });
+
+  it('does not increment mission.current for kill_elite with non-elite type', () => {
+    g.mission = { type: 'kill_elite', current: 0, target: 3, completed: false };
+    const regularEnemy = createTestEnemy(100, 200, 'fighter');
+    killEnemy(g, regularEnemy, null);
+    expect(g.mission.current).toBe(0);
+  });
+
+  it('increments mission.current for kill_miniboss type', () => {
+    g.mission = { type: 'kill_miniboss', current: 0, target: 1, completed: false };
+    killEnemy(g, enemy, null);
+    expect(g.mission.current).toBe(1);
+  });
+
+  it('calls completeMission with null completeMission does not crash', () => {
+    g.mission = { type: 'kill', current: 4, target: 5, completed: false };
+    expect(() => killEnemy(g, enemy, null)).not.toThrow();
+  });
+
+  it('creates particles at enemy position', () => {
+    killEnemy(g, enemy, null);
+    expect(g.particles.length).toBe(15);
+    for (const p of g.particles) {
+      expect(p.x).toBe(100);
+      expect(p.y).toBe(200);
+    }
+  });
+
+  it('particle color matches enemy color', () => {
+    killEnemy(g, enemy, null);
+    for (const p of g.particles) {
+      expect(p.color).toBe(enemy.color);
+    }
+  });
+
+  it('increments combo count', () => {
+    expect(g.combo.count).toBe(0);
+    killEnemy(g, enemy, null);
+    expect(g.combo.count).toBe(1);
+  });
+
+  it('resets combo timer', () => {
+    g.combo.timer = 0;
+    killEnemy(g, enemy, null);
+    expect(g.combo.timer).toBe(GAME_CONFIG.combo.timerDuration);
+  });
+
+  it('updates combo multiplier based on milestones', () => {
+    g.combo.count = 4;
+    killEnemy(g, enemy, null);
+    // count becomes 5, which hits the 1.5x milestone
+    expect(g.combo.count).toBe(5);
+    expect(g.combo.multiplier).toBe(1.5);
+  });
+
+  it('combo multiplier at 10 count', () => {
+    g.combo.count = 9;
+    killEnemy(g, enemy, null);
+    expect(g.combo.count).toBe(10);
+    expect(g.combo.multiplier).toBe(2);
+  });
+
+  it('combo multiplier at 15 count', () => {
+    g.combo.count = 14;
+    killEnemy(g, enemy, null);
+    expect(g.combo.count).toBe(15);
+    expect(g.combo.multiplier).toBe(3);
+  });
+
+  it('does not crash when g.combo is undefined', () => {
+    delete g.combo;
+    expect(() => killEnemy(g, enemy, null)).not.toThrow();
+  });
+
+  it('creates scrap pickup at enemy position', () => {
+    killEnemy(g, enemy, null);
+    expect(g.pickups.length).toBe(1);
+    expect(g.pickups[0].x).toBe(100);
+    expect(g.pickups[0].y).toBe(200);
+    expect(g.pickups[0].active).toBe(true);
+    expect(g.pickups[0].radius).toBe(6);
+  });
+
+  it('scrap pickup value for fighter is 1', () => {
+    const fighter = createTestEnemy(0, 0, 'fighter');
+    killEnemy(g, fighter, null);
+    expect(g.pickups[0].value).toBe(1);
+  });
+
+  it('scrap pickup value for heavy is 5', () => {
+    const heavy = createTestEnemy(0, 0, 'heavy');
+    killEnemy(g, heavy, null);
+    expect(g.pickups[0].value).toBe(5);
+  });
+
+  it('scrap pickup value for interceptor is 2', () => {
+    const interceptor = createTestEnemy(0, 0, 'interceptor');
+    killEnemy(g, interceptor, null);
+    expect(g.pickups[0].value).toBe(2);
+  });
+
+  it('scrap pickup value for unknown type is 1', () => {
+    const unknown = createTestEnemy(0, 0, 'unknown');
+    killEnemy(g, unknown, null);
+    expect(g.pickups[0].value).toBe(1);
+  });
+
+  it('multiple kills accumulate pickups', () => {
+    const e1 = createTestEnemy(0, 0);
+    const e2 = createTestEnemy(50, 50);
+    killEnemy(g, e1, null);
+    killEnemy(g, e2, null);
+    expect(g.pickups.length).toBe(2);
+  });
+
+  it('multiple kills accumulate stats', () => {
+    const e1 = createTestEnemy(0, 0);
+    const e2 = createTestEnemy(50, 50);
+    const e3 = createTestEnemy(100, 100);
+    killEnemy(g, e1, null);
+    killEnemy(g, e2, null);
+    killEnemy(g, e3, null);
+    expect(g.stats.enemiesDestroyed).toBe(3);
+  });
+
+  it('power-up drops are possible (random chance)', () => {
+    // Force the random check by running many kills to observe behavior
+    // Note: dropChance is 0.05 so it's probabilistic
+    // We test the mechanism, not the randomness
+    const enemyForDrop = createTestEnemy(0, 0);
+    killEnemy(g, enemyForDrop, null);
+    // powerups array should either have 0 or 1 entry
+    expect(g.powerups.length).toBeLessThanOrEqual(1);
+    if (g.powerups.length > 0) {
+      const pu = g.powerups[0];
+      expect(pu.active).toBe(true);
+      expect(pu.radius).toBe(10);
+      expect(typeof pu.type).toBe('string');
+    }
+  });
+
+  it('power-up has correct type from config', () => {
+    // Run multiple kills to get a power-up drop
+    let gotPowerup = false;
+    for (let i = 0; i < 200; i++) {
+      const e = createTestEnemy(0, 0);
+      killEnemy(g, e, null);
+      if (g.powerups.length > 0) {
+        const pu = g.powerups[g.powerups.length - 1];
+        const types = Object.keys(GAME_CONFIG.powerups.types);
+        expect(types).toContain(pu.type);
+        gotPowerup = true;
+        break;
+      }
+    }
+    expect(gotPowerup).toBe(true);
+  });
+
+  it('does not push power-up when g.powerups is undefined', () => {
+    delete g.powerups;
+    expect(() => killEnemy(g, enemy, null)).not.toThrow();
   });
 });

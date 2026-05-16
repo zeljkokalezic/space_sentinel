@@ -45,6 +45,8 @@ export const createTestState = (overrides = {}) => {
     particles: [],
     pickups: [],
     effects: [],
+    hazards: [],
+    stats: { enemiesDestroyed: 0 },
     stars: [],
     levels: {
       autocannon: 1, plasma: 0, missiles: 0,
@@ -135,8 +137,18 @@ export const createTestState = (overrides = {}) => {
     base.miniboss = { ...base.miniboss, ...overrides.miniboss };
   }
 
-  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, ...restOverrides } = overrides;
+  // Deep-merge hazards overrides if provided
+  if (overrides.hazards) {
+    base.hazards = overrides.hazards;
+  }
+
+  // Deep-merge stats overrides if provided
+  if (overrides.stats) {
+    base.stats = { ...base.stats, ...overrides.stats };
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 
