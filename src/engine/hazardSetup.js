@@ -30,9 +30,9 @@ export const setupHazards = (g, level, hazardTypes) => {
   for (const type of hazardTypes) {
     if (type === 'asteroidField') {
       const cfg = C.asteroidField;
-      const count = Math.min(
-        cfg.countMax,
-        cfg.countMin + Math.floor(level / 3)
+      // Scale from countMin to countMax over levels 1-20
+      const count = Math.round(
+        cfg.countMin + (cfg.countMax - cfg.countMin) * Math.min(level / 20, 1)
       );
       for (let i = 0; i < count; i++) {
         const pos = randomPosition(

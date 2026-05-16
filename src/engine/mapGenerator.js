@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from '../constants/gameConfig';
+
 export const generateMap = () => {
     const rows = 15;
     const cols = 5;
@@ -146,6 +148,8 @@ export const generateMap = () => {
     }
 
     // Assign environmental hazards to combat nodes
+    // Uses GAME_CONFIG.environmentalHazards for all probability values
+    const hazCfg = GAME_CONFIG.environmentalHazards;
     const hazardTypes = ['asteroidField', 'gravityWell', 'plasmaStorm', 'empZone'];
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
@@ -154,11 +158,17 @@ export const generateMap = () => {
             // Only assign hazards to combat, elite, escort, defend, sabotage nodes
             const combatTypes = ['combat', 'elite', 'escort', 'defend', 'sabotage'];
             if (!combatTypes.includes(node.type)) continue;
-            // Hazard chance scales with row (deeper = more hazards)
-            const hazardChance = 0.1 + r * 0.02;
+            // Hazard chance scales with row (deeper = more hazards), clamped to max
+            const hazardChance = Math.min(
+                hazCfg.maxChance,
+                hazCfg.baseChance + r * hazCfg.chancePerLevel
+            );
             if (Math.random() < hazardChance) {
-                // Level 9+ can get 2 hazards
-                const maxHazards = r >= 9 ? 2 : 1;
+                // Level 9+ can get up to maxHazardsPerMission
+                const maxHazards = Math.min(
+                    hazCfg.maxHazardsPerMission,
+                    r >= 9 ? 2 : 1
+                );
                 const chosen = [];
                 const shuffled = [...hazardTypes].sort(() => Math.random() - 0.5);
                 for (let h = 0; h < maxHazards; h++) {

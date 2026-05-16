@@ -96,12 +96,25 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       const pdist = Math.hypot(g.player.x - h.x, g.player.y - h.y);
       let warnText = null;
       let warnColor = '#ffffff';
-      if (h.type === 'plasmaStorm' && pdist < h.radius) {
-        warnText = '⚡ PLASMA STORM';
-        warnColor = '#a855f7';
-      } else if (h.type === 'emp' && h.empActive && pdist < h.radius) {
-        warnText = `⚡ EMP — Weapons disabled`;
-        warnColor = '#eab308';
+      if (h.type === 'plasmaStorm') {
+        if (h.respawning) {
+          warnText = `⚡ STORM RETURNING ${Math.ceil(h.respawnTimer)}s`;
+          warnColor = '#a855f7';
+        } else if (pdist < h.radius) {
+          warnText = '⚡ PLASMA STORM';
+          warnColor = '#a855f7';
+        } else if (pdist < h.radius * 3) {
+          warnText = `⚡ STORM APPROACHING`;
+          warnColor = 'rgba(168,85,247,0.7)';
+        }
+      } else if (h.type === 'emp') {
+        if (h.empActive && pdist < h.radius) {
+          warnText = `⚡ EMP — Weapons disabled`;
+          warnColor = '#eab308';
+        } else if (pdist < h.radius && h.timer <= h.cooldown) {
+          warnText = `⚡ EMP CHARGING ${Math.ceil(h.timer)}s`;
+          warnColor = 'rgba(234,179,8,0.7)';
+        }
       } else if (h.type === 'gravityWell' && pdist < h.radius * 0.5) {
         warnText = '⚡ GRAVITY WELL';
         warnColor = '#7c3aed';

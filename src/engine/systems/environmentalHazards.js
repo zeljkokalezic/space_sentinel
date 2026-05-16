@@ -6,6 +6,7 @@
  * @param {object} g — Game state
  * @returns {boolean} true if player died (gameover)
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles } from '../combat';
 
 export const updateEnvironmentalHazards = (dt, g) => {
@@ -211,10 +212,30 @@ const updatePlasmaStorm = (dt, h, g) => {
       if (e.hp <= 0) {
         e.active = false;
         createParticles(g, e.x, e.y, 8, '#a855f7', 100, 0.8);
-        // Award scrap for storm-killed enemies
-        g.scrap += e.scrap || 10;
-        g.totalScrapEarned += e.scrap || 10;
+        // Track kill for persistent stats
         if (g.stats) g.stats.enemiesDestroyed++;
+        // Track mission progress (same flow as enemies.js)
+        if (g.mission) {
+          if (g.mission.type === 'kill') {
+            g.mission.current++;
+          } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
+            g.mission.current++;
+          }
+        }
+        // Award scrap pickup (same as normal enemy death)
+        const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
+        g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 });
+        // Combo increment
+        if (g.combo) {
+          const comboConfig = GAME_CONFIG.combo;
+          g.combo.count++;
+          g.combo.timer = comboConfig.timerDuration;
+          let mult = comboConfig.milestones[0].mult;
+          for (const m of comboConfig.milestones) {
+            if (g.combo.count >= m.count) mult = m.mult;
+          }
+          g.combo.multiplier = mult;
+        }
       }
     }
   }
