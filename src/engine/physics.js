@@ -27,6 +27,7 @@ import { updateBoss } from './systems/boss';
 import { updateMiniboss } from './systems/miniboss';
 import { updateAudio } from './systems/audio';
 import { updateWaveAnnounce } from './systems/waveAnnounce';
+import { updateEnvironmentalHazards } from './systems/environmentalHazards';
 import { cleanup } from './systems/cleanup';
 
 export const updatePhysics = (dt, g, cbs) => {
@@ -101,6 +102,9 @@ export const updatePhysics = (dt, g, cbs) => {
   // ─── Enemy AI & collision ─────────────────────────────────────────────────────
   updateEnemies(dt, g, currentDiffMult, completeMission, setGameState);
   if (g.player.hp <= 0) return;
+
+  // ─── Environmental hazards ────────────────────────────────────────────────────
+  if (updateEnvironmentalHazards(dt, g)) return;
 
   // ─── Pickup magnet ────────────────────────────────────────────────────────────
   updatePickups(dt, g, completeMission);

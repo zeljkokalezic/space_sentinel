@@ -120,6 +120,16 @@
  * @property {number} miniboss.speed — Mini-boss movement speed
  * @property {number} miniboss.fireCooldown — Time between attacks
  * @property {number} miniboss.spiralAngle — Current spiral shot angle
+ * @property {Array} hazards — Environmental hazard entities
+ * @property {string} hazards[].type — 'asteroid' | 'gravityWell' | 'plasmaStorm' | 'emp'
+ * @property {number} hazards[].x — World X position
+ * @property {number} hazards[].y — World Y position
+ * @property {number} hazards[].radius — Collision/effect radius
+ * @property {boolean} hazards[].active — Whether hazard is currently active
+ * @property {number} [hazards[].vx] — Velocity X (plasma storm)
+ * @property {number} [hazards[].vy] — Velocity Y (plasma storm)
+ * @property {number} [hazards[].timer] — Timer for storm lifetime or EMP cooldown
+ * @property {number} [hazards[].empActive] — Whether EMP is currently active (0/1)
  * @property {number} shipSkin — Active skin index (0-4)
  * @property {boolean[]} unlockedSkins — Which skins are unlocked
  */
@@ -185,6 +195,7 @@ export const createGameState = () => ({
   enemiesSpawnedThisWave: 0,
   boss: createDefaultBoss(),
   miniboss: createDefaultMiniboss(),
+  hazards: [],
   settings: { showFPS: false, screenShake: true, particlesQuality: 'high', reducedMotion: false, highContrast: false },
   shipSkin: 0,
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),

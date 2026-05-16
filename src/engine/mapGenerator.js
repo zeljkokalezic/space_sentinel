@@ -145,6 +145,30 @@ export const generateMap = () => {
         }
     }
 
+    // Assign environmental hazards to combat nodes
+    const hazardTypes = ['asteroidField', 'gravityWell', 'plasmaStorm', 'empZone'];
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            let node = grid[r][c];
+            if (!node) continue;
+            // Only assign hazards to combat, elite, escort, defend, sabotage nodes
+            const combatTypes = ['combat', 'elite', 'escort', 'defend', 'sabotage'];
+            if (!combatTypes.includes(node.type)) continue;
+            // Hazard chance scales with row (deeper = more hazards)
+            const hazardChance = 0.1 + r * 0.02;
+            if (Math.random() < hazardChance) {
+                // Level 9+ can get 2 hazards
+                const maxHazards = r >= 9 ? 2 : 1;
+                const chosen = [];
+                const shuffled = [...hazardTypes].sort(() => Math.random() - 0.5);
+                for (let h = 0; h < maxHazards; h++) {
+                    chosen.push(shuffled[h]);
+                }
+                node.hazardTypes = chosen;
+            }
+        }
+    }
+
     let nodes = [];
     for (let r = 0; r < rows; r++) {
          for (let c = 0; c < cols; c++) {

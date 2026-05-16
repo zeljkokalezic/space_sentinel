@@ -36,7 +36,7 @@ Static data designed to be completely safely modifiable without touching core ga
 Standalone simulation and rendering algorithms detached from React state.
 
 #### Core modules
-- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, keys, mouse, worldMouse). Defines the `GameState` typedef.
+- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, hazards, keys, mouse, worldMouse). Defines the `GameState` typedef.
 - `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row.
 - `combat.js`: Low-level combat utilities — `getNearestEnemy(x, y, enemies)` (pure), `fireProjectile(g, x, y, angle, speed, damage, type, pierceCount)` (mutates `g.projectiles`), `createParticles(g, x, y, count, color, speed, life)` (mutates `g.particles`). No React imports.
 - `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` (pushes to `g.enemies`), `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage types). No React imports.
@@ -216,3 +216,23 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Shop:** `ShopOverlay.jsx` shows skin cards with color preview; buy/equip via `buySkin(index)` in App.jsx
 - **Rendering:** `renderer3d.js` applies skin colors per-frame: hullColor to ship mesh, accentColor to shield, engineGlow to thruster exhaust meshes
 - **Default skin (index 0) always unlocked, cost 0**
+
+## Environmental Hazards
+- **Purpose:** Dynamic battlefield modifiers that layer on top of existing mission types, adding spatial variety and strategic depth
+- **State:** `g.hazards` array — each entry: `{ type, x, y, radius, active, id, ...type-specific props }`
+- **Config:** `GAME_CONFIG.environmentalHazards` with per-hazard sub-configs (asteroidField, gravityWell, plasmaStorm, empZone) plus `baseChance`, `chancePerLevel`, `maxChance`, `maxHazardsPerMission`
+- **Setup:** `hazardSetup.js` — `setupHazards(g, level, hazardTypes)`, `resetHazards(g)`
+- **System:** `systems/environmentalHazards.js` — `updateEnvironmentalHazards(dt, g, setGameState)` returns boolean (true if gameover)
+- **Gameplay mechanics:**
+  - **Asteroid Field:** Stationary obstacles that block player/enemy movement (push-back collision) and absorb projectiles (spawn impact particles). Count scales with level (5-15).
+  - **Gravity Well:** Pulls player, enemies, and projectiles toward center. Strength scales with level. Inverse-distance falloff (stronger at center, weaker at edge).
+  - **Plasma Storm:** Moving damage zone that damages player (shield first, then hull) and enemies (2x multiplier). Storm respawns at new edge position after duration expires.
+  - **EMP Zone:** Periodically disables all weapons (player and enemy) for a set duration when player is within radius. Creates vulnerability windows.
+- **Map integration:** `mapGenerator.js` assigns hazard types to combat/elite/escort/defend/sabotage nodes based on level-scaled probability (10% base + 2% per row). Level 9+ nodes can get 2 hazards. Boss/miniboss nodes excluded.
+- **Mission setup:** `missionSetup.js` calls `setupHazards` after mission-specific setup if `mission.hazardTypes` is present; calls `resetHazards` otherwise.
+- **Rendering:**
+  - 3D: Asteroids (gray icosahedron wireframes), Gravity Wells (concentric purple spinning rings + center sphere), Plasma Storms (purple translucent disc + edge ring), EMP Zones (yellow hexagonal outline + center sphere, opacity flickers when active)
+  - 2D: Radar markers (gray dots, purple circles, purple zone circles, yellow hexagons), HUD warning text when player enters hazardous zone
+- **Map overlay:** Hazard icon badges on affected nodes (Mountain, Wind, CloudLightning, Hexagon from lucide-react) with legend entries
+- **Dev picker:** Hazard selector (None/Asteroids/Gravity/Plasma/EMP) passed to `launchDevMission` in App.jsx
+- **Adding new hazard types:** Update `gameConfig.js`, add new update branch in `systems/environmentalHazards.js`, add spawn logic in `hazardSetup.js`, add 3D/2D rendering, update DevMissionPicker `HAZARD_OPTIONS`

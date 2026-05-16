@@ -209,4 +209,47 @@ export const GAME_CONFIG = {
     enemiesPerWave: 10,
     announcementDuration: 2,
   },
+
+  environmentalHazards: {
+    // Probability a combat node has a hazard (scales with level)
+    baseChance: 0.15,
+    chancePerLevel: 0.02,
+    maxChance: 0.6,
+    maxHazardsPerMission: 2,
+
+    asteroidField: {
+      countMin: 5,
+      countMax: 15,
+      radiusMin: 15,
+      radiusMax: 45,
+      spawnSpreadMin: 300,
+      spawnSpreadMax: 1000,
+      color: 0x6b7280,
+    },
+    gravityWell: {
+      count: 1,
+      pullStrength: 150,
+      pullRadius: 400,
+      spawnSpread: 600,
+      color: 0x7c3aed,
+      damagePerSecond: 0,
+    },
+    plasmaStorm: {
+      damagePerSecond: 20,
+      moveSpeed: 60,
+      zoneRadius: 200,
+      duration: 25,
+      respawnTimer: 15,
+      spawnSpread: 500,
+      color: '#a855f7',
+    },
+    empZone: {
+      disableDuration: 2,
+      cooldown: 10,
+      radius: 300,
+      count: 1,
+      spawnSpread: 500,
+      color: '#eab308',
+    },
+  },
 };

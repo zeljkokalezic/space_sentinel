@@ -73,8 +73,8 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   }
 
   // Active buff indicators
+  let warnY = 85;
   if (g.activeBuffs) {
-    let buffY = 85;
     for (const [type, buff] of Object.entries(g.activeBuffs)) {
       if (buff.timer > 0) {
         const cfg = C.powerups?.types?.[type];
@@ -82,9 +82,36 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
           c.fillStyle = cfg.color;
           c.font = 'bold 11px monospace';
           c.textAlign = 'left';
-          c.fillText(`${cfg.icon} ${type.toUpperCase()} ${Math.ceil(buff.timer)}s`, 20, buffY);
-          buffY += 16;
+          c.fillText(`${cfg.icon} ${type.toUpperCase()} ${Math.ceil(buff.timer)}s`, 20, warnY);
+          warnY += 16;
         }
+      }
+    }
+  }
+
+  // Hazard warning indicators
+  if (g.hazards && g.hazards.length > 0) {
+    for (const h of g.hazards) {
+      if (!h || !h.active) continue;
+      const pdist = Math.hypot(g.player.x - h.x, g.player.y - h.y);
+      let warnText = null;
+      let warnColor = '#ffffff';
+      if (h.type === 'plasmaStorm' && pdist < h.radius) {
+        warnText = '⚡ PLASMA STORM';
+        warnColor = '#a855f7';
+      } else if (h.type === 'emp' && h.empActive && pdist < h.radius) {
+        warnText = `⚡ EMP — Weapons disabled`;
+        warnColor = '#eab308';
+      } else if (h.type === 'gravityWell' && pdist < h.radius * 0.5) {
+        warnText = '⚡ GRAVITY WELL';
+        warnColor = '#7c3aed';
+      }
+      if (warnText) {
+        c.fillStyle = warnColor;
+        c.font = 'bold 11px monospace';
+        c.textAlign = 'left';
+        c.fillText(warnText, 20, warnY);
+        warnY += 16;
       }
     }
   }
@@ -442,6 +469,44 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
         const {px,py} = toR(s.x, s.y);
         c.fillStyle='#f97316';
         c.fillRect(px-3, py-3, 6, 6);
+      }
+    }
+  }
+
+  // Environmental hazards on radar
+  if (g.hazards && g.hazards.length > 0) {
+    for (const h of g.hazards) {
+      if (!h || !h.active) continue;
+      const hd = Math.hypot(h.x - g.player.x, h.y - g.player.y);
+      if (hd > rRange) continue;
+      const {px, py} = toR(h.x, h.y);
+      if (h.type === 'asteroid') {
+        c.fillStyle = '#6b7280';
+        c.beginPath(); c.arc(px, py, 2, 0, Math.PI * 2); c.fill();
+      } else if (h.type === 'gravityWell') {
+        c.strokeStyle = '#7c3aed';
+        c.lineWidth = 1;
+        c.beginPath(); c.arc(px, py, 6, 0, Math.PI * 2); c.stroke();
+        c.fillStyle = '#7c3aed';
+        c.beginPath(); c.arc(px, py, 2, 0, Math.PI * 2); c.fill();
+      } else if (h.type === 'plasmaStorm') {
+        c.fillStyle = 'rgba(168,85,247,0.3)';
+        c.beginPath(); c.arc(px, py, 12, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = '#c084fc';
+        c.lineWidth = 1;
+        c.beginPath(); c.arc(px, py, 12, 0, Math.PI * 2); c.stroke();
+      } else if (h.type === 'emp') {
+        c.strokeStyle = h.empActive ? '#eab308' : 'rgba(234,179,8,0.5)';
+        c.lineWidth = h.empActive ? 2 : 1;
+        // Draw hexagon
+        c.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+          const hx = px + Math.cos(a) * 5;
+          const hy = py + Math.sin(a) * 5;
+          if (i === 0) c.moveTo(hx, hy); else c.lineTo(hx, hy);
+        }
+        c.closePath(); c.stroke();
       }
     }
   }

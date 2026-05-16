@@ -317,6 +317,118 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
+  // ─── Environmental hazards ────────────────────────────────────────────────
+  if (g.hazards && g.hazards.length > 0) {
+    for (const h of g.hazards) {
+      if (!h || !h.active) continue;
+      const hdx = h.x - g.player.x;
+      const hdy = h.y - g.player.y;
+      if (hdx * hdx + hdy * hdy > renderDistSq) continue;
+
+      if (h.type === 'asteroid') {
+        const am = getMesh(h.id, () => {
+          const m = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(1, 0),
+            new THREE.MeshBasicMaterial({ color: 0x6b7280, wireframe: true })
+          );
+          m.scale.set(h.radius, h.radius, h.radius);
+          return m;
+        });
+        am.position.set(h.x, h.y, 0);
+        am.rotation.x = h.rotX || 0;
+        am.rotation.y = h.rotY || 0;
+      } else if (h.type === 'gravityWell') {
+        // Inner ring
+        const innerKey = h.id + '_inner';
+        const inner = getMesh(innerKey, () => {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(h.radius * 0.3, h.radius * 0.5, 24),
+            new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          return ring;
+        });
+        inner.position.set(h.x, h.y, 0);
+        inner.rotation.z += 0.02;
+        // Outer ring
+        const outerKey = h.id + '_outer';
+        const outer = getMesh(outerKey, () => {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(h.radius * 0.6, h.radius * 0.8, 24),
+            new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.3 })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          return ring;
+        });
+        outer.position.set(h.x, h.y, 0);
+        outer.rotation.z -= 0.01;
+        // Center marker
+        const centerKey = h.id + '_center';
+        const center = getMesh(centerKey, () => {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true })
+          );
+          m.scale.set(h.radius * 0.15, h.radius * 0.15, h.radius * 0.15);
+          return m;
+        });
+        center.position.set(h.x, h.y, 0);
+      } else if (h.type === 'plasmaStorm') {
+        // Storm zone disc
+        const stormKey = h.id + '_zone';
+        const storm = getMesh(stormKey, () => {
+          const disc = new THREE.Mesh(
+            new THREE.CircleGeometry(1, 32),
+            new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
+          );
+          disc.rotation.x = -Math.PI / 2;
+          return disc;
+        });
+        storm.position.set(h.x, h.y, 0);
+        storm.scale.set(h.radius, h.radius, h.radius);
+        // Edge ring
+        const edgeKey = h.id + '_edge';
+        const edge = getMesh(edgeKey, () => {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(0.9, 1, 32),
+            new THREE.MeshBasicMaterial({ color: 0xc084fc, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          return ring;
+        });
+        edge.position.set(h.x, h.y, 0);
+        edge.scale.set(h.radius, h.radius, h.radius);
+        edge.rotation.z += 0.01;
+      } else if (h.type === 'emp') {
+        // Hexagonal zone outline
+        const empKey = h.id + '_hex';
+        const emp = getMesh(empKey, () => {
+          const m = new THREE.Mesh(
+            new THREE.RingGeometry(h.radius * 0.85, h.radius, 6),
+            new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: h.empActive ? 0.8 : 0.25 })
+          );
+          m.rotation.x = -Math.PI / 2;
+          return m;
+        });
+        emp.position.set(h.x, h.y, 0);
+        emp.rotation.z += 0.005;
+        // Update opacity based on active state
+        if (emp.material) emp.material.opacity = h.empActive ? 0.8 : 0.25;
+        // Center marker
+        const empCenterKey = h.id + '_center';
+        const empCenter = getMesh(empCenterKey, () => {
+          const m = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true })
+          );
+          m.scale.set(5, 5, 5);
+          return m;
+        });
+        empCenter.position.set(h.x, h.y, 0);
+      }
+    }
+  }
+
   // Boss (large red wireframe box)
   if (g.boss && g.boss.active && g.boss.hp > 0) {
     const boss = g.boss;

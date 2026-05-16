@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createGameState }      from './engine/state';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
+import { setupHazards }            from './engine/hazardSetup';
 import { SHIP_SKINS }              from './constants/skins';
 
 import { useGameLoop } from './hooks/useGameLoop';
@@ -44,7 +45,7 @@ export default function App() {
   const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };
 
   // ─── Dev mode: launch a specific mission ────────────────────────────────────
-  const launchDevMission = ({ type, level }) => {
+  const launchDevMission = ({ type, level, hazard }) => {
     resetGame();
     game.current.level = level;
 
@@ -65,6 +66,11 @@ export default function App() {
 
     game.current.devMode = true;
     setupCombatMission(game.current, mission, level);
+
+    // Set up hazard if selected
+    if (hazard && hazard !== 'none') {
+      setupHazards(game.current, level, [hazard]);
+    }
 
     setUiLevels({ ...game.current.levels });
     setGameState('playing');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb } from 'lucide-react';
+import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb, Mountain, Wind, CloudLightning, Hexagon } from 'lucide-react';
 import { enterNodeMission } from '../engine/missionSetup';
 
 /**
@@ -91,7 +91,7 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
       setGameState('event');
     } else {
       // Combat / elite / boss node
-      enterNodeMission(game, game.level, n.type);
+      enterNodeMission(game, game.level, n.type, n);
       setGameState('playing');
     }
   };
@@ -120,6 +120,11 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
         <div className="flex items-center gap-3"><Heart        className="w-5 h-5 text-pink-400"   /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
         <div className="flex items-center gap-3"><Bomb         className="w-5 h-5 text-amber-400"   /> <span className="text-gray-300 font-bold">Sabotage Turrets</span></div>
         <div className="flex items-center gap-3"><Skull        className="w-5 h-5 text-red-500"    /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
+        <div className="text-gray-400 font-black mt-2 mb-1 border-b border-gray-700 pb-2 tracking-widest text-xs uppercase">Hazards</div>
+        <div className="flex items-center gap-3"><Mountain     className="w-4 h-4 text-gray-400"    /> <span className="text-gray-400 text-xs">Asteroid Field</span></div>
+        <div className="flex items-center gap-3"><Wind         className="w-4 h-4 text-purple-400"  /> <span className="text-gray-400 text-xs">Gravity Well</span></div>
+        <div className="flex items-center gap-3"><CloudLightning className="w-4 h-4 text-purple-400"/> <span className="text-gray-400 text-xs">Plasma Storm</span></div>
+        <div className="flex items-center gap-3"><Hexagon      className="w-4 h-4 text-yellow-400"  /> <span className="text-gray-400 text-xs">EMP Zone</span></div>
       </div>
 
       {/* Edges */}
@@ -157,6 +162,15 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
             {isAvailable && n.type === 'boss'   && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
             {isAvailable && n.type === 'elite'     && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
             {isAvailable && n.type === 'sabotage'  && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-amber-400 bg-black/60 px-2 py-1 rounded">SABOTAGE</div>}
+            {/* Hazard badges */}
+            {isAvailable && n.hazardTypes && n.hazardTypes.map((ht, i) => (
+              <div key={i} className="absolute -top-2 -right-2 w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center border border-gray-600" style={{ transform: `translate(${i * 2}px, ${i * 2}px)` }}>
+                {ht === 'asteroidField' && <Mountain className="w-3 h-3 text-gray-400" />}
+                {ht === 'gravityWell' && <Wind className="w-3 h-3 text-purple-400" />}
+                {ht === 'plasmaStorm' && <CloudLightning className="w-3 h-3 text-purple-400" />}
+                {ht === 'empZone' && <Hexagon className="w-3 h-3 text-yellow-400" />}
+              </div>
+            ))}
           </div>
         );
       })}

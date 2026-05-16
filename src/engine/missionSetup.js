@@ -10,6 +10,7 @@ import { setupBeacon, resetBeacon } from './beaconSetup';
 import { setupSabotage, resetSabotage } from './sabotageSetup';
 import { setupBoss, resetBoss } from './bossSetup';
 import { setupMiniboss, resetMiniboss } from './minibossSetup';
+import { setupHazards, resetHazards } from './hazardSetup';
 
 /**
  * Set up a combat mission on the game state.
@@ -68,6 +69,13 @@ export const setupCombatMission = (g, mission, level) => {
     resetBoss(g);
     resetMiniboss(g);
   }
+
+  // ─── Environmental hazards ───────────────────────────────────────────────────
+  if (mission.hazardTypes && mission.hazardTypes.length > 0) {
+    setupHazards(g, level, mission.hazardTypes);
+  } else {
+    resetHazards(g);
+  }
 };
 
 /**
@@ -76,8 +84,12 @@ export const setupCombatMission = (g, mission, level) => {
  * @param {object} g       — Game state
  * @param {number} level   — Current level
  * @param {string} nodeType — 'combat', 'elite', or 'boss'
+ * @param {object} [node]  — Optional full map node (for hazard types)
  */
-export const enterNodeMission = (g, level, nodeType) => {
+export const enterNodeMission = (g, level, nodeType, node) => {
   const mission = generateMission(level, nodeType);
+  if (node && node.hazardTypes) {
+    mission.hazardTypes = node.hazardTypes;
+  }
   setupCombatMission(g, mission, level);
 };
