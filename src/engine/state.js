@@ -136,6 +136,7 @@
 
 import { generateMap } from './mapGenerator';
 import { loadAchievements } from './achievements';
+import { loadSettings } from './settings';
 import { SHIP_SKINS } from '../constants/skins';
 
 /**
@@ -197,7 +198,7 @@ export const createGameState = () => ({
   boss: createDefaultBoss(),
   miniboss: createDefaultMiniboss(),
   hazards: [],
-  settings: { showFPS: false, screenShake: true, particlesQuality: 'high', reducedMotion: false, highContrast: false },
+  settings: loadSettings(),
   shipSkin: 0,
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,

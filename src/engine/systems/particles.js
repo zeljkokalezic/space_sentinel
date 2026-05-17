@@ -116,7 +116,11 @@ export const updateEffects = (dt, g) => {
  */
 export const createParticlesWithType = (g, x, y, color, count, type = 'spark') => {
   const config = PARTICLE_TYPES[type] || PARTICLE_TYPES.spark;
-  for (let i = 0; i < count; i++) {
+  const quality = g.settings?.particlesQuality;
+  const qualityMult = quality === 'low' ? 0.35 : quality === 'medium' ? 0.65 : 1;
+  const motionMult = g.settings?.reducedMotion ? 0.5 : 1;
+  const actualCount = Math.max(0, Math.round(count * qualityMult * motionMult));
+  for (let i = 0; i < actualCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * (config.speedMax - config.speedMin) + config.speedMin;
     g.particles.push({

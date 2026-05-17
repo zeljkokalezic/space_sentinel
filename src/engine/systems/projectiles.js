@@ -81,8 +81,10 @@ export const updateProjectiles = (dt, g, setGameState) => {
         }
       }
 
+      if (!p.active) continue;
+
       // ── Player projectile hits mini-boss ──
-      if (g.miniboss && g.miniboss.active) {
+      if (g.miniboss && g.miniboss.active && !p.hitList.includes('miniboss')) {
         if (Math.hypot(p.x - g.miniboss.x, p.y - g.miniboss.y) < g.miniboss.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
@@ -90,13 +92,15 @@ export const updateProjectiles = (dt, g, setGameState) => {
           g.miniboss.hp -= actualDmg;
           g.effects.push({ type: 'dmg', x: g.miniboss.x + (Math.random() - 0.5) * 15, y: g.miniboss.y + (Math.random() - 0.5) * 15, text: Math.ceil(p.damage).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
-          if (p.pierce > 0) p.pierce--;
+          if (p.pierce > 0) { p.pierce--; p.hitList.push('miniboss'); }
           else               p.active = false;
         }
       }
 
+      if (!p.active) continue;
+
       // ── Player projectile hits boss ──
-      if (g.boss && g.boss.active) {
+      if (g.boss && g.boss.active && !p.hitList.includes('boss')) {
         if (Math.hypot(p.x - g.boss.x, p.y - g.boss.y) < g.boss.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
@@ -104,7 +108,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           g.boss.hp -= actualDmg;
           g.effects.push({ type: 'dmg', x: g.boss.x + (Math.random() - 0.5) * 15, y: g.boss.y + (Math.random() - 0.5) * 15, text: Math.ceil(p.damage).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
-          if (p.pierce > 0) p.pierce--;
+          if (p.pierce > 0) { p.pierce--; p.hitList.push('boss'); }
           else               p.active = false;
         }
       }

@@ -6,7 +6,7 @@
  */
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { setupLocalStorageMock, clearLocalStorageMock } from './helpers';
-import { loadSettings, saveSettings, getDefaultSettings } from '../components/SettingsOverlay';
+import { loadSettings, saveSettings, getDefaultSettings } from '../engine/settings';
 
 describe('getDefaultSettings', () => {
   test('returns the documented default shape', () => {
@@ -155,12 +155,12 @@ describe('loadSettings', () => {
     expect(result).toEqual(getDefaultSettings());
   });
 
-  test('returns partial settings merged with defaults is NOT done (returns parsed as-is)', () => {
+  test('returns partial settings merged with defaults', () => {
     // loadSettings returns whatever parses — no merging with defaults
     const partial = { volume: 0.99 };
     localStorage.setItem('space_sentinel_settings', JSON.stringify(partial));
     const result = loadSettings();
     expect(result.volume).toBe(0.99);
-    expect(result.sfxVolume).toBeUndefined();
+    expect(result.sfxVolume).toBe(getDefaultSettings().sfxVolume);
   });
 });

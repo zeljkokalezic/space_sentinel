@@ -304,7 +304,7 @@ describe('updateMiniboss', () => {
     expect(result).toBe(true);
     expect(g.miniboss.active).toBe(false);
     expect(completeMission).toHaveBeenCalled();
-    expect(g.stats.minibossesDefeated).toBe(1);
+    expect(g.stats.minibossesDefeated).toBe(0);
   });
 
   it('should drop scrap reward on death', () => {

@@ -769,9 +769,11 @@ describe('player death', () => {
       respawning: false, respawnTimer: 15,
     }];
 
-    const result = updateEnvironmentalHazards(0.1, g);
+    const setGameState = vi.fn();
+    const result = updateEnvironmentalHazards(0.1, g, undefined, setGameState);
 
     expect(result).toBe(true);
+    expect(setGameState).toHaveBeenCalledWith('gameover');
   });
 
   it('returns false when player survives', () => {

@@ -9,7 +9,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, killEnemy } from '../combat';
 
-export const updateEnvironmentalHazards = (dt, g, completeMission) => {
+export const updateEnvironmentalHazards = (dt, g, completeMission, setGameState) => {
   // Guard for backwards compatibility with tests
   if (!g || !g.hazards || g.hazards.length === 0) return false;
 
@@ -31,7 +31,11 @@ export const updateEnvironmentalHazards = (dt, g, completeMission) => {
     }
   }
 
-  return player.hp <= 0;
+  if (player.hp <= 0) {
+    if (setGameState) setGameState('gameover');
+    return true;
+  }
+  return false;
 };
 
 // ─── Asteroid Field ──────────────────────────────────────────────────────────

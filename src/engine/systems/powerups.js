@@ -2,15 +2,17 @@
  * systems/powerups.js — Power-up pickup and buff management.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, killEnemy } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  */
-export const updatePowerups = (dt, g) => {
+export const updatePowerups = (dt, g, completeMission) => {
   const C = GAME_CONFIG;
+  if (!g.activeBuffs) g.activeBuffs = {};
+  if (!g.powerups) g.powerups = [];
 
   // Decay active buffs
   for (const [type, buff] of Object.entries(g.activeBuffs)) {
@@ -45,8 +47,7 @@ export const updatePowerups = (dt, g) => {
         // Instant kill all enemies
         for (let e of g.enemies) {
           if (e.active) {
-            e.active = false;
-            createParticles(g, e.x, e.y, e.color, 10);
+            killEnemy(g, e, completeMission);
           }
         }
         // White flash effect

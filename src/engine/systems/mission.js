@@ -2,6 +2,7 @@
  * systems/mission.js — Mission completion detection, rewards, map progression, transition timer.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { UPGRADE_DATA } from '../../constants/upgrades';
 import { SoundManager } from '../audio';
 import { checkAchievements, saveAchievements, getAchievement } from '../achievements';
 import { autoSave } from '../saveManager';
@@ -28,6 +29,10 @@ export const updateTransition = (dt, g, cbs) => {
     g.enemies = []; g.projectiles = []; g.particles = []; g.pickups = []; g.effects = [];
     if (g.escort) g.escort.active = false;
     if (g.beacon) g.beacon.active = false;
+    if (g.sabotage) { g.sabotage.active = false; g.sabotage.structures = []; }
+    if (g.boss) g.boss.active = false;
+    if (g.miniboss) g.miniboss.active = false;
+    if (g.hazards) g.hazards = [];
   }
   return true;
 };
@@ -65,7 +70,7 @@ export const createCompleteMission = (g) => {
         enemiesDestroyed: 0, totalScrap: 0,
         surviveMissions: 0, escortMissions: 0,
         defendMissions: 0, sabotageMissions: 0,
-        bossesDefeated: 0, upgradesMaxed: 0,
+        bossesDefeated: 0, minibossesDefeated: 0, upgradesMaxed: 0,
       };
     }
     g.stats.totalScrap += g.mission.reward;
@@ -74,6 +79,7 @@ export const createCompleteMission = (g) => {
     if (g.mission.type === 'defend') g.stats.defendMissions++;
     if (g.mission.type === 'sabotage') g.stats.sabotageMissions++;
     if (g.mission.type === 'kill_boss') g.stats.bossesDefeated++;
+    if (g.mission.type === 'kill_miniboss') g.stats.minibossesDefeated = (g.stats.minibossesDefeated || 0) + 1;
 
     // Check achievements
     if (!g.achievements) {
@@ -135,10 +141,10 @@ export const createCompleteMission = (g) => {
  * Count how many upgrade types are at max level.
  */
 function countUpgradesMaxed(levels) {
-  const MAX_LEVEL = 10;
   let count = 0;
   for (const key of Object.keys(levels)) {
-    if (levels[key] >= MAX_LEVEL) count++;
+    const maxLevel = UPGRADE_DATA[key]?.maxLevel;
+    if (maxLevel !== undefined && levels[key] >= maxLevel) count++;
   }
   return count;
 }

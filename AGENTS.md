@@ -8,7 +8,7 @@
 
 ### `/src`
 The core directory containing the React-Three.js bridge.
-- `App.jsx`: **Orchestrator (~182 lines).** Owns React state `gameState` (`start`, `map`, `playing`, `shop`, `event`, `gameover`, `victory`, `dev`), `uiScrap`, `uiLevels`, `mapStateVersion`, and `devMode`. Refs: `game` (mutable game state), `containerRef` (Three.js container), `canvasRef` (2D HUD canvas). Delegates game loop to `useGameLoop` hook and input handling to `useInput` hook. Contains `resetGame()`, `startGame()`, `launchDevMission()`, `buyUpgrade()`. Dev mode toggles via backtick key on start/gameover/victory screens and redirects map transitions back to the dev picker.
+- `App.jsx`: **Orchestrator (~199 lines).** Owns React state `gameState` (`start`, `map`, `playing`, `shop`, `event`, `gameover`, `victory`, `dev`), `uiScrap`, `uiLevels`, `uiShipSkin`, `uiUnlockedSkins`, `mapStateVersion`, and `devMode`. Refs: `game` (mutable game state), `containerRef` (Three.js container), `canvasRef` (2D HUD canvas). Delegates game loop to `useGameLoop` hook and input handling to `useInput` hook. Contains `resetGame()`, `startGame()`, `continueGame()`, `launchDevMission()`, `buyUpgrade()`, `buySkin()`. Dev mode toggles via backtick key on start/gameover/victory screens and redirects map transitions back to the dev picker.
 - `main.jsx`: Standard Vite React DOM initialization with StrictMode.
 
 ### `/src/hooks`
@@ -39,7 +39,9 @@ Standalone simulation and rendering algorithms detached from React state.
 - `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, hazards, keys, mouse, worldMouse). Defines the `GameState` typedef.
 - `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row.
 - `combat.js`: Low-level combat utilities — `getNearestEnemy(x, y, enemies)` (pure), `fireProjectile(g, x, y, angle, speed, damage, type, pierceCount)` (mutates `g.projectiles`), `createParticles(g, x, y, count, color, speed, life)` (mutates `g.particles`). No React imports.
+- `targeting.js`: Shared hostile target selection for enemies, bosses, mini-bosses, and sabotage structures. Provides target collection and nearest-target helpers used by auto-aim, missiles, and HUD indicators.
 - `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` (pushes to `g.enemies`), `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage types). No React imports.
+- `settings.js`: Persistent settings helpers (`getDefaultSettings`, `normalizeSettings`, `loadSettings`, `saveSettings`) backed by localStorage (`space_sentinel_settings`). Used by `createGameState()` and `SettingsOverlay.jsx`.
 - `escortSetup.js`: Reusable escort mission initialization — `setupEscort(g, level)` initializes escort drone state; `resetEscort(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `beaconSetup.js`: Reusable defend mission beacon initialization — `setupBeacon(g, level)` initializes beacon state; `resetBeacon(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `sabotageSetup.js`: Reusable sabotage mission structure initialization — `setupSabotage(g, level)` spawns turret structures; `resetSabotage(g)` clears them. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
@@ -60,7 +62,7 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `mission.js`: Mission logic — `updateTransition(dt, g, cbs)`, `createCompleteMission(g)`, `checkMissionProgress(g, dt)`. Mission completion detection, rewards calculation, map progression, and transition timer.
 - `escort.js`: Escort drone — `updateEscort(dt, g, diffMult)`. Escort drone movement, evasion behavior, collision, and mission progress checks.
 - `beacon.js`: Beacon defense — `updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)`. Beacon HP management, enemy projectile/ram collision, defense radius targeting, and mission completion checks.
-- `sabotage.js`: Sabotage turrets — `updateSabotage(dt, g, currentDiffMult, completeMission, setGameState)`. Structure firing at player, player projectile collision with structures, enemy targeting bias toward structures, and mission completion when all structures destroyed.
+- `sabotage.js`: Sabotage turrets — `updateSabotage(dt, g, currentDiffMult, completeMission)`. Structure firing at player, player projectile collision with structures, enemy targeting bias toward structures, and mission completion when all structures destroyed.
 
 #### Rendering
 - `renderer.js`: **Barrel module** — re-exports from renderer3d.js and renderer2d.js. Provides `drawFrame(threeObj, g, canvasEl, statusRef)` which calls both 3D and 2D renderers.
@@ -136,7 +138,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Module:** `engine/audio.js` — Procedural Web Audio API sound generation
 - **SoundManager:** Singleton with `play()`, `setMuted()`, `setVolume()`
 - **SFX Types:** shoot, enemy_shoot, player_hit, shield_hit, pickup, explosion, mission_complete, game_over
-- **Soundtrack:** `engine/soundtrack.js` — Ambient drone with oscillators + LFO modulation
+- **Soundtrack:** Implemented inside `engine/audio.js` — ambient soundtrack layers with oscillators + LFO modulation
 - **Mute Button:** Top-right HUD button (also in PauseOverlay)
 
 ## Achievement System
@@ -156,6 +158,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 
 ## Settings System
 - **Component:** `SettingsOverlay.jsx` — Accessed from Pause Menu
+- **Module:** `engine/settings.js` — settings defaults, normalization, load/save helpers
 - **Persistence:** localStorage (`space_sentinel_settings`)
 - **Audio:** Master volume, SFX volume, music volume sliders
 - **Gameplay:** Difficulty (easy/normal/hard)

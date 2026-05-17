@@ -4,6 +4,7 @@
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { SoundManager } from './audio';
+import { getHostileTargets } from './targeting';
 
 /**
  * Returns the nearest active enemy to (x, y), or null if none exist.
@@ -34,7 +35,7 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
   const C = GAME_CONFIG;
   let target = null;
   if (type === 'missile') {
-    const active = g.enemies.filter(e => e.active);
+    const active = getHostileTargets(g).map(t => t.ref);
     if (active.length > 0) {
       target = active[Math.floor(Math.random() * active.length)];
     }
@@ -66,7 +67,11 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
  */
 export const createParticles = (g, x, y, color, count) => {
   const C = GAME_CONFIG;
-  for (let i = 0; i < count; i++) {
+  const quality = g.settings?.particlesQuality;
+  const qualityMult = quality === 'low' ? 0.35 : quality === 'medium' ? 0.65 : 1;
+  const motionMult = g.settings?.reducedMotion ? 0.5 : 1;
+  const actualCount = Math.max(0, Math.round(count * qualityMult * motionMult));
+  for (let i = 0; i < actualCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * (C.particles.speedMax - C.particles.speedMin) + C.particles.speedMin;
     g.particles.push({
@@ -101,9 +106,6 @@ export const killEnemy = (g, e, completeMission) => {
       g.mission.current++;
       if (completeMission && g.mission.current >= g.mission.target) completeMission();
     } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
-      g.mission.current++;
-      if (completeMission && g.mission.current >= g.mission.target) completeMission();
-    } else if (g.mission.type === 'kill_miniboss') {
       g.mission.current++;
       if (completeMission && g.mission.current >= g.mission.target) completeMission();
     }

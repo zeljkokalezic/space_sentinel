@@ -17,6 +17,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { updatePowerups } from '../../engine/systems/powerups';
 import { createTestState, createTestEnemy } from '../helpers';
 
 /* ──────────────────────────────────────────────
@@ -548,16 +549,8 @@ describe('Edge cases', () => {
   it('should not crash when activeBuffs is missing', () => {
     const g = createTestState();
     delete g.activeBuffs;
-    // The updatePowerups function should handle this gracefully
-    expect(() => {
-      if (g.activeBuffs) {
-        for (const [type, buff] of Object.entries(g.activeBuffs)) {
-          if (buff.timer > 0) {
-            buff.timer -= 0.1;
-          }
-        }
-      }
-    }).not.toThrow();
+    expect(() => updatePowerups(0.1, g)).not.toThrow();
+    expect(g.activeBuffs).toEqual({});
   });
 });
 

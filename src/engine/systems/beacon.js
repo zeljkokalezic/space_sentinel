@@ -52,6 +52,7 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
         vx: (Math.random()-0.5)*200,
         vy: (Math.random()-0.5)*200,
         life: 1.5,
+        maxLife: 1.5,
         active: true,
         color: 0x22d3ee,
       });

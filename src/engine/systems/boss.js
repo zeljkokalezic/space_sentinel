@@ -175,9 +175,6 @@ export const updateBoss = (dt, g, currentDiffMult, completeMission, setGameState
       radius: 8,
     });
 
-    // Update stats
-    if (g.stats) g.stats.bossesDefeated++;
-
     // Complete mission
     completeMission();
     return true;

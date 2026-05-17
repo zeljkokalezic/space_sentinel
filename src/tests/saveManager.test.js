@@ -32,10 +32,10 @@ afterEach(() => {
  * 1. createSaveData
  * ────────────────────────────────────────────── */
 describe('createSaveData', () => {
-  it('returns object with version 1', () => {
+  it('returns object with version 2', () => {
     const g = createTestState();
     const data = createSaveData(g);
-    expect(data.version).toBe(1);
+    expect(data.version).toBe(2);
   });
 
   it('includes ISO timestamp', () => {
@@ -125,6 +125,13 @@ describe('createSaveData', () => {
     const g = createTestState();
     const data = createSaveData(g);
     expect(data.achievements).toEqual([]);
+  });
+
+  it('serializes ship skin state', () => {
+    const g = createTestState({ shipSkin: 2, unlockedSkins: [true, false, true] });
+    const data = createSaveData(g);
+    expect(data.shipSkin).toBe(2);
+    expect(data.unlockedSkins).toEqual([true, false, true]);
   });
 });
 
@@ -291,6 +298,20 @@ describe('applySaveData', () => {
     expect(g.achievements.unlocked).toBeInstanceOf(Set);
     expect(g.achievements.unlocked.has('first_blood')).toBe(true);
     expect(g.achievements.unlocked.has('veteran')).toBe(true);
+  });
+
+  it('restores ship skin state from version 2 saves', () => {
+    const g = createTestState({ shipSkin: 0, unlockedSkins: [true, false, false] });
+    applySaveData(g, { version: 2, shipSkin: 2, unlockedSkins: [true, false, true] });
+    expect(g.shipSkin).toBe(2);
+    expect(g.unlockedSkins).toEqual([true, false, true]);
+  });
+
+  it('keeps existing ship skin defaults for version 1 saves', () => {
+    const g = createTestState({ shipSkin: 0, unlockedSkins: [true, false, false] });
+    applySaveData(g, { version: 1, scrap: 500 });
+    expect(g.shipSkin).toBe(0);
+    expect(g.unlockedSkins).toEqual([true, false, false]);
   });
 });
 

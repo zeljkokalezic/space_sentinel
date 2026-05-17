@@ -191,6 +191,13 @@ describe('fireProjectile', () => {
     expect(g.projectiles[0].target).toBeNull();
   });
 
+  it('missile type can target active bosses when no enemies exist', () => {
+    g.enemies = [];
+    g.boss = { ...g.boss, active: true, x: 100, y: 0, hp: 500, maxHp: 500 };
+    fireProjectile(g, 0, 0, 0, 500, 10, 'missile');
+    expect(g.projectiles[0].target).toBe(g.boss);
+  });
+
   it('enemy_missile type sets target to g.player', () => {
     fireProjectile(g, 0, 0, 0, 500, 10, 'enemy_missile');
     expect(g.projectiles[0].target).toBe(g.player);
@@ -426,10 +433,10 @@ describe('killEnemy', () => {
     expect(g.mission.current).toBe(0);
   });
 
-  it('increments mission.current for kill_miniboss type', () => {
+  it('does not increment mission.current for kill_miniboss type', () => {
     g.mission = { type: 'kill_miniboss', current: 0, target: 1, completed: false };
     killEnemy(g, enemy, null);
-    expect(g.mission.current).toBe(1);
+    expect(g.mission.current).toBe(0);
   });
 
   it('calls completeMission with null completeMission does not crash', () => {

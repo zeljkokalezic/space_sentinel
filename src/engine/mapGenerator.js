@@ -111,14 +111,16 @@ export const generateMap = () => {
     
     // Guarantee at least one elite node if none was assigned randomly
     if (!eliteAssigned) {
+        let placed = false;
         for (let r = 2; r < rows - 2; r++) {
-            for (let c = 0; c < cols; c++) {
+            for (let c = 0; c < cols && !placed; c++) {
                 let node = grid[r][c];
                 if (node && node.type === 'combat') {
                     node.type = 'elite';
-                    break;
+                    placed = true;
                 }
             }
+            if (placed) break;
         }
     }
 
@@ -132,20 +134,22 @@ export const generateMap = () => {
         if (eventAssigned) break;
     }
     if (!eventAssigned) {
+        let placed = false;
         for (let r = 2; r < rows - 2; r++) {
-            for (let c = 0; c < cols; c++) {
+            for (let c = 0; c < cols && !placed; c++) {
                 let node = grid[r][c];
                 if (node && node.type === 'combat') {
                     node.type = 'event';
-                    break;
+                    placed = true;
                 }
             }
+            if (placed) break;
         }
     }
 
     // Place mini-boss nodes at rows that are multiples of spawnInterval (rows 4, 8, 12)
     // Mini-bosses appear every 3 levels, between regular nodes and the final boss
-    const spawnInterval = 3;
+    const spawnInterval = GAME_CONFIG.miniboss.spawnInterval;
     for (let r = spawnInterval; r < rows - 2; r += spawnInterval) {
         // Find a combat node on this row to convert to mini-boss
         let placed = false;

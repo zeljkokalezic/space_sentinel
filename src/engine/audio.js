@@ -517,8 +517,12 @@ class SoundManagerClass {
   constructor() {
     this.ctx = null;
     this.masterGain = null;
+    this.sfxGain = null;
+    this.musicGain = null;
     this._muted = false;
     this._volume = 1;
+    this._sfxVolume = 1;
+    this._musicVolume = 1;
     this._continuous = {}; // name -> { nodes, stopFn }
     this._soundtrackIntensity = 'calm'; // 'calm' | 'tense' | 'triumphant'
     this._soundtrackActive = false;
@@ -534,7 +538,13 @@ class SoundManagerClass {
     try {
       this.ctx = new AudioContext();
       this.masterGain = this.ctx.createGain();
+      this.sfxGain = this.ctx.createGain();
+      this.musicGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(this._volume, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(this._sfxVolume, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this._musicVolume, this.ctx.currentTime);
+      this.sfxGain.connect(this.masterGain);
+      this.musicGain.connect(this.masterGain);
       this.masterGain.connect(this.ctx.destination);
     } catch {
       this.ctx = null; // creation failed
@@ -643,7 +653,7 @@ class SoundManagerClass {
       } else {
         gainNode.gain.setValueAtTime(1, now);
       }
-      gainNode.connect(this.masterGain);
+      gainNode.connect(this.musicGain || this.masterGain);
 
       const result = generator(this.ctx, gainNode, now);
       if (!result) return;
@@ -709,7 +719,8 @@ class SoundManagerClass {
 
     try {
       const gainNode = this.ctx.createGain();
-      gainNode.connect(this.masterGain);
+      const isMusic = name.startsWith('soundtrack_') || name === 'bg_drone';
+      gainNode.connect(isMusic ? (this.musicGain || this.masterGain) : (this.sfxGain || this.masterGain));
 
       const result = generator(this.ctx, gainNode, now);
       if (!result) return;
@@ -785,6 +796,9 @@ class SoundManagerClass {
    */
   setSfxVolume(vol) {
     this._sfxVolume = Math.max(0, Math.min(1, vol));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this._sfxVolume, this.ctx.currentTime);
+    }
   }
 
   /**
@@ -793,6 +807,9 @@ class SoundManagerClass {
    */
   setMusicVolume(vol) {
     this._musicVolume = Math.max(0, Math.min(1, vol));
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setValueAtTime(this._musicVolume, this.ctx.currentTime);
+    }
   }
 
   /**
@@ -813,6 +830,8 @@ class SoundManagerClass {
       try { this.ctx.close(); } catch { /* context already closed */ }
       this.ctx = null;
       this.masterGain = null;
+      this.sfxGain = null;
+      this.musicGain = null;
     }
   }
 

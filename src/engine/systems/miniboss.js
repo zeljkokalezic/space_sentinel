@@ -161,9 +161,6 @@ export const updateMiniboss = (dt, g, currentDiffMult, completeMission, setGameS
       radius: 8,
     });
 
-    // Update stats
-    if (g.stats) g.stats.minibossesDefeated++;
-
     // Complete mission
     completeMission();
     return true;

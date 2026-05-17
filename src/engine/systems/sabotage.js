@@ -86,6 +86,7 @@ export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
             radius: 6,
           });
         }
+        break;
       }
     }
   }

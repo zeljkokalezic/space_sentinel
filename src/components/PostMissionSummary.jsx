@@ -61,7 +61,7 @@ export default function PostMissionSummary({ game, visible }) {
   const g = game.current;
   const stats = {
     missionType: g.mission?.type || 'unknown',
-    enemiesDestroyed: g.mission?.current || 0,
+    enemiesDestroyed: g.stats?.enemiesDestroyed ?? 0,
     totalTime: g.totalTime || 0,
     playerHpPercent: Math.max(0, (g.player?.hp || 0) / (g.player?.maxHp || 100) * 100),
     scrapEarned: g.mission?.reward || 0,
@@ -89,6 +89,7 @@ export default function PostMissionSummary({ game, visible }) {
     sabotage: 'Sabotage',
     kill_boss: 'Boss Battle',
     kill_elite: 'Elite Hunt',
+    kill_miniboss: 'Mini-Boss Battle',
   };
   
   const missionName = missionNames[stats.missionType] || 'Mission';

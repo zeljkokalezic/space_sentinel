@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { Rocket, Play, Crosshair, Bug, Save } from 'lucide-react';
-import { hasSave, loadGame } from '../engine/saveManager';
+import { hasSave } from '../engine/saveManager';
 
-export default function StartScreen({ startGame, devMode, gameRef }) {
+export default function StartScreen({ startGame, continueGame, devMode, gameRef }) {
   const [hasSavedGame] = useState(() => hasSave('auto'));
 
   const handleContinue = () => {
-    if (gameRef?.current && loadGame(gameRef.current, 'auto')) {
-      startGame();
-    }
+    if (gameRef?.current) continueGame?.();
   };
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 text-white z-50 backdrop-blur-md">
@@ -26,7 +24,7 @@ export default function StartScreen({ startGame, devMode, gameRef }) {
       </div>
       <p className="text-xl text-gray-300 mb-12 max-w-lg text-center leading-relaxed">
         {devMode
-          ? 'Dev mode active. Pick any mission type and difficulty freely. Press D to disable.'
+          ? 'Dev mode active. Pick any mission type and difficulty freely. Press ` to disable.'
           : 'You are the core. Defend yourself against endless waves. Gather scrap from fallen enemies to dynamically upgrade your ship systems. Survive.'}
       </p>
     <button
@@ -35,7 +33,7 @@ export default function StartScreen({ startGame, devMode, gameRef }) {
       >
         <Play className="w-8 h-8 fill-current" /> {devMode ? 'OPEN MISSION SELECTOR' : 'INITIALIZE SEQUENCE'}<span className="hidden md:inline">&nbsp;(SPACE)</span>
       </button>
-      {hasSavedGame && (
+      {hasSavedGame && !devMode && (
         <button
           className="mt-4 px-8 py-3 bg-green-600/80 hover:bg-green-500 rounded-full font-bold text-lg transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_35px_rgba(34,197,94,0.5)] hover:scale-105 flex items-center gap-2"
           onClick={handleContinue}

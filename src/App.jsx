@@ -4,6 +4,8 @@ import { createGameState }      from './engine/state';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
 import { setupHazards }            from './engine/hazardSetup';
+import { loadGame }                from './engine/saveManager';
+import { SoundManager }            from './engine/audio';
 import { SHIP_SKINS }              from './constants/skins';
 import { UPGRADE_DATA }            from './constants/upgrades';
 
@@ -41,9 +43,34 @@ export default function App() {
   // ─── Game state initialisation ─────────────────────────────────────────────
   const resetGame = () => {
     game.current = createGameState();
+    SoundManager.setVolume(game.current.settings?.volume ?? 0.5);
+    SoundManager.setSfxVolume(game.current.settings?.sfxVolume ?? 0.7);
+    SoundManager.setMusicVolume(game.current.settings?.musicVolume ?? 0.5);
+    SoundManager.setMuted(game.current.audio?.muted ?? false);
   };
 
   const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };
+
+  const syncUiFromGame = () => {
+    const g = game.current;
+    if (!g) return;
+    setUiScrap(g.scrap);
+    setUiLevels({ ...g.levels });
+    setUiShipSkin(g.shipSkin ?? 0);
+    setUiUnlockedSkins([...(g.unlockedSkins ?? SHIP_SKINS.map(s => s.cost === 0))]);
+    setMapStateVersion(v => v + 1);
+  };
+
+  const continueGame = () => {
+    resetGame();
+    if (!loadGame(game.current, 'auto')) return;
+    game.current.devMode = false;
+    game.current.paused = false;
+    setPaused(false);
+    setDevMode(false);
+    syncUiFromGame();
+    setGameState('map');
+  };
 
   // ─── Dev mode: launch a specific mission ────────────────────────────────────
   const launchDevMission = ({ type, level, hazard }) => {
@@ -73,7 +100,7 @@ export default function App() {
       setupHazards(game.current, level, [hazard]);
     }
 
-    setUiLevels({ ...game.current.levels });
+    syncUiFromGame();
     setGameState('playing');
   };
 
@@ -159,7 +186,7 @@ export default function App() {
       )}
 
       {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} uiShipSkin={uiShipSkin} uiUnlockedSkins={uiUnlockedSkins} buySkin={buySkin} />}
-      {gameState === 'start'    && <StartScreen    startGame={startGame} devMode={devMode} gameRef={game} />}
+      {gameState === 'start'    && <StartScreen    startGame={startGame} continueGame={continueGame} devMode={devMode} gameRef={game} />}
       {gameState === 'gameover' && <GameOverScreen  gameRef={game} startGame={startGame} />}
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}
       {gameState === 'event'    && <EventScreen     gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}

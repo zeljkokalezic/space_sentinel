@@ -395,6 +395,27 @@ describe('structure destruction', () => {
     expect(g.effects[0].text).toBe('25');
   });
 
+  it('one projectile only damages one overlapping structure', () => {
+    const g = createSabotageState({
+      structures: [
+        { x: 200, y: 0, hp: 100, maxHp: 100, radius: 30, fireCooldown: 2.0, active: true },
+        { x: 200, y: 0, hp: 100, maxHp: 100, radius: 30, fireCooldown: 2.0, active: true },
+      ],
+      projectiles: [{
+        x: 200, y: 0,
+        vx: 100, vy: 0,
+        active: true, isEnemy: false,
+        damage: 25,
+        radius: 5,
+      }],
+    });
+
+    updateSabotage(0.1, g, 1, vi.fn());
+
+    const damaged = g.sabotage.structures.filter(s => s.hp < 100);
+    expect(damaged.length).toBe(1);
+  });
+
   it('particles are created on hit (even if structure survives)', () => {
     const g = createSabotageState({
       structures: [{

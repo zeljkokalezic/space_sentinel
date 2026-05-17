@@ -6,57 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { SoundManager } from '../engine/audio';
-
-/**
- * Load settings from localStorage.
- * @returns {object} Settings object
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export function loadSettings() {
-  try {
-    const data = localStorage.getItem('space_sentinel_settings');
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (parsed && typeof parsed === 'object') return parsed;
-    }
-  } catch {
-    // ignore
-  }
-  return getDefaultSettings();
-}
-
-/**
- * Save settings to localStorage.
- * @param {object} settings
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export function saveSettings(settings) {
-  try {
-    localStorage.setItem('space_sentinel_settings', JSON.stringify(settings));
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * Default settings.
- * @returns {object}
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export function getDefaultSettings() {
-  return {
-    volume: 0.5,
-    sfxVolume: 0.7,
-    musicVolume: 0.5,
-    difficulty: 'normal', // 'easy', 'normal', 'hard'
-    showFPS: false,
-    particlesQuality: 'high', // 'low', 'medium', 'high'
-    screenShake: true,
-    colorblindMode: 'none', // 'none', 'protanopia', 'deuteranopia', 'tritanopia'
-    reducedMotion: false,
-    highContrast: false,
-  };
-}
+import { loadSettings, saveSettings } from '../engine/settings';
 
 /**
  * SettingsOverlay component.

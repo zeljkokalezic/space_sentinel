@@ -3,6 +3,7 @@
  * No React imports. No Three.js scene logic.
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
+import { getHostileTargets } from './targeting';
 
 // Radar sweep angle persists across frames
 let radarAngle = 0;
@@ -140,20 +141,22 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.fillText(`TIME: ${Math.floor(g.totalTime/60)}:${Math.floor(g.totalTime%60).toString().padStart(2,'0')}`, w/2, 50);
 
   // Mission bar
-  const mBarW=300, mProg=g.mission.target>0?Math.max(0,Math.min(1,g.mission.current/g.mission.target)):0;
-  c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(w/2-mBarW/2,10,mBarW,10);
-  c.fillStyle='#39ff14'; c.fillRect(w/2-mBarW/2,10,mBarW*mProg,10);
-  c.fillStyle='#fff'; c.font='bold 16px sans-serif'; c.textAlign='center';
-  const mTxt = g.mission.type==='survive'
-    ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
-    : g.mission.type==='escort'
-    ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
-    : g.mission.type==='defend'
-    ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
-    : g.mission.type==='sabotage'
-    ? `LEVEL ${g.level}: ${g.mission.title} [${g.mission.current} / ${g.mission.target}]`
-    : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
-  c.fillText(mTxt, w/2, 18);
+  if (g.mission) {
+    const mBarW=300, mProg=g.mission.target>0?Math.max(0,Math.min(1,g.mission.current/g.mission.target)):0;
+    c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(w/2-mBarW/2,10,mBarW,10);
+    c.fillStyle='#39ff14'; c.fillRect(w/2-mBarW/2,10,mBarW*mProg,10);
+    c.fillStyle='#fff'; c.font='bold 16px sans-serif'; c.textAlign='center';
+    const mTxt = g.mission.type==='survive'
+      ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+      : g.mission.type==='escort'
+      ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
+      : g.mission.type==='defend'
+      ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+      : g.mission.type==='sabotage'
+      ? `LEVEL ${g.level}: ${g.mission.title} [${g.mission.current} / ${g.mission.target}]`
+      : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
+    c.fillText(mTxt, w/2, 18);
+  }
 
   // ── Mute toggle button (top-right, below top bar) ──────────────────────────
   const muted = g.audio?.muted ?? false;
@@ -533,8 +536,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   if (g.mission && !g.mission.completed && (g.mission.type === 'kill' || g.mission.type === 'collect')) {
     let nearest = null;
     let nearestDist = Infinity;
-    for (const e of g.enemies) {
-      if (!e.active) continue;
+    for (const e of getHostileTargets(g)) {
       const d = Math.hypot(e.x - g.player.x, e.y - g.player.y);
       if (d < nearestDist) { nearestDist = d; nearest = e; }
     }

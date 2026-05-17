@@ -89,4 +89,24 @@ describe('projectile hit sounds', () => {
     // Should play 'hit' for the first enemy hit (the loop breaks after first hit per projectile)
     expect(spy).toHaveBeenCalledWith('hit');
   });
+
+  it('records boss hit for piercing projectiles to prevent repeated damage', () => {
+    const projectile = createTestProjectile(0, 0, 0, 'plasma');
+    projectile.vx = 0;
+    projectile.vy = 0;
+    projectile.pierce = 2;
+    projectile.damage = 10;
+
+    const g = createTestState({
+      enemies: [],
+      projectiles: [projectile],
+      boss: { active: true, x: 0, y: 0, hp: 100, maxHp: 100, radius: 60, shield: 0 },
+    });
+
+    updateProjectiles(0.016, g, vi.fn());
+    updateProjectiles(0.016, g, vi.fn());
+
+    expect(g.boss.hp).toBe(90);
+    expect(projectile.hitList).toContain('boss');
+  });
 });

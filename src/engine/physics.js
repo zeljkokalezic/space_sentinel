@@ -8,7 +8,7 @@
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { spawnEnemy } from './spawner';
-import { getNearestEnemy } from './combat';
+import { getNearestHostileTarget } from './targeting';
 import { calculateDifficultyMultiplier } from './difficulty';
 
 // Systems
@@ -56,7 +56,7 @@ export const updatePhysics = (dt, g, cbs) => {
   updateWaveAnnounce(dt, g);
 
   const C = GAME_CONFIG;
-  const currentDiffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
+  const currentDiffMult = calculateDifficultyMultiplier(g.level, g.totalTime, g.settings?.difficulty);
   const currentSpawnRate = Math.max(0.1, C.enemies.baseSpawnRate - (g.level * C.enemies.spawnRateLevelDecay) - (g.totalTime * C.enemies.spawnRateTimeDecay));
 
   if (g.spawnCooldown <= 0 && !(g.waveAnnounce && g.waveAnnounce.active)) {
@@ -78,7 +78,7 @@ export const updatePhysics = (dt, g, cbs) => {
     ady = Math.sin(g.player.yaw);
   }
   if (g.levels.autoAim > 0) {
-    const ne = getNearestEnemy(g.player.x, g.player.y, g.enemies);
+    const ne = getNearestHostileTarget(g.player.x, g.player.y, g);
     if (ne) { adx = ne.x - g.player.x; ady = ne.y - g.player.y; }
     else    { adx = Math.cos(g.player.yaw); ady = Math.sin(g.player.yaw); }
   }
@@ -105,13 +105,13 @@ export const updatePhysics = (dt, g, cbs) => {
   if (g.player.hp <= 0) return;
 
   // ─── Environmental hazards ────────────────────────────────────────────────────
-  if (updateEnvironmentalHazards(dt, g, completeMission)) return;
+  if (updateEnvironmentalHazards(dt, g, completeMission, setGameState)) return;
 
   // ─── Pickup magnet ────────────────────────────────────────────────────────────
   updatePickups(dt, g, completeMission);
 
   // ─── Power-up pickup & buff management ──────────────────────────────────────
-  updatePowerups(dt, g);
+  updatePowerups(dt, g, completeMission);
 
   // ─── Particles ────────────────────────────────────────────────────────────────
   updateParticles(dt, g);

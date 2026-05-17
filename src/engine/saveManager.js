@@ -7,6 +7,7 @@
 
 const SAVE_KEY = 'space_sentinel_save';
 const AUTO_SAVE_KEY = 'space_sentinel_autosave';
+const SAVE_VERSION = 2;
 
 /**
  * Serializable save data structure.
@@ -27,6 +28,8 @@ const AUTO_SAVE_KEY = 'space_sentinel_autosave';
  * @property {Object} map - Map state
  * @property {Object} stats - Persistent stats
  * @property {Set<string>} achievements - Unlocked achievement IDs
+ * @property {number} shipSkin - Active ship skin index
+ * @property {boolean[]} unlockedSkins - Purchased ship skins
  */
 
 /**
@@ -36,7 +39,7 @@ const AUTO_SAVE_KEY = 'space_sentinel_autosave';
  */
 export function createSaveData(g) {
   return {
-    version: 1,
+    version: SAVE_VERSION,
     timestamp: new Date().toISOString(),
     player: {
       hp: g.player.hp,
@@ -63,6 +66,8 @@ export function createSaveData(g) {
       upgradesMaxed: 0,
     },
     achievements: g.achievements?.unlocked ? [...g.achievements.unlocked] : [],
+    shipSkin: g.shipSkin ?? 0,
+    unlockedSkins: Array.isArray(g.unlockedSkins) ? [...g.unlockedSkins] : undefined,
   };
 }
 
@@ -143,6 +148,14 @@ export function applySaveData(g, data) {
   if (data.achievements) {
     g.achievements = g.achievements || { unlocked: new Set(), notifications: [] };
     g.achievements.unlocked = new Set(data.achievements);
+  }
+
+  if (typeof data.shipSkin === 'number') {
+    g.shipSkin = data.shipSkin;
+  }
+
+  if (Array.isArray(data.unlockedSkins)) {
+    g.unlockedSkins = [...data.unlockedSkins];
   }
 }
 

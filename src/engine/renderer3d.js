@@ -309,7 +309,7 @@ export const draw3DFrame = (threeObj, g) => {
 
   // Beacon shield ring
   if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
-    const shieldMesh = getMesh(g.beacon + '_shield', () => {
+    const shieldMesh = getMesh('beacon_shield', () => {
       const ringGeom = new THREE.RingGeometry(g.beacon.radius + 5, g.beacon.radius + 10, 16);
       const m = new THREE.Mesh(ringGeom, new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.3 }));
       return m;
@@ -530,8 +530,9 @@ export const draw3DFrame = (threeObj, g) => {
   // Particles
   for (let p of g.particles) {
     if (!p.active) continue;
-    const m = getMesh(p, () => { const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true, transparent: true })); m.scale.set(3,3,3); return m; });
-    m.position.set(p.x, p.y, p.z||0); m.material.opacity = p.life / p.maxLife;
+    const m = getMesh(p, () => { const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: p.color ?? 0x39ff14, wireframe: true, transparent: true })); m.scale.set(3,3,3); return m; });
+    if (m.material && p.color !== undefined) m.material.color.set(p.color);
+    m.position.set(p.x, p.y, p.z||0); m.material.opacity = p.maxLife ? p.life / p.maxLife : Math.min(1, p.life);
   }
 
   // Laser effects
