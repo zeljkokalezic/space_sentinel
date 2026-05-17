@@ -122,6 +122,27 @@ export const generateMap = () => {
         }
     }
 
+    // Guarantee at least one event node if none was assigned randomly
+    let eventAssigned = false;
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            let node = grid[r][c];
+            if (node && node.type === 'event') { eventAssigned = true; break; }
+        }
+        if (eventAssigned) break;
+    }
+    if (!eventAssigned) {
+        for (let r = 2; r < rows - 2; r++) {
+            for (let c = 0; c < cols; c++) {
+                let node = grid[r][c];
+                if (node && node.type === 'combat') {
+                    node.type = 'event';
+                    break;
+                }
+            }
+        }
+    }
+
     // Place mini-boss nodes at rows that are multiples of spawnInterval (rows 4, 8, 12)
     // Mini-bosses appear every 3 levels, between regular nodes and the final boss
     const spawnInterval = 3;
@@ -135,11 +156,11 @@ export const generateMap = () => {
                 placed = true;
             }
         }
-        // If no combat node available, convert an elite node
+        // If no combat node available, convert a defend/escort/sabotage node (not elite)
         if (!placed) {
             for (let c = 0; c < cols && !placed; c++) {
                 let node = grid[r][c];
-                if (node && node.type === 'elite') {
+                if (node && ['defend', 'escort', 'sabotage'].includes(node.type)) {
                     node.type = 'miniboss';
                     placed = true;
                 }

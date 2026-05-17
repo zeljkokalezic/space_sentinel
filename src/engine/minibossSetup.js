@@ -34,6 +34,8 @@ export const setupMiniboss = (g, level) => {
     speed: C.miniboss.baseSpeed + level * C.miniboss.speedPerLevel,
     fireCooldown: C.boss.fireCooldown,
     spiralAngle: 0,
+    shield: 0,
+    maxShield: 0,
   };
 
   // Stop regular enemy spawning during mini-boss fight

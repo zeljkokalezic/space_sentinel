@@ -31,6 +31,8 @@ export const setupBoss = (g, level) => {
     speed: C.boss.baseSpeed + level * C.boss.speedPerLevel,
     fireCooldown: C.boss.fireCooldown,
     spiralAngle: 0,
+    shield: 0,
+    maxShield: 0,
   };
 
   // Stop regular enemy spawning during boss fight

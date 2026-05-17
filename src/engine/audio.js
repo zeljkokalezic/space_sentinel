@@ -498,10 +498,13 @@ const SOUND_GENERATORS = {
   bg_drone: playBgDrone,
   ui_click: playUiClick,
   boss_phase_change: playBossPhaseChange,
-  enemy_shoot: playEnemyShoot,
+ enemy_shoot: playEnemyShoot,
   wave_announce: playWaveAnnounce,
   countdown_beep: playCountdownBeep,
   wave_start: playWaveStart,
+  soundtrack_calm: _playSoundtrackCalm,
+  soundtrack_tense: _playSoundtrackTense,
+  soundtrack_triumphant: _playSoundtrackTriumphant,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

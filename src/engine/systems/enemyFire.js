@@ -24,16 +24,16 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
   enemy.fireCooldown -= dt;
   if (enemy.fireCooldown > 0) return false;
 
-  if (enemy.type === 'shooter' && distToTarget < C.player.radius * 16) {
-    fireProjectile(g, enemy.x, enemy.y, angle, C.weapons.missiles.baseSpeed, 15 * currentDiffMult, 'enemy_bullet');
-    enemy.fireCooldown = 1.8 + Math.random();
+  if (enemy.type === 'shooter' && distToTarget < C.player.radius * C.enemyWeapons.shooter.rangeMult) {
+    fireProjectile(g, enemy.x, enemy.y, angle, C.weapons.missiles.baseSpeed, C.enemyWeapons.shooter.damage * currentDiffMult, 'enemy_bullet');
+    enemy.fireCooldown = C.enemyWeapons.shooter.cooldownMin + Math.random() * C.enemyWeapons.shooter.cooldownVariance;
     return true;
   }
 
-  if (enemy.type === 'missile_boat' && distToTarget < C.player.radius * 21) {
-    fireProjectile(g, enemy.x, enemy.y, angle - 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
-    fireProjectile(g, enemy.x, enemy.y, angle + 0.5, 120, 25 * currentDiffMult, 'enemy_missile');
-    enemy.fireCooldown = 4.0;
+  if (enemy.type === 'missile_boat' && distToTarget < C.player.radius * C.enemyWeapons.missile_boat.rangeMult) {
+    fireProjectile(g, enemy.x, enemy.y, angle - 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
+    fireProjectile(g, enemy.x, enemy.y, angle + 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
+    enemy.fireCooldown = C.enemyWeapons.missile_boat.cooldown;
     return true;
   }
 

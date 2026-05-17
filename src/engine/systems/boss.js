@@ -65,7 +65,7 @@ export const updateBoss = (dt, g, currentDiffMult, completeMission, setGameState
   if (newPhase !== boss.phase) {
     boss.phase = newPhase;
     SoundManager.play('boss_phase_change');
-    createParticles(g, boss.x, boss.y, '#fbbf24', 20);
+    createParticles(g, boss.x, boss.y, 0xfbbf24, 20);
     g.effects.push({
       type: 'mission_complete',
       text: `PHASE ${boss.phase}!`,
@@ -116,7 +116,7 @@ export const updateBoss = (dt, g, currentDiffMult, completeMission, setGameState
     boss.isCharging = true;
     boss.chargeTarget = { x: player.x, y: player.y };
     // Telegraph: flash effect
-    createParticles(g, boss.x, boss.y, '#fbbf24', 10);
+    createParticles(g, boss.x, boss.y, 0xfbbf24, 10);
   }
 
   // ── Boss rams player ──
@@ -143,8 +143,8 @@ export const updateBoss = (dt, g, currentDiffMult, completeMission, setGameState
   // ── Boss dies ──
   if (boss.hp <= 0) {
     boss.active = false;
-    createParticles(g, boss.x, boss.y, '#dc2626', 40);
-    createParticles(g, boss.x, boss.y, '#fbbf24', 30);
+    createParticles(g, boss.x, boss.y, 0xdc2626, 40);
+    createParticles(g, boss.x, boss.y, 0xfbbf24, 30);
     SoundManager.play('explosion');
 
     // Guaranteed power-up drops

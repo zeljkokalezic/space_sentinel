@@ -18,8 +18,11 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
   for (let e of g.enemies) {
     if (!e.active) continue;
 
-    const distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
-    const angle = Math.atan2(g.player.y - e.y, g.player.x - e.x);
+    // Use targetX/targetY if set by beacon/sabotage, otherwise target player
+    const tx = e.targetX !== undefined ? e.targetX : g.player.x;
+    const ty = e.targetY !== undefined ? e.targetY : g.player.y;
+    const distToPlayer = Math.hypot(tx - e.x, ty - e.y);
+    const angle = Math.atan2(ty - e.y, tx - e.x);
     let moveAngle = angle;
     if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
 

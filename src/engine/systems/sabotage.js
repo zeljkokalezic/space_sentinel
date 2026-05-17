@@ -49,7 +49,7 @@ export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
         color: cfg.color,
         active: true,
         isEnemy: true,
-        lifetime: 4.0,
+        life: 0,
       });
     }
   }

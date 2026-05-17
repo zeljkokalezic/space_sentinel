@@ -80,6 +80,21 @@ export const GAME_CONFIG = {
     eliteBonusMax: 0.4,
   },
 
+  enemyWeapons: {
+    shooter: {
+      damage: 15,
+      cooldownMin: 1.8,
+      cooldownVariance: 1.0,
+      rangeMult: 16,
+    },
+    missile_boat: {
+      missileDamage: 25,
+      missileSpeed: 120,
+      cooldown: 4.0,
+      rangeMult: 21,
+    },
+  },
+
   world: {
     bounds: 4000,
     starCount: 800,

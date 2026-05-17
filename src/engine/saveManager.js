@@ -59,6 +59,7 @@ export function createSaveData(g) {
       defendMissions: 0,
       sabotageMissions: 0,
       bossesDefeated: 0,
+      minibossesDefeated: 0,
       upgradesMaxed: 0,
     },
     achievements: g.achievements?.unlocked ? [...g.achievements.unlocked] : [],

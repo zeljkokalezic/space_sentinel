@@ -9,7 +9,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, killEnemy } from '../combat';
 
-export const updateEnvironmentalHazards = (dt, g) => {
+export const updateEnvironmentalHazards = (dt, g, completeMission) => {
   // Guard for backwards compatibility with tests
   if (!g || !g.hazards || g.hazards.length === 0) return false;
 
@@ -25,7 +25,7 @@ export const updateEnvironmentalHazards = (dt, g) => {
     } else if (h.type === 'gravityWell') {
       updateGravityWell(dt, h, g);
     } else if (h.type === 'plasmaStorm') {
-      updatePlasmaStorm(dt, h, g);
+      updatePlasmaStorm(dt, h, g, completeMission);
     } else if (h.type === 'emp') {
       updateEMP(dt, h, g);
     }
@@ -145,7 +145,7 @@ const updateGravityWell = (dt, h, g) => {
 
 // ─── Plasma Storm ─────────────────────────────────────────────────────────────
 
-const updatePlasmaStorm = (dt, h, g) => {
+const updatePlasmaStorm = (dt, h, g, completeMission) => {
   const { damagePerSecond, radius, respawnTimer: respawnDuration } = h;
 
   if (h.respawning) {
@@ -161,7 +161,7 @@ const updatePlasmaStorm = (dt, h, g) => {
       const speed = GAME_CONFIG.environmentalHazards.plasmaStorm.moveSpeed + g.level * 2;
       h.vx = Math.cos(dirAngle) * speed;
       h.vy = Math.sin(dirAngle) * speed;
-      h.timer = 25;
+      h.timer = GAME_CONFIG.environmentalHazards.plasmaStorm.duration;
       h.respawning = false;
     }
     return;
@@ -210,7 +210,7 @@ const updatePlasmaStorm = (dt, h, g) => {
       const damage = damagePerSecond * 2 * dt;
       e.hp -= damage;
       if (e.hp <= 0) {
-        killEnemy(g, e, null);
+        killEnemy(g, e, completeMission);
       }
     }
   }

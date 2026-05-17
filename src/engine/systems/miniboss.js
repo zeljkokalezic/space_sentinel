@@ -66,7 +66,7 @@ export const updateMiniboss = (dt, g, currentDiffMult, completeMission, setGameS
   if (newPhase !== boss.phase) {
     boss.phase = newPhase;
     SoundManager.play('boss_phase_change');
-    createParticles(g, boss.x, boss.y, '#fbbf24', 20);
+    createParticles(g, boss.x, boss.y, 0xfbbf24, 20);
     g.effects.push({
       type: 'mission_complete',
       text: `PHASE ${boss.phase}!`,
@@ -118,7 +118,7 @@ export const updateMiniboss = (dt, g, currentDiffMult, completeMission, setGameS
     boss.isCharging = true;
     boss.chargeTarget = { x: player.x, y: player.y };
     // Telegraph: flash effect
-    createParticles(g, boss.x, boss.y, '#fbbf24', 10);
+    createParticles(g, boss.x, boss.y, 0xfbbf24, 10);
   }
 
   // ── Mini-boss rams player ──
@@ -146,8 +146,8 @@ export const updateMiniboss = (dt, g, currentDiffMult, completeMission, setGameS
   // ── Mini-boss dies ──
   if (boss.hp <= 0) {
     boss.active = false;
-    createParticles(g, boss.x, boss.y, '#f97316', 40);
-    createParticles(g, boss.x, boss.y, '#fbbf24', 30);
+    createParticles(g, boss.x, boss.y, 0xf97316, 40);
+    createParticles(g, boss.x, boss.y, 0xfbbf24, 30);
     SoundManager.play('explosion');
 
     // Scrap reward (base + level scaling)
@@ -162,7 +162,7 @@ export const updateMiniboss = (dt, g, currentDiffMult, completeMission, setGameS
     });
 
     // Update stats
-    if (g.stats) g.stats.bossesDefeated++;
+    if (g.stats) g.stats.minibossesDefeated++;
 
     // Complete mission
     completeMission();

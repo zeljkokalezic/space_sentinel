@@ -39,7 +39,8 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   if (fpsLastTime === 0) fpsLastTime = now; // lazy init on first frame
   const elapsed = now - fpsLastTime;
   if (elapsed >= 1000) {
-    fpsValue = Math.round(fpsFrames * 1000 / elapsed);
+    const cappedElapsed = Math.min(elapsed, 5000);
+    fpsValue = Math.round(fpsFrames * 1000 / cappedElapsed);
     fpsFrames = 0;
     fpsLastTime = now;
   }
@@ -65,7 +66,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     // Timer bar
     const barWidth = 120
     const barHeight = 6
-    const timerRatio = g.combo.timer / 3
+    const timerRatio = g.combo.timer / GAME_CONFIG.combo.timerDuration
     c.fillStyle = 'rgba(255,255,255,0.3)'
     c.fillRect(w / 2 - barWidth / 2, 68, barWidth, barHeight)
     c.fillStyle = comboColor
@@ -166,7 +167,11 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.strokeStyle = muted ? '#ef4444' : 'rgba(255,255,255,0.5)';
   c.lineWidth = 2;
   c.beginPath();
-  c.roundRect(btnX, btnY, MUTE_BTN_SIZE, MUTE_BTN_SIZE, 6);
+  if (c.roundRect) {
+    c.roundRect(btnX, btnY, MUTE_BTN_SIZE, MUTE_BTN_SIZE, 6);
+  } else {
+    c.rect(btnX, btnY, MUTE_BTN_SIZE, MUTE_BTN_SIZE);
+  }
   c.fill(); c.stroke();
 
   // Speaker icon (triangle body + curved horn)

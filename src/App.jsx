@@ -5,6 +5,7 @@ import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
 import { setupHazards }            from './engine/hazardSetup';
 import { SHIP_SKINS }              from './constants/skins';
+import { UPGRADE_DATA }            from './constants/upgrades';
 
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
@@ -80,6 +81,8 @@ export default function App() {
   const buyUpgrade = (key, cost) => {
     const g = game.current;
     if (g.scrap < cost) return;
+    const upgrade = UPGRADE_DATA[key];
+    if (!upgrade || g.levels[key] >= upgrade.maxLevel) return;
     g.scrap -= cost;
     const nextLevel = g.levels[key] + 1;
     g.levels[key] = nextLevel;

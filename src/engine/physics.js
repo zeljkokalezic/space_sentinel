@@ -99,12 +99,13 @@ export const updatePhysics = (dt, g, cbs) => {
   updateProjectiles(dt, g, setGameState);
   if (g.player.hp <= 0) return;
 
-  // ─── Enemy AI & collision ─────────────────────────────────────────────────────
-  updateEnemies(dt, g, currentDiffMult, completeMission, setGameState);
+ // ─── Enemy AI & collision ─────────────────────────────────────────────
+  const enemyDt = g.activeBuffs.timeSlow ? dt * 0.5 : dt;
+  updateEnemies(enemyDt, g, currentDiffMult, completeMission, setGameState);
   if (g.player.hp <= 0) return;
 
   // ─── Environmental hazards ────────────────────────────────────────────────────
-  if (updateEnvironmentalHazards(dt, g)) return;
+  if (updateEnvironmentalHazards(dt, g, completeMission)) return;
 
   // ─── Pickup magnet ────────────────────────────────────────────────────────────
   updatePickups(dt, g, completeMission);

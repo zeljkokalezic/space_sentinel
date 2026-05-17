@@ -266,7 +266,7 @@ describe('updateMiniboss', () => {
     g.particles = [];
     g.powerups = [];
     g.pickups = [];
-    g.stats = { bossesDefeated: 0 };
+    g.stats = { bossesDefeated: 0, minibossesDefeated: 0 };
 
     updateMiniboss(0.016, g, 1, completeMission, setGameState);
     // Boss should have moved closer
@@ -298,13 +298,13 @@ describe('updateMiniboss', () => {
     g.particles = [];
     g.powerups = [];
     g.pickups = [];
-    g.stats = { bossesDefeated: 0 };
+    g.stats = { bossesDefeated: 0, minibossesDefeated: 0 };
 
     const result = updateMiniboss(0.016, g, 1, completeMission, setGameState);
     expect(result).toBe(true);
     expect(g.miniboss.active).toBe(false);
     expect(completeMission).toHaveBeenCalled();
-    expect(g.stats.bossesDefeated).toBe(1);
+    expect(g.stats.minibossesDefeated).toBe(1);
   });
 
   it('should drop scrap reward on death', () => {
@@ -331,7 +331,7 @@ describe('updateMiniboss', () => {
     g.particles = [];
     g.powerups = [];
     g.pickups = [];
-    g.stats = { bossesDefeated: 0 };
+    g.stats = { bossesDefeated: 0, minibossesDefeated: 0 };
 
     updateMiniboss(0.016, g, 1, completeMission, setGameState);
     expect(g.pickups.length).toBeGreaterThan(0);
@@ -362,7 +362,7 @@ describe('updateMiniboss', () => {
     g.particles = [];
     g.powerups = [];
     g.pickups = [];
-    g.stats = { bossesDefeated: 0 };
+    g.stats = { bossesDefeated: 0, minibossesDefeated: 0 };
 
     updateMiniboss(0.016, g, 1, completeMission, setGameState);
     expect(g.miniboss.phase).toBe(2);
@@ -394,7 +394,7 @@ describe('updateMiniboss', () => {
     g.particles = [];
     g.powerups = [];
     g.pickups = [];
-    g.stats = { bossesDefeated: 0 };
+    g.stats = { bossesDefeated: 0, minibossesDefeated: 0 };
 
     updateMiniboss(0.016, g, 1, 1, setGameState);
     expect(g.player.hp).toBeLessThan(300);
@@ -426,7 +426,7 @@ describe('updateMiniboss', () => {
     g.particles = [];
     g.powerups = [];
     g.pickups = [];
-    g.stats = { bossesDefeated: 0 };
+    g.stats = { bossesDefeated: 0, minibossesDefeated: 0 };
 
     updateMiniboss(0.016, g, 1, completeMission, setGameState);
     expect(setGameState).toHaveBeenCalledWith('gameover');

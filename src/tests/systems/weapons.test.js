@@ -88,7 +88,7 @@ describe('autocannon firing', () => {
   it('projectile has no pierce (autocannon pierce = 0)', () => {
     const g = stateWithAutocannon();
     updateWeapons(0.016, g);
-    expect(g.projectiles[0].pierce).toBe(false);
+    expect(g.projectiles[0].pierce).toBe(0);
   });
 
   it('projectile is active on creation', () => {

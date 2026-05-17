@@ -95,6 +95,7 @@ describe('createSaveData', () => {
       defendMissions: 0,
       sabotageMissions: 0,
       bossesDefeated: 0,
+      minibossesDefeated: 0,
       upgradesMaxed: 0,
     });
   });

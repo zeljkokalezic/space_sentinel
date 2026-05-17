@@ -46,7 +46,7 @@ export const createTestState = (overrides = {}) => {
     pickups: [],
     effects: [],
     hazards: [],
-    stats: { enemiesDestroyed: 0 },
+    stats: { enemiesDestroyed: 0, minibossesDefeated: 0 },
     stars: [],
     levels: {
       autocannon: 1, plasma: 0, missiles: 0,

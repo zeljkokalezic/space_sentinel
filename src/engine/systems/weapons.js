@@ -16,11 +16,15 @@ export const updateWeapons = (dt, g, completeMission) => {
     ? (getNearestEnemy(g.player.x, g.player.y, g.enemies) !== null)
     : true;
 
+  // ── Active buff multipliers ──
+  const fireMult = g.activeBuffs.rapidFire ? 0.5 : 1;
+  const dmgMult  = g.activeBuffs.damageSurge ? 2 : 1;
+
   // ── Autocannon ──
   if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0 && hasTarget) {
     SoundManager.play('shoot');
     const angle = g.player.aimAngle;
-    const dmg = C.weapons.autocannon.baseDamage + g.levels.autocannon * C.weapons.autocannon.damagePerLevel;
+    const dmg = (C.weapons.autocannon.baseDamage + g.levels.autocannon * C.weapons.autocannon.damagePerLevel) * dmgMult;
     const shots = 1 + Math.floor(g.levels.autocannon / C.weapons.autocannon.shotsPerExtraLevels);
     const perpX = -Math.sin(angle);
     const perpY =  Math.cos(angle);
@@ -28,9 +32,9 @@ export const updateWeapons = (dt, g, completeMission) => {
       const lateralOff = (i - (shots - 1) / 2) * 18;
       const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
-      fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', false);
+      fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', 0);
     }
-    g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction);
+    g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, (C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction) * fireMult);
   }
 
   // ── Plasma Piercer ──
@@ -44,9 +48,9 @@ export const updateWeapons = (dt, g, completeMission) => {
       const lateralOff = (i - (shots - 1) / 2) * 22;
       const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
-      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel, 'plasma', 1 + Math.floor(g.levels.plasma / 2));
+      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2));
     }
-    g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction);
+    g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, (C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction) * fireMult);
   }
 
   // ── Missiles (360-degree ring) ──
@@ -55,15 +59,15 @@ export const updateWeapons = (dt, g, completeMission) => {
     const count = g.levels.missiles;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i;
-      fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel, 'missile', 0);
+      fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, (C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel) * dmgMult, 'missile', 0);
     }
-    g.cooldowns.missiles = Math.max(C.weapons.missiles.minCooldown, C.weapons.missiles.baseCooldown - g.levels.missiles * C.weapons.missiles.cooldownReduction);
+    g.cooldowns.missiles = Math.max(C.weapons.missiles.minCooldown, (C.weapons.missiles.baseCooldown - g.levels.missiles * C.weapons.missiles.cooldownReduction) * fireMult);
   }
 
   // ── Point Defense (auto-targets nearby enemy missiles, then enemies) ──
   if (g.levels.pointDefense > 0 && g.cooldowns.pointDefense <= 0) {
     const range = C.weapons.pointDefense.baseRange + g.levels.pointDefense * C.weapons.pointDefense.rangePerLevel;
-    const dmg = C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel;
+    const dmg = (C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel) * dmgMult;
     const maxHits = 1 + Math.floor(g.levels.pointDefense / C.weapons.pointDefense.maxHitsPer2Levels);
     let hits = 0;
     let hit = false;
@@ -108,7 +112,7 @@ export const updateWeapons = (dt, g, completeMission) => {
         }
       }
     }
-    if (hit) g.cooldowns.pointDefense = Math.max(C.weapons.pointDefense.minCooldown, C.weapons.pointDefense.baseCooldown - g.levels.pointDefense * C.weapons.pointDefense.cooldownReduction);
+    if (hit) g.cooldowns.pointDefense = Math.max(C.weapons.pointDefense.minCooldown, (C.weapons.pointDefense.baseCooldown - g.levels.pointDefense * C.weapons.pointDefense.cooldownReduction) * fireMult);
   }
 
   g.cooldowns.shieldRegen -= dt;

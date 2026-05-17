@@ -7,25 +7,29 @@ import { SHIP_SKINS } from '../constants/skins';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Reusable scratch objects to avoid per-frame GC pressure
+const _raycaster = new THREE.Raycaster();
+const _ndcVec = new THREE.Vector2();
+const _plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+const _target = new THREE.Vector3();
+const _projVec = new THREE.Vector3();
+
 export const raycastToPlane = (clientX, clientY, camera) => {
-  const ndcX = (clientX / window.innerWidth) * 2 - 1;
-  const ndcY = -(clientY / window.innerHeight) * 2 + 1;
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
-  const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-  const target = new THREE.Vector3();
-  raycaster.ray.intersectPlane(plane, target);
-  if (!target) return null;
-  return { x: target.x, y: target.y };
+  _ndcVec.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+  _raycaster.setFromCamera(_ndcVec, camera);
+  _target.set(0, 0, 0);
+  _raycaster.ray.intersectPlane(_plane, _target);
+  if (!_target) return null;
+  return { x: _target.x, y: _target.y };
 };
 
 export const projectToScreen = (camera, wx, wy, wz = 0) => {
-  const v = new THREE.Vector3(wx, wy, wz);
-  v.project(camera);
+  _projVec.set(wx, wy, wz);
+  _projVec.project(camera);
   return {
-    x: (v.x * 0.5 + 0.5) * window.innerWidth,
-    y: (-v.y * 0.5 + 0.5) * window.innerHeight,
-    visible: v.z < 1,
+    x: (_projVec.x * 0.5 + 0.5) * window.innerWidth,
+    y: (-_projVec.y * 0.5 + 0.5) * window.innerHeight,
+    visible: _projVec.z < 1,
   };
 };
 
@@ -100,10 +104,12 @@ export const draw3DFrame = (threeObj, g) => {
   // Player ship
   const pm = getMesh(g.player, () => {
     const group = new THREE.Group();
-    group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(40, 60, 20), mats.player)));
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(80, 20, 10), mats.player); wing.position.set(0, -10, -5); group.add(wing);
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 10), mats.player); bridge.position.set(0, 10, 10); group.add(bridge);
-    const shield = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), mats.shield); shield.scale.set(42, 42, 42); shield.name = 'shield'; group.add(shield);
+    const hullMat = mats.player.clone();
+    group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(40, 60, 20), hullMat)));
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(80, 20, 10), hullMat); wing.position.set(0, -10, -5); group.add(wing);
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 10), hullMat); bridge.position.set(0, 10, 10); group.add(bridge);
+    const shieldMat = mats.shield.clone();
+    const shield = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), shieldMat); shield.scale.set(42, 42, 42); shield.name = 'shield'; group.add(shield);
     // Engine glow (thruster exhaust)
     const egMat = new THREE.MeshBasicMaterial({ color: 0x39ff14, transparent: true, opacity: 0.7 });
     const egL = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), egMat.clone()); egL.scale.set(4, 6, 4); egL.name = 'engineL'; egL.position.set(-30, -15, -5); group.add(egL);
@@ -121,24 +127,26 @@ export const draw3DFrame = (threeObj, g) => {
   const shieldMesh = pm.children.find(c => c.name === 'shield');
   if (shieldMesh) { shieldMesh.visible = g.player.maxShield > 0; shieldMesh.material.opacity = Math.max(0.1, 0.5 * (g.player.shield / g.player.maxShield)); }
 
-  // Apply active skin colors to player mesh
+  // Apply active skin colors to player mesh (only when skin changes)
   const skinIdx = Math.max(0, Math.min(g.shipSkin ?? 0, SHIP_SKINS.length - 1));
   const skin = SHIP_SKINS[skinIdx];
-  const updateMaterials = (obj, color) => {
-    if (obj.material) obj.material.color.setHex(color);
-    if (obj.children) obj.children.forEach(c => updateMaterials(c, color));
-  };
-  pm.children.forEach(child => {
-    if (child.name === 'shield') return; // shield handled separately
-    if (child.name === 'engineL' || child.name === 'engineR') {
-      // Engine glow uses skin.engineGlow
-      if (child.material) child.material.color.setHex(skin.engineGlow);
-      return;
+  if (pm.userData.skinIdx !== skinIdx) {
+    pm.userData.skinIdx = skinIdx;
+    const updateMaterials = (obj, color) => {
+      if (obj.material) obj.material.color.setHex(color);
+      if (obj.children) obj.children.forEach(c => updateMaterials(c, color));
+    };
+    pm.children.forEach(child => {
+      if (child.name === 'shield') return;
+      if (child.name === 'engineL' || child.name === 'engineR') {
+        if (child.material) child.material.color.setHex(skin.engineGlow);
+        return;
+      }
+      updateMaterials(child, skin.hullColor);
+    });
+    if (shieldMesh && shieldMesh.material) {
+      shieldMesh.material.color.setHex(skin.accentColor);
     }
-    updateMaterials(child, skin.hullColor);
-  });
-  if (shieldMesh && shieldMesh.material) {
-    shieldMesh.material.color.setHex(skin.accentColor);
   }
 
   // Dynamic turrets
@@ -147,6 +155,16 @@ export const draw3DFrame = (threeObj, g) => {
     const hash = Object.values(g.levels).join('-');
     if (pm.userData.levelsHash !== hash) {
       pm.userData.levelsHash = hash;
+      // Dispose geometries/materials before removing children to avoid GPU memory leak
+      turretsGroup.children.forEach(child => {
+        child.traverse(obj => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+      });
       turretsGroup.clear();
 
       const addTurret = (x, y, isDouble) => {
@@ -297,6 +315,7 @@ export const draw3DFrame = (threeObj, g) => {
       return m;
     });
     shieldMesh.position.set(g.beacon.x, g.beacon.y, 0);
+    shieldMesh.rotation.z += 0.01; // Spin the ring
   }
 
   // Sabotage structures (enemy turrets)
@@ -518,13 +537,33 @@ export const draw3DFrame = (threeObj, g) => {
   // Laser effects
   for (let e of g.effects) {
     if (e.type !== 'laser') continue;
-    const m = getMesh(e, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser));
+    const m = getMesh(e, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser.clone()));
     if (e.source && e.target) m.geometry.setFromPoints([new THREE.Vector3(e.source.x,e.source.y,0), new THREE.Vector3(e.target.x,e.target.y,0)]);
     m.material.opacity = Math.min(1, e.life * 10);
   }
 
-  // Cleanup dead objects
-  for (let [obj, mesh] of meshes.entries()) { if (!activeKeys.has(obj)) { scene.remove(mesh); meshes.delete(obj); } }
+  // Cleanup dead objects — dispose geometries/materials to free GPU memory
+  const sharedGeos = new Set(Object.values(geoms));
+  const sharedMats = new Set([mats.player, mats.shield, mats.pickup, mats.laser]);
+  const disposeMesh = (mesh) => {
+    if (mesh.geometry && !sharedGeos.has(mesh.geometry)) mesh.geometry.dispose();
+    if (mesh.material) {
+      const matArr = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const mat of matArr) {
+        if (!sharedMats.has(mat)) mat.dispose();
+      }
+    }
+    if (mesh.children) {
+      for (const child of mesh.children) disposeMesh(child);
+    }
+  };
+  for (let [obj, mesh] of meshes.entries()) {
+    if (!activeKeys.has(obj)) {
+      disposeMesh(mesh);
+      scene.remove(mesh);
+      meshes.delete(obj);
+    }
+  }
 
   renderer.render(scene, camera);
 };
