@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Hermes plans
+.hermes/plans/
+.nanocoder/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
