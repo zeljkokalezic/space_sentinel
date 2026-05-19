@@ -63,6 +63,11 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `escort.js`: Escort drone — `updateEscort(dt, g, diffMult)`. Escort drone movement, evasion behavior, collision, and mission progress checks.
 - `beacon.js`: Beacon defense — `updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)`. Beacon HP management, enemy projectile/ram collision, defense radius targeting, and mission completion checks.
 - `sabotage.js`: Sabotage turrets — `updateSabotage(dt, g, currentDiffMult, completeMission)`. Structure firing at player, player projectile collision with structures, enemy targeting bias toward structures, and mission completion when all structures destroyed.
+- `bossCore.js`: Shared boss/mini-boss AI — `updateBossCore(dt, boss, g, currentDiffMult, damageMult, onDeath, completeMission, setGameState)`. Handles movement (orbit/approach/charge), phase transitions (3 HP-based phases), attacks (single/spread/spiral shots), charge attacks (phase 2+), player ram collision, and death (particles, power-up drops, scrap reward, mission completion). Boss-specific differences passed via `damageMult` (1 vs `C.miniboss.damagePercent`) and `onDeath` config (death colors, guaranteed drops, scrap value).
+- `boss.js`: Boss wrapper — `updateBoss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with boss-specific config (full damage, guaranteed power-up drops, fixed scrap reward).
+- `miniboss.js`: Mini-boss wrapper — `updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with scaled damage (`C.miniboss.damagePercent`), no guaranteed drops, level-scaled scrap reward.
+- `powerups.js`: Power-up pickup & buff management — `updatePowerups(dt, g)`. Power-ups: `nuke` (instant kill all enemies), `repair` (restore HP), `shieldBoost` (temporary shield), `rapidFire` (reduced cooldowns), `damageSurge` (increased damage), `timeSlow` (slowed enemy movement). Dropped on enemy kill (5% chance) or boss death (guaranteed: shieldBoost + damageSurge). Active buffs stored in `g.activeBuffs` with per-buff timers.
+- `combo.js`: Kill streak system — increment on enemy kill (`killEnemy` in `combat.js`), timer decay + scrap multiplier applied on pickup collection (`pickups.js`). Config: `GAME_CONFIG.combo` — 3s timer window, milestone tiers at 5/10/15 kills for 1.5x/2x/3x scrap. Milestone sounds via `SoundManager.play('combo_milestone')`.
 
 #### Rendering
 - `renderer.js`: **Barrel module** — re-exports from renderer3d.js and renderer2d.js. Provides `drawFrame(threeObj, g, canvasEl, statusRef)` which calls both 3D and 2D renderers.
@@ -192,7 +197,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Spatial Culling:** `cleanup.js` removes entities beyond 3000 units from player
 - **Render Distance:** `renderer3d.js` skips rendering entities beyond 1800 units
 - **LOD:** Distant enemies (>1000 units) rendered at 80% scale
-- **Object Pooling:** `engine/pool.js` for reusable entity objects (projectiles, particles)
+- **Entity Cleanup:** `cleanup.js` uses filter-based GC on entity arrays (enemies, projectiles, particles, pickups, effects) at 5-second intervals
 
 ## Post-Mission Summary
 - **Component:** `PostMissionSummary.jsx` — Shows mission stats during transition
