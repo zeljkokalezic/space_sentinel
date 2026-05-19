@@ -332,11 +332,12 @@ describe('periodic cleanup timer', () => {
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
+    const ci = GAME_CONFIG.cleanup.interval;
     // Call with dt less than interval
-    cleanup(1.0, g);
+    cleanup(ci - 1, g);
 
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(1.0);
+    expect(g._cleanupTimer).toBe(ci - 1);
   });
 
   it('does not clean when timer is below interval after accumulation', () => {
@@ -345,19 +346,20 @@ describe('periodic cleanup timer', () => {
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
-    const interval = GAME_CONFIG.cleanup.interval;
+    const ci = GAME_CONFIG.cleanup.interval;
+    const step = ci / 4; // 4 steps = ci, so 3 steps = 0.75*ci < ci
 
-    cleanup(1.0, g);
+    cleanup(step, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(1.0);
+    expect(g._cleanupTimer).toBe(step);
 
-    cleanup(2.0, g);
+    cleanup(step, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(3.0);
+    expect(g._cleanupTimer).toBe(step * 2);
 
-    cleanup(1.0, g);
+    cleanup(step, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(4.0);
+    expect(g._cleanupTimer).toBe(step * 3);
   });
 
   it('cleans when timer reaches exactly the interval', () => {
@@ -403,18 +405,14 @@ describe('periodic cleanup timer', () => {
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
-    const interval = GAME_CONFIG.cleanup.interval;
+    const ci = GAME_CONFIG.cleanup.interval;
 
-    // Accumulate: 1 + 2 + 2 = 5 = interval
-    cleanup(1.0, g);
+    // Accumulate: half + half = interval
+    cleanup(ci / 2, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(1.0);
+    expect(g._cleanupTimer).toBe(ci / 2);
 
-    cleanup(2.0, g);
-    expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(3.0);
-
-    cleanup(2.0, g);
+    cleanup(ci / 2, g);
     expect(g.enemies.length).toBe(0);
     expect(g._cleanupTimer).toBe(0);
   });
@@ -425,14 +423,14 @@ describe('periodic cleanup timer', () => {
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
-    const interval = GAME_CONFIG.cleanup.interval;
+    const ci = GAME_CONFIG.cleanup.interval;
 
-    // Accumulate: 3 + 3 = 6 > 5
-    cleanup(3.0, g);
+    // Accumulate: 0.75*ci + 0.5*ci = 1.25*ci > ci
+    cleanup(ci * 0.75, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(3.0);
+    expect(g._cleanupTimer).toBe(ci * 0.75);
 
-    cleanup(3.0, g);
+    cleanup(ci * 0.5, g);
     expect(g.enemies.length).toBe(0);
     expect(g._cleanupTimer).toBe(0);
   });
@@ -466,11 +464,12 @@ describe('periodic cleanup timer', () => {
 
   it('uses existing _cleanupTimer value if already set', () => {
     const g = createTestState();
-    g._cleanupTimer = 3.0;
+    const ci = GAME_CONFIG.cleanup.interval;
+    g._cleanupTimer = ci - 2; // start well below interval
 
     cleanup(1.0, g);
 
-    expect(g._cleanupTimer).toBe(4.0);
+    expect(g._cleanupTimer).toBe(ci - 1); // accumulated but still below interval
   });
 });
 
@@ -668,22 +667,23 @@ describe('edge cases', () => {
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
-    const interval = GAME_CONFIG.cleanup.interval;
-    const smallDt = 0.001;
-    const callsNeeded = Math.ceil(interval / smallDt);
+    const ci = GAME_CONFIG.cleanup.interval;
+    const steps = 20;
+    const step = ci / steps; // exact fraction of interval, avoids FP drift
 
-    for (let i = 0; i < callsNeeded - 1; i++) {
-      cleanup(smallDt, g);
+    for (let i = 0; i < steps - 1; i++) {
+      cleanup(step, g);
       expect(g.enemies.length).toBe(1);
     }
 
-    // This call should push timer over the threshold
-    cleanup(smallDt, g);
+    // Final call pushes timer to exactly ci
+    cleanup(step, g);
     expect(g.enemies.length).toBe(0);
+    expect(g._cleanupTimer).toBe(0);
   });
 
   it('cleanup interval matches GAME_CONFIG value', () => {
-    expect(GAME_CONFIG.cleanup.interval).toBe(5.0);
+    expect(GAME_CONFIG.cleanup.interval).toBe(2.0);
   });
 
   it('does not modify game state other than arrays and timer when below threshold', () => {

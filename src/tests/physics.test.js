@@ -364,6 +364,8 @@ describe('updatePhysics — mission completion', () => {
  * 6. Cleanup removes inactive entities after interval
  * ───────────────────────────────────────────────────────── */
 describe('updatePhysics — entity cleanup', () => {
+  const ci = GAME_CONFIG.cleanup.interval;
+
   it('does NOT remove inactive entities before cleanup interval', () => {
     const g = createTestState({
       totalTime: 0,
@@ -376,8 +378,7 @@ describe('updatePhysics — entity cleanup', () => {
     });
     g.enemies[0].active = false;
 
-    updatePhysics(1.0, g, makeCbs());
-    // Timer is now 1.0, below the 5.0 interval — no cleanup
+    updatePhysics(ci - 1, g, makeCbs()); // timer = ci-1, below interval — no cleanup
     expect(g.enemies.length).toBe(2); // still has the inactive one
   });
 
@@ -385,7 +386,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 4.0, // almost at interval
+      _cleanupTimer: ci - 1, // almost at interval
       enemies: [
         createTestEnemy(100, 0),
         createTestEnemy(200, 0),
@@ -393,8 +394,7 @@ describe('updatePhysics — entity cleanup', () => {
     });
     g.enemies[0].active = false;
 
-    updatePhysics(1.0, g, makeCbs());
-    // Timer was 4.0 + 1.0 = 5.0, triggers cleanup
+    updatePhysics(1.0, g, makeCbs()); // timer = ci, triggers cleanup
     expect(g.enemies.length).toBe(1);
     expect(g.enemies[0].active).toBe(true);
   });
@@ -403,7 +403,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 4.0,
+      _cleanupTimer: ci - 1,
       cooldowns: { autocannon: 999, plasma: 999, missiles: 999, pointDefense: 999, shieldRegen: 999 },
       projectiles: [
         { x: 0, y: 0, active: true, life: 0, vx: 100, vy: 0, radius: 5, type: 'autocannon', isEnemy: false, hitList: [], pierce: 0 },
@@ -420,7 +420,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 4.0,
+      _cleanupTimer: ci - 1,
       particles: [
         { x: 0, y: 0, active: true, life: 10.0, maxLife: 10.0, vx: 0, vy: 0, vz: 0, color: 0xffffff },
         { x: 0, y: 0, active: false, life: 0, maxLife: 1.0, vx: 0, vy: 0, vz: 0, color: 0xffffff },
@@ -436,7 +436,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 4.0,
+      _cleanupTimer: ci - 1,
       pickups: [
         { x: 0, y: 0, active: true, value: 1, radius: 6 },
         { x: 0, y: 0, active: false, value: 2, radius: 6 },
@@ -452,7 +452,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 4.0,
+      _cleanupTimer: ci - 1,
       effects: [
         { type: 'dmg', x: 0, y: 0, text: '10', life: 10.0 },
         { type: 'dmg', x: 0, y: 0, text: '20', life: -0.5 },
@@ -468,11 +468,11 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 4.5,
+      _cleanupTimer: ci - 0.5,
       enemies: [createTestEnemy(100, 0)],
     });
 
-    updatePhysics(0.5, g, makeCbs()); // timer becomes 5.0, cleanup runs, timer resets
+    updatePhysics(0.5, g, makeCbs()); // timer becomes ci, cleanup runs, timer resets
     expect(g._cleanupTimer).toBe(0);
   });
 
@@ -480,15 +480,15 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: 3.0,
+      _cleanupTimer: ci - 2,
       enemies: [createTestEnemy(100, 0)],
     });
     g.enemies[0].active = false;
 
-    updatePhysics(1.0, g, makeCbs()); // timer = 4.0, no cleanup
+    updatePhysics(1.0, g, makeCbs()); // timer = ci-1, no cleanup
     expect(g.enemies.length).toBe(1);
 
-    updatePhysics(1.0, g, makeCbs()); // timer = 5.0, cleanup runs
+    updatePhysics(1.0, g, makeCbs()); // timer = ci, cleanup runs
     expect(g.enemies.length).toBe(0);
   });
 });

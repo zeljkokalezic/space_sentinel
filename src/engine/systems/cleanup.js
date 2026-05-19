@@ -19,38 +19,21 @@ export const cleanup = (dt, g) => {
   if (g._cleanupTimer >= C.cleanup.interval) {
     g._cleanupTimer = 0;
     
-    // Filter dead entities
-    g.enemies     = g.enemies.filter(e => e.active);
-    g.projectiles = g.projectiles.filter(p => p.active);
-    g.particles   = g.particles.filter(p => p.active);
-    g.pickups     = g.pickups.filter(p => p.active);
-    g.powerups    = g.powerups.filter(p => p.active);
-    g.effects     = g.effects.filter(e => e.life > 0);
-    
-    // Spatial culling: remove entities far from player
-    const cullRadius = 3000; // Cull entities beyond 3km
+    // Single-pass: filter dead + spatial cull in one go
+    const cullDistSq = 3000 * 3000; // 3km squared
     const px = g.player.x;
     const py = g.player.y;
-    
-    g.enemies = g.enemies.filter(e => {
-      if (!e.active) return false;
-      const dx = e.x - px;
-      const dy = e.y - py;
-      return dx * dx + dy * dy < cullRadius * cullRadius;
-    });
-    
-    g.projectiles = g.projectiles.filter(p => {
-      if (!p.active) return false;
-      const dx = p.x - px;
-      const dy = p.y - py;
-      return dx * dx + dy * dy < cullRadius * cullRadius;
-    });
-    
-    g.pickups = g.pickups.filter(p => {
-      if (!p.active) return false;
-      const dx = p.x - px;
-      const dy = p.y - py;
-      return dx * dx + dy * dy < cullRadius * cullRadius;
-    });
+
+    const inBounds = (e) => {
+      const dx = e.x - px, dy = e.y - py;
+      return dx * dx + dy * dy < cullDistSq;
+    };
+
+    g.enemies     = g.enemies.filter(e => e.active && inBounds(e));
+    g.projectiles = g.projectiles.filter(p => p.active && inBounds(p));
+    g.particles   = g.particles.filter(p => p.active && inBounds(p));
+    g.pickups     = g.pickups.filter(p => p.active && inBounds(p));
+    g.powerups    = g.powerups.filter(p => p.active && inBounds(p));
+    g.effects     = g.effects.filter(e => e.life > 0);
   }
 };

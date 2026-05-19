@@ -149,7 +149,7 @@ export const GAME_CONFIG = {
   },
 
   cleanup: {
-    interval: 5.0,
+    interval: 2.0,
   },
 
   transition: {
