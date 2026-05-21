@@ -11,11 +11,13 @@ export const GAME_CONFIG = {
     baseSpeed: 120,
     magnetRadius: 150,
     turnSpeed: 1.4,
+    strafeSpeedRatio: 0.7,
     worldBounds: 4000,
   },
 
   thrusters: {
     speedPerLevel: 30,
+    strafeSpeedPerLevel: 3,
   },
 
   magnet: {

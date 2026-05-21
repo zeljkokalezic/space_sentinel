@@ -54,7 +54,7 @@ Standalone simulation and rendering algorithms detached from React state.
 
 ##### `/src/engine/systems/`
 Each system receives explicit parameters (not reading from global state) and mutates the game state arrays directly.
-- `playerMovement.js`: Player ship movement — `updatePlayer(dt, g)`. Handles keyboard (WASD/arrows) and touch joystick input, thrust, acceleration, yaw, and world bounds clamping.
+- `playerMovement.js`: Player ship movement — `updatePlayer(dt, g)`. Handles keyboard (WASD/arrows + Q/E strafe) and touch joystick input. W/S thrust forward/back, A/D rotate yaw, Q/E strafe left/right (perpendicular to ship facing). Touch joystick decomposes into forward + strafe components relative to ship yaw. Velocity: `vx = fwdX*thrust*speed + rightX*strafe*strafeSpeed`, `vy = fwdY*thrust*speed + rightY*strafe*strafeSpeed`. Strafe speed = forwardSpeed * `strafeSpeedRatio` (0.7) + thruster level bonus. World bounds clamping.
 - `weapons.js`: Player weapon firing — `updateWeapons(dt, g)`. Handles autocannon, plasma, missiles, and pointDefense firing with cooldowns, damage scaling, and homing missile targeting.
 - `projectiles.js`: Projectile lifecycle — `updateProjectiles(dt, g)`. Movement, homing behavior, collision detection with enemies, and hit particles.
 - `enemies.js`: Enemy AI — `updateEnemies(dt, g, diffMult)`. Movement toward player, firing, and collision with player hull.

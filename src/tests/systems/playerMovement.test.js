@@ -507,17 +507,18 @@ describe('touch joystick input', () => {
     expect(g.player.vy).toBe(0);
   });
 
-  it('touch input produces yaw change and thrust when distance >= 10', () => {
+  it('touch input produces strafe when distance >= 10', () => {
     const g = createTestState();
-    const startYaw = g.player.yaw;
     g.touchBase = { x: 100, y: 100 };
     g.touchCurrent = { x: 160, y: 100 }; // tx=60, ty=0, dist=60
     updatePlayer(dt, g);
 
-    // nx = 60 / max(60, 60) = 1 => yaw -= 1 * turnSpeed * dt * 3
-    // ny = 0 => thrust = 0
-    expect(g.player.yaw).toBeCloseTo(startYaw - 1 * turnSpeed * dt * 3);
-    expect(g.player.vx).toBeCloseTo(0);
+    // ndx=1, ndy=0, yaw=PI/2 => fwd=(0,1), right=(1,0)
+    // thrust = -(1*0 + 0*1) = 0
+    // strafe = 1*1 + 0*0 = 1 => lateral movement to the right
+    expect(g.player.yaw).toBeCloseTo(Math.PI / 2); // yaw unchanged
+    const currentStrafeSpeed = baseSpeed * GAME_CONFIG.player.strafeSpeedRatio;
+    expect(g.player.vx).toBeCloseTo(currentStrafeSpeed);
     expect(g.player.vy).toBeCloseTo(0);
   });
 
