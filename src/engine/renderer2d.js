@@ -315,7 +315,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.fillStyle = '#ffffff';
     c.font = 'bold 12px monospace';
     c.textAlign = 'center';
-    c.fillText(`BOSS [${Math.ceil(boss.hp)}HP] PHASE ${boss.phase}`, w / 2, barY + barH + 14);
+    c.fillText(`${boss.name || 'BOSS'} [${Math.ceil(boss.hp)}HP] PHASE ${boss.phase}`, w / 2, barY + barH + 14);
   }
 
   // Mini-boss HP bar (below boss bar, orange theme)
@@ -340,7 +340,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.fillStyle = '#fdba74';
     c.font = 'bold 11px monospace';
     c.textAlign = 'center';
-    c.fillText(`MINI-BOSS [${Math.ceil(mb.hp)}HP] PHASE ${mb.phase}`, w / 2, barY + barH + 13);
+    c.fillText(`${mb.name || 'MINI-BOSS'} [${Math.ceil(mb.hp)}HP] PHASE ${mb.phase}`, w / 2, barY + barH + 13);
   }
 
   // Effects (damage numbers, mission banner)
@@ -352,6 +352,19 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     } else if (e.type==='mission_complete') {
       c.fillStyle=`rgba(250,204,21,${Math.min(1,e.life)})`; c.font='bold 36px monospace'; c.textAlign='center';
       c.fillText(e.text, w/2, h/3+Math.sin(e.life*Math.PI)*10);
+    } else if (e.type==='boss_intro') {
+      const alpha = Math.min(1, e.life);
+      if (e.big) {
+        c.fillStyle = `rgba(255,80,80,${alpha})`;
+        c.font = 'bold 48px monospace';
+        c.textAlign = 'center';
+        c.fillText(e.text, w / 2, h / 3);
+      } else {
+        c.fillStyle = `rgba(255,255,255,${alpha * 0.8})`;
+        c.font = 'bold 20px monospace';
+        c.textAlign = 'center';
+        c.fillText(e.text, w / 2, h / 3 - 40);
+      }
     }
   }
 

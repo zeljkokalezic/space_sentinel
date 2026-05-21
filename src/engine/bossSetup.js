@@ -1,8 +1,13 @@
 /**
  * bossSetup.js — Boss fight initialization and cleanup.
+ *
+ * Selects a boss variant from BOSS_ROSTER based on level,
+ * spreads variant properties onto g.boss, and triggers intro effects.
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
+import { BOSS_ROSTER } from '../constants/bosses';
 import { createParticles } from './combat';
+import { SoundManager } from './audio';
 
 /**
  * Initialize a boss fight.
@@ -11,12 +16,28 @@ import { createParticles } from './combat';
  */
 export const setupBoss = (g, level) => {
   const C = GAME_CONFIG;
-  const bossHp = C.boss.baseHp + level * C.boss.hpPerLevel;
+
+  // Select boss variant (deterministic by level, cycles through roster)
+  const variant = BOSS_ROSTER[level % BOSS_ROSTER.length];
+
+  const bossHp = variant.baseHp + level * variant.hpPerLevel;
   const spawnDist = 1200;
   const angle = Math.random() * Math.PI * 2;
 
   g.boss = {
     ...g.boss,
+    // Variant identity
+    id: variant.id,
+    name: variant.name,
+    color: variant.color,
+    innerColor: variant.innerColor,
+    geometry: variant.geometry,
+    attackPatterns: variant.attackPatterns,
+    deathColors: variant.deathColors,
+    guaranteedDrops: variant.guaranteedDrops,
+    scrapReward: variant.scrapReward,
+
+    // Core state
     active: true,
     x: g.player.x + Math.cos(angle) * spawnDist,
     y: g.player.y + Math.sin(angle) * spawnDist,
@@ -27,8 +48,8 @@ export const setupBoss = (g, level) => {
     chargeTimer: C.boss.chargeCooldown,
     chargeTarget: { x: 0, y: 0 },
     isCharging: false,
-    radius: C.boss.radius,
-    speed: C.boss.baseSpeed + level * C.boss.speedPerLevel,
+    radius: variant.radius,
+    speed: variant.speed + level * variant.speedPerLevel,
     fireCooldown: C.boss.fireCooldown,
     spiralAngle: 0,
     shield: 0,
@@ -38,8 +59,26 @@ export const setupBoss = (g, level) => {
   // Stop regular enemy spawning during boss fight
   g.spawnCooldown = 999;
 
+  // Intro announcement
+  g.effects.push({
+    type: 'boss_intro',
+    text: variant.introText,
+    life: 2.5,
+    big: false,
+  });
+  g.effects.push({
+    type: 'boss_intro',
+    text: variant.name,
+    life: 2.5,
+    big: true,
+  });
+
   // Visual effect for boss spawn
-  createParticles(g, g.boss.x, g.boss.y, '#dc2626', 30);
+  createParticles(g, g.boss.x, g.boss.y, variant.color || 0xdc2626, 30);
+
+  // Audio
+  SoundManager.play('boss_spawn');
+  SoundManager.play('boss_intro');
 };
 
 /**

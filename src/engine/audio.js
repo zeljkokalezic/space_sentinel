@@ -477,6 +477,58 @@ function playWaveStart(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** boss_spawn — Deep rumble + rising alarm (dramatic boss entrance) */
+function playBossSpawn(ctx, gainNode, now) {
+  // Low noise rumble
+  const noise = createWhiteNoiseBuffer(ctx, 1.2);
+  const noiseSource = ctx.createBufferSource();
+  noiseSource.buffer = noise;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'lowpass';
+  noiseFilter.frequency.setValueAtTime(800, now);
+  noiseFilter.frequency.exponentialRampToValueAtTime(80, now + 1.0);
+  noiseSource.connect(noiseFilter);
+  noiseFilter.connect(gainNode);
+  noiseSource.start(now);
+
+  // Rising sawtooth alarm
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(60, now);
+  osc.frequency.exponentialRampToValueAtTime(600, now + 0.5);
+  osc.frequency.exponentialRampToValueAtTime(150, now + 1.0);
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0.4, now);
+  osc.connect(oscGain);
+  oscGain.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 1.2);
+
+  const dur = applyEnvelope(gainNode, 0.05, 0.3, 0.7, now);
+  return { duration: dur, nodes: [noiseSource, noiseFilter, osc, oscGain] };
+}
+
+/** boss_intro — Descending minor chord sting (boss name reveal) */
+function playBossIntro(ctx, gainNode, now) {
+  // Minor chord: C4, Eb4, Gb4 descending
+  const notes = [261.63, 311.13, 369.99];
+  const oscs = [];
+  const subGain = ctx.createGain();
+  subGain.connect(gainNode);
+  for (let i = 0; i < notes.length; i++) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(notes[i], now);
+    osc.frequency.exponentialRampToValueAtTime(notes[i] * 0.5, now + 0.5);
+    osc.connect(subGain);
+    osc.start(now + i * 0.08);
+    osc.stop(now + i * 0.08 + 0.6);
+    oscs.push(osc);
+  }
+  const dur = applyEnvelope(gainNode, 0.02, 0.2, 0.4, now);
+  return { duration: dur, nodes: [...oscs, subGain] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -505,6 +557,8 @@ const SOUND_GENERATORS = {
   soundtrack_calm: _playSoundtrackCalm,
   soundtrack_tense: _playSoundtrackTense,
   soundtrack_triumphant: _playSoundtrackTriumphant,
+  boss_spawn: playBossSpawn,
+  boss_intro: playBossIntro,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

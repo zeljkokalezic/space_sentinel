@@ -31,6 +31,8 @@ Static data designed to be completely safely modifiable without touching core ga
 - `gameConfig.js`: Centralized game configuration object (`GAME_CONFIG`). Contains all magic numbers for player stats, weapon parameters (damage, cooldowns, speed), enemy types, spawn rates, and game balance values.
 - `upgrades.js`: Contains `UPGRADE_DATA` with 9 upgrade types: autoAim, autocannon, plasma, missiles, hull, shield, thrusters, magnet, pointDefense. Each has name, icon (lucide-react), description, baseCost, costMult, and maxLevel.
 - `events.js`: Contains `EVENTS_DATA` array of randomized space encounter events. Each event has id, title, text, and choices with resolve callbacks that receive `gameRef`, `setUiScrap`, `setUiLevels`.
+- `bosses.js`: Boss and mini-boss roster data. `BOSS_ROSTER` (3 full boss variants) and `MINIBOSS_ROSTER` (3 mini-boss variants). Each variant: id, name, title, introText, color, innerColor, geometry (box/octahedron/dodecahedron/tetrahedron/icosahedron), radius, HP config, speed, attackPatterns { phase1, phase2, phase3 }, deathColors, guaranteedDrops, scrapReward. Boss selection: `BOSS_ROSTER[level % BOSS_ROSTER.length]`.
+- `attackPatterns.js`: Boss attack pattern function library (`ATTACK_PATTERNS` map). Each pattern: `(g, boss, angle, damage, speed) => void`. Patterns: single_aimed, spread_shot, spiral_barrage, burst_ring, double_aimed, wide_spread, zigzag_spread, orbiting_mines, homing_burst. Boss variants reference patterns by key in their `attackPatterns` config.
 
 ### `/src/engine`
 Standalone simulation and rendering algorithms detached from React state.
@@ -63,7 +65,7 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `escort.js`: Escort drone — `updateEscort(dt, g, diffMult)`. Escort drone movement, evasion behavior, collision, and mission progress checks.
 - `beacon.js`: Beacon defense — `updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)`. Beacon HP management, enemy projectile/ram collision, defense radius targeting, and mission completion checks.
 - `sabotage.js`: Sabotage turrets — `updateSabotage(dt, g, currentDiffMult, completeMission)`. Structure firing at player, player projectile collision with structures, enemy targeting bias toward structures, and mission completion when all structures destroyed.
-- `bossCore.js`: Shared boss/mini-boss AI — `updateBossCore(dt, boss, g, currentDiffMult, damageMult, onDeath, completeMission, setGameState)`. Handles movement (orbit/approach/charge), phase transitions (3 HP-based phases), attacks (single/spread/spiral shots), charge attacks (phase 2+), player ram collision, and death (particles, power-up drops, scrap reward, mission completion). Boss-specific differences passed via `damageMult` (1 vs `C.miniboss.damagePercent`) and `onDeath` config (death colors, guaranteed drops, scrap value).
+- `bossCore.js`: Shared boss/mini-boss AI — `updateBossCore(dt, boss, g, currentDiffMult, damageMult, onDeath, completeMission, setGameState)`. Handles movement (orbit/approach/charge), phase transitions (3 HP-based phases), attacks via ATTACK_PATTERNS lookup from `boss.attackPatterns`, charge attacks (phase 2+), player ram collision, and death (particles, power-up drops, scrap reward, mission completion). Boss-specific differences passed via `damageMult` (1 vs `C.miniboss.damagePercent`) and `onDeath` config (death colors, guaranteed drops, scrap value).
 - `boss.js`: Boss wrapper — `updateBoss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with boss-specific config (full damage, guaranteed power-up drops, fixed scrap reward).
 - `miniboss.js`: Mini-boss wrapper — `updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with scaled damage (`C.miniboss.damagePercent`), no guaranteed drops, level-scaled scrap reward.
 - `powerups.js`: Power-up pickup & buff management — `updatePowerups(dt, g)`. Power-ups: `nuke` (instant kill all enemies), `repair` (restore HP), `shieldBoost` (temporary shield), `rapidFire` (reduced cooldowns), `damageSurge` (increased damage), `timeSlow` (slowed enemy movement). Dropped on enemy kill (5% chance) or boss death (guaranteed: shieldBoost + damageSurge). Active buffs stored in `g.activeBuffs` with per-buff timers.
@@ -205,6 +207,22 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Grade System:** S/A/B/C/D based on performance score
 - **Timing:** Displays during `transitionTimer` countdown before map screen
 
+## Boss Personality System
+- **Purpose:** Each boss/mini-boss has unique identity (name, appearance, attacks, intro)
+- **Data:** `constants/bosses.js` — `BOSS_ROSTER` (3 variants), `MINIBOSS_ROSTER` (3 variants)
+- **Attack patterns:** `constants/attackPatterns.js` — 9 reusable pattern functions
+- **Boss variants (full):** Void Reaper (red box, single->spread->spiral), Nexus Prime (purple dodecahedron, double->wide spread->orbiting mines), Phantom Warden (cyan octahedron, single->zigzag->homing burst)
+- **Mini-boss variants:** Scout Alpha (orange box), Razor Wing (yellow tetrahedron), Iron Hull (gray icosahedron)
+- **Selection:** `BOSS_ROSTER[level % BOSS_ROSTER.length]` (deterministic by level)
+- **Setup:** `bossSetup.js` / `minibossSetup.js` — select variant, spread properties, trigger intro effects + spawn sound
+- **AI:** `bossCore.js` resolves attack pattern from `boss.attackPatterns.phase{N}` via `ATTACK_PATTERNS` map
+- **Rendering:**
+  - 3D: Geometry (box/octahedron/dodecahedron/tetrahedron/icosahedron), per-variant colors
+  - 2D: Boss name on HP bar, intro text (subtitle + big name) via `boss_intro` effect type
+- **Audio:** `boss_spawn` (deep rumble + rising alarm), `boss_intro` (descending minor chord sting)
+- **Adding new variants:** Add entry to `BOSS_ROSTER`/`MINIBOSS_ROSTER` with id, name, colors, geometry, attackPatterns
+- **Adding new attacks:** Add function to `attackPatterns.js`, reference by key in variant config
+
 ## Mini-Boss System
 - **Purpose:** Scaled-down boss fight every 3 levels as intermediate challenge
 - **State:** `g.miniboss` object with same structure as `g.boss` (active, x, y, hp, maxHp, phase, attackTimer, chargeTimer, chargeTarget, isCharging, radius, speed, fireCooldown, spiralAngle)
@@ -213,7 +231,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **System:** `systems/miniboss.js` — `updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)`
 - **Map integration:** `miniboss` node type placed every 3 levels in mapGenerator.js
 - **Mission type:** `kill_miniboss` routed in missionSetup.js and spawner.js
-- **Rendering:** 3D: orange wireframe box (smaller than boss), 2D: HP bar + "MINI-BOSS" label
+- **Rendering:** 3D: per-variant geometry/color (from MINIBOSS_ROSTER), 2D: HP bar + boss name label
 - **Map overlay:** Skull icon with orange border for miniboss nodes
 - **Dev picker:** `kill_miniboss` mission type with yellow card
 

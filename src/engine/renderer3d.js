@@ -448,7 +448,7 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
-  // Boss (large red wireframe box)
+  // Boss (large wireframe, geometry/color from variant)
   if (g.boss && g.boss.active && g.boss.hp > 0) {
     const boss = g.boss;
     const bdx = boss.x - g.player.x;
@@ -456,16 +456,25 @@ export const draw3DFrame = (threeObj, g) => {
     if (bdx * bdx + bdy * bdy <= renderDistSq) {
       const bm = getMesh(boss, () => {
         const group = new THREE.Group();
+        const geoType = boss.geometry || 'box';
+        const geoMap = {
+          box: () => new THREE.BoxGeometry(1, 1, 1),
+          octahedron: () => new THREE.OctahedronGeometry(1, 0),
+          dodecahedron: () => new THREE.DodecahedronGeometry(1, 0),
+          tetrahedron: () => new THREE.TetrahedronGeometry(1, 0),
+          icosahedron: () => new THREE.IcosahedronGeometry(1, 0),
+        };
+        const geoFn = geoMap[geoType] || geoMap.box;
         const body = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshBasicMaterial({ color: 0xdc2626, wireframe: true })
+          geoFn(),
+          new THREE.MeshBasicMaterial({ color: boss.color || 0xdc2626, wireframe: true })
         );
         body.scale.set(boss.radius * 2, boss.radius * 2, boss.radius * 2);
         group.add(body);
         // Inner glow
         const inner = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshBasicMaterial({ color: 0xff4444, wireframe: true, transparent: true, opacity: 0.5 })
+          geoFn(),
+          new THREE.MeshBasicMaterial({ color: boss.innerColor || 0xff4444, wireframe: true, transparent: true, opacity: 0.5 })
         );
         inner.scale.set(boss.radius * 1.2, boss.radius * 1.2, boss.radius * 1.2);
         group.add(inner);
@@ -477,7 +486,7 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
-  // Mini-boss (medium orange wireframe box)
+  // Mini-boss (medium wireframe, geometry/color from variant)
   if (g.miniboss && g.miniboss.active && g.miniboss.hp > 0) {
     const mb = g.miniboss;
     const mdx = mb.x - g.player.x;
@@ -485,16 +494,25 @@ export const draw3DFrame = (threeObj, g) => {
     if (mdx * mdx + mdy * mdy <= renderDistSq) {
       const mm = getMesh(mb, () => {
         const group = new THREE.Group();
+        const geoType = mb.geometry || 'box';
+        const geoMap = {
+          box: () => new THREE.BoxGeometry(1, 1, 1),
+          octahedron: () => new THREE.OctahedronGeometry(1, 0),
+          dodecahedron: () => new THREE.DodecahedronGeometry(1, 0),
+          tetrahedron: () => new THREE.TetrahedronGeometry(1, 0),
+          icosahedron: () => new THREE.IcosahedronGeometry(1, 0),
+        };
+        const geoFn = geoMap[geoType] || geoMap.box;
         const body = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true })
+          geoFn(),
+          new THREE.MeshBasicMaterial({ color: mb.color || 0xf97316, wireframe: true })
         );
         body.scale.set(mb.radius * 2, mb.radius * 2, mb.radius * 2);
         group.add(body);
         // Inner glow
         const inner = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshBasicMaterial({ color: 0xfb923c, wireframe: true, transparent: true, opacity: 0.5 })
+          geoFn(),
+          new THREE.MeshBasicMaterial({ color: mb.innerColor || 0xfb923c, wireframe: true, transparent: true, opacity: 0.5 })
         );
         inner.scale.set(mb.radius * 1.2, mb.radius * 1.2, mb.radius * 1.2);
         group.add(inner);

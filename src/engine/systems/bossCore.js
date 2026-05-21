@@ -1,9 +1,13 @@
 /**
  * systems/bossCore.js — Shared boss/mini-boss AI, attacks, phase transitions, and collision.
  * Used by both boss.js and miniboss.js to eliminate ~95% code duplication.
+ *
+ * Attack patterns are resolved from boss.attackPatterns (set by bossSetup/minibossSetup)
+ * via the ATTACK_PATTERNS library in src/constants/attackPatterns.js.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, fireProjectile } from '../combat';
+import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
+import { createParticles } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -87,32 +91,13 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
   if (boss.attackTimer <= 0) {
     boss.attackTimer = effectiveCooldown;
 
-    if (boss.phase === 1) {
-      // Phase 1: Single aimed shot
-      fireProjectile(g, boss.x, boss.y, angle, C.boss.projectileSpeed,
-        scaledDamage * currentDiffMult, 'enemy_bullet', 0);
-      SoundManager.play('enemy_shoot');
-    } else if (boss.phase >= 2) {
-      // Phase 2+: Spread shot (3-5 projectiles)
-      const spreadCount = boss.phase === 2 ? 3 : 5;
-      const spreadAngle = 0.3;
-      for (let i = 0; i < spreadCount; i++) {
-        const a = angle - spreadAngle + (i / (spreadCount - 1)) * spreadAngle * 2;
-        fireProjectile(g, boss.x, boss.y, a, C.boss.projectileSpeed,
-          scaledDamage * currentDiffMult, 'enemy_bullet', 0);
-      }
-      SoundManager.play('enemy_shoot');
+    // Resolve attack pattern from boss variant config
+    const patternKey = boss.attackPatterns?.[`phase${boss.phase}`] || 'single_aimed';
+    const pattern = ATTACK_PATTERNS[patternKey];
+    if (pattern) {
+      pattern(g, boss, angle, scaledDamage * currentDiffMult, C.boss.projectileSpeed);
     }
-
-    if (boss.phase >= 3) {
-      // Phase 3: Additional spiral shots
-      for (let i = 0; i < 3; i++) {
-        const spiralA = boss.spiralAngle + (i * Math.PI * 2 / 3);
-        fireProjectile(g, boss.x, boss.y, spiralA, C.boss.projectileSpeed * 0.8,
-          scaledDamage * 0.5 * currentDiffMult, 'enemy_bullet', 0);
-      }
-      boss.spiralAngle += 0.5;
-    }
+    SoundManager.play('enemy_shoot');
   }
 
   // ── Charge attacks (phase 2+) ──

@@ -3,6 +3,7 @@
  * Pure functions; no React imports.
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
+import { BOSS_ROSTER, MINIBOSS_ROSTER } from '../constants/bosses';
 import { calculateDifficultyMultiplier } from './difficulty';
 import { SoundManager } from './audio';
 
@@ -142,18 +143,20 @@ export const generateMission = (level, nodeType) => {
   let target, title, reward;
 
   if (nodeType === 'boss') {
+    const variant = BOSS_ROSTER[level % BOSS_ROSTER.length];
     t = 'kill_boss';
     target = 1;
-    title = `Destroy the Sentinel Core`;
-    reward = 500;
+    title = variant.title;
+    reward = variant.scrapReward;
     return { type: t, target, current: 0, title, reward };
   }
 
   if (nodeType === 'miniboss') {
+    const variant = MINIBOSS_ROSTER[level % MINIBOSS_ROSTER.length];
     t = 'kill_miniboss';
     target = 1;
-    title = `Destroy the Mini-Boss`;
-    reward = GAME_CONFIG.miniboss.scrapReward + level * 20;
+    title = variant.title;
+    reward = variant.scrapReward + level * 20;
     return { type: t, target, current: 0, title, reward };
   }
 

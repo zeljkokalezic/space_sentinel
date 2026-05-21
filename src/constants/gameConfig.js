@@ -189,6 +189,7 @@ export const GAME_CONFIG = {
   },
 
   boss: {
+    // Shared values used by bossCore.js (variant-specific data in constants/bosses.js)
     baseHp: 1500,
     hpPerLevel: 200,
     radius: 60,
