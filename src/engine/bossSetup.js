@@ -17,8 +17,9 @@ import { SoundManager } from './audio';
 export const setupBoss = (g, level) => {
   const C = GAME_CONFIG;
 
-  // Select boss variant (deterministic by level, cycles through roster)
-  const variant = BOSS_ROSTER[level % BOSS_ROSTER.length];
+  // Select boss variant (dev override or deterministic by level, cycles through roster)
+  const variantIdx = g.devVariantIndex != null ? g.devVariantIndex : level % BOSS_ROSTER.length;
+  const variant = BOSS_ROSTER[variantIdx];
 
   const bossHp = variant.baseHp + level * variant.hpPerLevel;
   const spawnDist = 1200;

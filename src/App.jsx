@@ -73,7 +73,7 @@ export default function App() {
   };
 
   // ─── Dev mode: launch a specific mission ────────────────────────────────────
-  const launchDevMission = ({ type, level, hazard }) => {
+  const launchDevMission = ({ type, level, hazard, variantIndex }) => {
     resetGame();
     game.current.level = level;
 
@@ -93,6 +93,9 @@ export default function App() {
     const mission = generateMission(level, nodeType);
 
     game.current.devMode = true;
+    if (variantIndex != null) {
+      game.current.devVariantIndex = variantIndex;
+    }
     setupCombatMission(game.current, mission, level);
 
     // Set up hazard if selected

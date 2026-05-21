@@ -6,6 +6,7 @@ import {
   Skull, ChevronUp, ChevronDown,
   Bug, Bomb, Mountain, Wind, CloudLightning, Hexagon
 } from 'lucide-react';
+import { BOSS_ROSTER, MINIBOSS_ROSTER } from '../constants/bosses';
 
 const HAZARD_OPTIONS = [
   { id: 'none',            label: 'None',       icon: null },
@@ -97,15 +98,43 @@ function LevelSlider({ value, onChange, min = 1, max = 20 }) {
   );
 }
 
+function VariantSelector({ roster, value, onChange, label }) {
+  return (
+    <div className="flex flex-col items-center gap-2 w-full max-w-xs">
+      <div className="text-xs text-gray-400 uppercase tracking-widest font-bold">{label}</div>
+      <div className="flex gap-2 flex-wrap justify-center">
+        {roster.map((v, i) => (
+          <button
+            key={v.id}
+            onClick={() => onChange(i)}
+            className={`px-3 py-2 rounded-lg border transition-all text-xs font-bold
+              ${value === i
+                ? 'bg-gray-700 scale-105 ring-1 ring-white/30'
+                : 'bg-gray-800/50 hover:bg-gray-700 border-gray-600'}
+            `}
+            style={{ borderColor: value === i ? '#' + v.color.toString(16).padStart(6, '0') : undefined }}
+          >
+            {v.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DevMissionPicker({ onLaunch, onExit }) {
   const [selectedType, setSelectedType] = useState('kill');
   const [level, setLevel] = useState(1);
   const [selectedHazard, setSelectedHazard] = useState('none');
+  const [variantIndex, setVariantIndex] = useState(0);
 
   const handleLaunch = () => {
     const missionDef = MISSION_TYPES.find(m => m.id === selectedType);
-    onLaunch({ type: selectedType, level, hazard: selectedHazard, label: missionDef?.label || selectedType });
+    onLaunch({ type: selectedType, level, hazard: selectedHazard, label: missionDef?.label || selectedType, variantIndex });
   };
+
+  const isBoss = selectedType === 'kill_boss' || selectedType === 'kill_miniboss';
+  const roster = selectedType === 'kill_boss' ? BOSS_ROSTER : MINIBOSS_ROSTER;
 
   return (
     <div className="absolute inset-0 bg-[#0a0a14]/95 flex flex-col items-center justify-center z-50 backdrop-blur-md overflow-y-auto font-sans">
@@ -147,6 +176,18 @@ export default function DevMissionPicker({ onLaunch, onExit }) {
           />
         ))}
       </div>
+
+      {/* Variant Selector (boss/miniboss only) */}
+      {isBoss && (
+        <div className="mb-6 bg-gray-900/60 rounded-xl p-4 border border-gray-700">
+          <VariantSelector
+            roster={roster}
+            value={variantIndex}
+            onChange={setVariantIndex}
+            label={selectedType === 'kill_boss' ? 'Boss Variant' : 'Mini-Boss Variant'}
+          />
+        </div>
+      )}
 
       {/* Hazard Selector */}
       <div className="mb-6 text-center">

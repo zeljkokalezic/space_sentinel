@@ -18,8 +18,9 @@ import { SoundManager } from './audio';
 export const setupMiniboss = (g, level) => {
   const C = GAME_CONFIG;
 
-  // Select mini-boss variant (deterministic by level, cycles through roster)
-  const variant = MINIBOSS_ROSTER[level % MINIBOSS_ROSTER.length];
+  // Select mini-boss variant (dev override or deterministic by level, cycles through roster)
+  const variantIdx = g.devVariantIndex != null ? g.devVariantIndex : level % MINIBOSS_ROSTER.length;
+  const variant = MINIBOSS_ROSTER[variantIdx];
 
   const fullBossHp = C.boss.baseHp + level * C.boss.hpPerLevel;
   const minibossHp = Math.floor(fullBossHp * variant.hpPercent);
