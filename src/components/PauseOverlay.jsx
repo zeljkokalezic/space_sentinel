@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { SoundManager } from '../engine/audio';
 import SettingsOverlay from './SettingsOverlay';
+import AchievementPanel from './AchievementPanel';
 
 export default function PauseOverlay({ gameRef, startGame, setPaused }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
   const [muted, setMuted] = useState(gameRef?.current?.audio?.muted ?? false);
   const handleResume = () => {
     if (gameRef.current) {
@@ -48,6 +50,12 @@ export default function PauseOverlay({ gameRef, startGame, setPaused }) {
             Settings
           </button>
           <button
+            onClick={() => setShowAchievements(true)}
+            className="px-6 py-3 rounded-lg bg-yellow-600/20 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/30 transition-colors font-medium"
+          >
+            Achievements
+          </button>
+          <button
             onClick={handleRestart}
             className="px-6 py-3 rounded-lg bg-yellow-600/20 border border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/30 transition-colors font-medium"
           >
@@ -62,6 +70,7 @@ export default function PauseOverlay({ gameRef, startGame, setPaused }) {
         </div>
       </div>
       {showSettings && <SettingsOverlay gameRef={gameRef} onClose={() => setShowSettings(false)} />}
+      {showAchievements && <AchievementPanel game={gameRef} onClose={() => setShowAchievements(false)} />}
     </div>
   );
 }

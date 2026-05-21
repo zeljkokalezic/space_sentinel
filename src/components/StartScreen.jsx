@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { Rocket, Play, Crosshair, Bug, Save } from 'lucide-react';
+import { Rocket, Play, Crosshair, Bug, Save, Trophy } from 'lucide-react';
 import { hasSave } from '../engine/saveManager';
+import AchievementPanel from './AchievementPanel';
 
 export default function StartScreen({ startGame, continueGame, devMode, gameRef }) {
   const [hasSavedGame] = useState(() => hasSave('auto'));
+  const [showAchievements, setShowAchievements] = useState(false);
+
+  if (showAchievements) {
+    return <AchievementPanel game={gameRef} onClose={() => setShowAchievements(false)} />;
+  }
 
   const handleContinue = () => {
     if (gameRef?.current) continueGame?.();
@@ -41,6 +47,12 @@ export default function StartScreen({ startGame, continueGame, devMode, gameRef 
           <Save className="w-5 h-5" /> CONTINUE (Auto-Save)
         </button>
       )}
+      <button
+        className="mt-4 px-8 py-3 bg-yellow-600/80 hover:bg-yellow-500 rounded-full font-bold text-lg transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_35px_rgba(234,179,8,0.5)] hover:scale-105 flex items-center gap-2"
+        onClick={() => setShowAchievements(true)}
+      >
+        <Trophy className="w-5 h-5" /> ACHIEVEMENTS
+      </button>
       <div className="mt-12 text-gray-400 flex flex-wrap justify-center gap-8 font-mono bg-gray-900/50 p-4 rounded-xl border border-gray-800">
         <div className="flex items-center gap-2">
           <span className="text-white border border-gray-600 px-2 rounded">W A S D</span> / <span className="text-white border border-gray-600 px-2 rounded">Drag</span> to Move
