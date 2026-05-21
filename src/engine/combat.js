@@ -93,6 +93,7 @@ export const createParticles = (g, x, y, color, count) => {
  * @param {function} [completeMission] - Optional callback to complete the current mission
  */
 export const killEnemy = (g, e, completeMission) => {
+  if (!e.active) return;
   const C = GAME_CONFIG;
 
   e.active = false;

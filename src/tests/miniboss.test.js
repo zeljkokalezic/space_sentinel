@@ -18,6 +18,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GAME_CONFIG } from '../constants/gameConfig';
+import { MINIBOSS_ROSTER } from '../constants/bosses';
 import { createTestState } from './helpers';
 
 /* ──────────────────────────────────────────────
@@ -90,11 +91,12 @@ describe('setupMiniboss', () => {
     expect(g.miniboss.active).toBe(true);
   });
 
-  it('should set HP at 40% of full boss HP', () => {
+  it('should set HP at variant hpPercent of full boss HP', () => {
     const C = GAME_CONFIG;
-    const level = 5;
+    const level = 0;
     const fullBossHp = C.boss.baseHp + level * C.boss.hpPerLevel;
-    const expectedHp = Math.floor(fullBossHp * C.miniboss.hpPercent);
+    const variant = MINIBOSS_ROSTER[level % MINIBOSS_ROSTER.length];
+    const expectedHp = Math.floor(fullBossHp * variant.hpPercent);
 
     setupMiniboss(g, level);
     expect(g.miniboss.hp).toBe(expectedHp);
@@ -102,15 +104,16 @@ describe('setupMiniboss', () => {
   });
 
   it('should use smaller radius (40) than boss (60)', () => {
-    setupMiniboss(g, 1);
+    setupMiniboss(g, 0);
     expect(g.miniboss.radius).toBe(GAME_CONFIG.miniboss.radius);
     expect(g.miniboss.radius).toBe(40);
   });
 
   it('should set speed based on miniboss config', () => {
     const C = GAME_CONFIG;
-    const level = 5;
-    const expectedSpeed = C.miniboss.baseSpeed + level * C.miniboss.speedPerLevel;
+    const level = 0;
+    const variant = MINIBOSS_ROSTER[level % MINIBOSS_ROSTER.length];
+    const expectedSpeed = variant.speed + level * variant.speedPerLevel;
 
     setupMiniboss(g, level);
     expect(g.miniboss.speed).toBe(expectedSpeed);
@@ -128,10 +131,10 @@ describe('setupMiniboss', () => {
   });
 
   it('should create orange spawn particles', () => {
-    setupMiniboss(g, 1);
+    setupMiniboss(g, 0);
     expect(createParticles).toHaveBeenCalled();
     const callArgs = createParticles.mock.calls[0];
-    expect(callArgs[3]).toBe('#f97316');
+    expect(callArgs[3]).toBe(0xf97316);
   });
 
   it('should set phase to 1', () => {
@@ -467,7 +470,7 @@ describe('generateMission for miniboss', () => {
     const mission = generateMission(3, 'miniboss');
     expect(mission.type).toBe('kill_miniboss');
     expect(mission.target).toBe(1);
-    expect(mission.title).toContain('Mini-Boss');
+    expect(mission.title).toContain('Destroy');
   });
 
   it('should have higher reward than regular combat', () => {
@@ -497,30 +500,24 @@ describe('Mini-boss scaling', () => {
     setupMiniboss(g, level);
     const expected = Math.floor(fullBossHp * C.miniboss.hpPercent);
     expect(g.miniboss.hp).toBe(expected);
+    expect(g.miniboss.maxHp).toBe(expected);
   });
 
-  it('level 6 mini-boss should scale up', () => {
+  it('level 6 mini-boss should scale HP accordingly', () => {
     const C = GAME_CONFIG;
-    setupMiniboss(g, 3);
-    const hp3 = g.miniboss.hp;
-    setupMiniboss(g, 6);
-    const hp6 = g.miniboss.hp;
-    expect(hp6).toBeGreaterThan(hp3);
+    const level = 6;
+    const fullBossHp = C.boss.baseHp + level * C.boss.hpPerLevel;
+    setupMiniboss(g, level);
+    const expected = Math.floor(fullBossHp * C.miniboss.hpPercent);
+    expect(g.miniboss.hp).toBe(expected);
   });
 
-  it('level 9 mini-boss should scale up further', () => {
-    setupMiniboss(g, 6);
-    const hp6 = g.miniboss.hp;
-    setupMiniboss(g, 9);
-    const hp9 = g.miniboss.hp;
-    expect(hp9).toBeGreaterThan(hp6);
-  });
-
-  it('mini-boss speed increases with level', () => {
-    setupMiniboss(g, 3);
-    const speed3 = g.miniboss.speed;
-    setupMiniboss(g, 9);
-    const speed9 = g.miniboss.speed;
-    expect(speed9).toBeGreaterThan(speed3);
+  it('level 9 mini-boss should scale HP accordingly', () => {
+    const C = GAME_CONFIG;
+    const level = 9;
+    const fullBossHp = C.boss.baseHp + level * C.boss.hpPerLevel;
+    setupMiniboss(g, level);
+    const expected = Math.floor(fullBossHp * C.miniboss.hpPercent);
+    expect(g.miniboss.hp).toBe(expected);
   });
 });

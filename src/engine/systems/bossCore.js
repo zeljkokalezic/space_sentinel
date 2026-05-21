@@ -74,7 +74,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     SoundManager.play('boss_phase_change');
     createParticles(g, boss.x, boss.y, 0xfbbf24, 20);
     g.effects.push({
-      type: 'mission_complete',
+      type: 'phase_change',
       text: `PHASE ${boss.phase}!`,
       life: 1.5,
     });

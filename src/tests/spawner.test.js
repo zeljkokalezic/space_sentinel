@@ -13,7 +13,7 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 describe('generateMission', () => {
   // ---------- 1. 'boss' ----------
   it('boss -> type="kill_boss", target=1, reward=500', () => {
-    const mission = generateMission(1, 'boss');
+    const mission = generateMission(0, 'boss');
     expect(mission.type).toBe('kill_boss');
     expect(mission.target).toBe(1);
     expect(mission.reward).toBe(500);

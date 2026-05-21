@@ -21,25 +21,25 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     // Use targetX/targetY if set by beacon/sabotage, otherwise target player
     const tx = e.targetX !== undefined ? e.targetX : g.player.x;
     const ty = e.targetY !== undefined ? e.targetY : g.player.y;
-    const distToPlayer = Math.hypot(tx - e.x, ty - e.y);
+    const distToTarget = Math.hypot(tx - e.x, ty - e.y);
     const angle = Math.atan2(ty - e.y, tx - e.x);
     let moveAngle = angle;
     if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
 
     let moveSpeed = e.speed;
     if (e.type === 'shooter') {
-      if      (distToPlayer < C.player.radius * 8) moveSpeed = e.speed * -0.5;
-      else if (distToPlayer < C.player.radius * 10) moveSpeed = 0;
+      if      (distToTarget < C.player.radius * 8) moveSpeed = e.speed * -0.5;
+      else if (distToTarget < C.player.radius * 10) moveSpeed = 0;
     } else if (e.type === 'missile_boat') {
-      if      (distToPlayer < C.player.radius * 13) moveSpeed = e.speed * -1;
-      else if (distToPlayer < C.player.radius * 18) moveSpeed = 0;
+      if      (distToTarget < C.player.radius * 13) moveSpeed = e.speed * -1;
+      else if (distToTarget < C.player.radius * 18) moveSpeed = 0;
     }
 
     e.x += Math.cos(moveAngle) * moveSpeed * dt;
     e.y += Math.sin(moveAngle) * moveSpeed * dt;
 
     // ── Enemy firing ──
-    tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g);
+    tryFireEnemyWeapon(e, angle, distToTarget, dt, currentDiffMult, g);
 
     // ── Enemy rams player ──
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
@@ -57,7 +57,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       let eDamage = C.weapons.missiles.baseDamage;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
       e.hp -= eDamage;
-      g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: String(baseDmg * currentDiffMult), life: 0.8 });
+      g.effects.push({ type: 'dmg', x: e.x, y: e.y - 10, text: String(dmg), life: 0.8 });
       e.x += Math.cos(angle + Math.PI) * 30;
       e.y += Math.sin(angle + Math.PI) * 30;
       createParticles(g, e.x, e.y, 0xef4444, 10);

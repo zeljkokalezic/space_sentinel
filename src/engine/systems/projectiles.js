@@ -13,6 +13,8 @@ import { SoundManager } from '../audio';
  */
 export const updateProjectiles = (dt, g, setGameState) => {
   const C = GAME_CONFIG;
+  const MAX_PLAYER_MISSILE_SPEED = 500;
+  const MAX_ENEMY_MISSILE_SPEED = 350;
   for (let p of g.projectiles) {
     if (!p.active) continue;
     p.life += dt;
@@ -27,7 +29,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
       while (diff < -Math.PI) diff += Math.PI * 2;
       const tSpeed = 5 * dt;
       const nAngle = cAngle + Math.max(-tSpeed, Math.min(tSpeed, diff));
-      const speed = Math.hypot(p.vx, p.vy) + 100 * dt;
+      const speed = Math.min(MAX_PLAYER_MISSILE_SPEED, Math.hypot(p.vx, p.vy) + 100 * dt);
       p.vx = Math.cos(nAngle) * speed;
       p.vy = Math.sin(nAngle) * speed;
       if (Math.random() < 0.3) createParticles(g, p.x, p.y, 0xf97316, 1);
@@ -45,7 +47,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
         while (diff >  Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         const nAngle = cAngle + Math.max(-2 * dt, Math.min(2 * dt, diff));
-        const currentSpeed = Math.hypot(p.vx, p.vy) + 50 * dt;
+        const currentSpeed = Math.min(MAX_ENEMY_MISSILE_SPEED, Math.hypot(p.vx, p.vy) + 50 * dt);
         p.vx = Math.cos(nAngle) * currentSpeed;
         p.vy = Math.sin(nAngle) * currentSpeed;
         if (Math.random() < 0.3) createParticles(g, p.x, p.y, 0xd946ef, 1);
@@ -61,7 +63,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
         g.player.hp -= dmg;
         createParticles(g, p.x, p.y, 0xef4444, 5);
         p.active = false;
-        g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+        g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
       }
     } else {
@@ -73,7 +75,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           let actualDmg = p.damage;
           if (e.shield > 0) { const absorb = Math.min(e.shield, actualDmg); e.shield -= absorb; actualDmg -= absorb; }
           e.hp -= actualDmg;
-          g.effects.push({ type: 'dmg', x: e.x + (Math.random() - 0.5) * 10, y: e.y + (Math.random() - 0.5) * 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+          g.effects.push({ type: 'dmg', x: e.x + (Math.random() - 0.5) * 10, y: e.y + (Math.random() - 0.5) * 10, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
           else              { p.active = false; }
@@ -90,7 +92,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           let actualDmg = p.damage;
           if (g.miniboss.shield > 0) { const absorb = Math.min(g.miniboss.shield, actualDmg); g.miniboss.shield -= absorb; actualDmg -= absorb; }
           g.miniboss.hp -= actualDmg;
-          g.effects.push({ type: 'dmg', x: g.miniboss.x + (Math.random() - 0.5) * 15, y: g.miniboss.y + (Math.random() - 0.5) * 15, text: Math.ceil(p.damage).toString(), life: 0.8 });
+          g.effects.push({ type: 'dmg', x: g.miniboss.x + (Math.random() - 0.5) * 15, y: g.miniboss.y + (Math.random() - 0.5) * 15, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('miniboss'); }
           else               p.active = false;
@@ -106,7 +108,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           let actualDmg = p.damage;
           if (g.boss.shield > 0) { const absorb = Math.min(g.boss.shield, actualDmg); g.boss.shield -= absorb; actualDmg -= absorb; }
           g.boss.hp -= actualDmg;
-          g.effects.push({ type: 'dmg', x: g.boss.x + (Math.random() - 0.5) * 15, y: g.boss.y + (Math.random() - 0.5) * 15, text: Math.ceil(p.damage).toString(), life: 0.8 });
+          g.effects.push({ type: 'dmg', x: g.boss.x + (Math.random() - 0.5) * 15, y: g.boss.y + (Math.random() - 0.5) * 15, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('boss'); }
           else               p.active = false;
