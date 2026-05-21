@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { SHIP_SKINS } from '../constants/skins';
+import { getScreenShakeOffset } from './screenShake';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -109,9 +110,14 @@ export const draw3DFrame = (threeObj, g) => {
   // Chase camera
   const playerYaw = g.player.yaw ?? Math.PI / 2;
   const camFwdX = Math.cos(playerYaw), camFwdY = Math.sin(playerYaw);
-  camera.position.lerp(new THREE.Vector3(g.player.x - camFwdX * 220, g.player.y - camFwdY * 220, 120), 0.03);
+
+  // Screen shake offset (respects settings)
+  const shakeEnabled = g.settings?.screenShake !== false;
+  const shake = shakeEnabled && g.screenShake?.active ? getScreenShakeOffset(g.screenShake.intensity) : { x: 0, y: 0 };
+
+  camera.position.lerp(new THREE.Vector3(g.player.x - camFwdX * 220 + shake.x, g.player.y - camFwdY * 220 + shake.y, 120), 0.03);
   camera.up.set(0, 0, 1);
-  camera.lookAt(new THREE.Vector3(g.player.x + camFwdX * 80, g.player.y + camFwdY * 80, 0));
+  camera.lookAt(new THREE.Vector3(g.player.x + camFwdX * 80 + shake.x, g.player.y + camFwdY * 80 + shake.y, 0));
   camera.updateMatrixWorld(false);
   const freshWM = raycastToPlane(g.mouse.x || window.innerWidth / 2, g.mouse.y || window.innerHeight / 2, camera);
   if (freshWM) g.worldMouse = freshWM;

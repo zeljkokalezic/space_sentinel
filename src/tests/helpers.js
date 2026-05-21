@@ -120,6 +120,10 @@ export const createTestState = (overrides = {}) => {
       fireCooldown: 1.5,
       spiralAngle: 0,
     },
+    screenShake: {
+      active: false,
+      intensity: 0,
+    },
   };
 
   // Deep-merge player overrides if provided
@@ -147,8 +151,13 @@ export const createTestState = (overrides = {}) => {
     base.stats = { ...base.stats, ...overrides.stats };
   }
 
-  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, ...restOverrides } = overrides;
+  // Deep-merge screenShake overrides if provided
+  if (overrides.screenShake) {
+    base.screenShake = { ...base.screenShake, ...overrides.screenShake };
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 

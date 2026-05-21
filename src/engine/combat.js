@@ -155,3 +155,24 @@ export const killEnemy = (g, e, completeMission) => {
   const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
   g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 });
 };
+
+/**
+ * Trigger screen shake by adding intensity.
+ * Accepts either a preset name ('explosion', 'bigExplosion', 'playerHit')
+ * or a raw numeric intensity value.
+ *
+ * @param {object} g — Live game state
+ * @param {string|number} presetOrIntensity — Preset name or numeric intensity
+ */
+export const triggerScreenShake = (g, presetOrIntensity) => {
+  if (!g || !g.screenShake) return;
+  const C = GAME_CONFIG.screenShake;
+  let intensity = 0;
+  if (typeof presetOrIntensity === 'string') {
+    intensity = C.presets?.[presetOrIntensity] ?? 0;
+  } else if (typeof presetOrIntensity === 'number') {
+    intensity = presetOrIntensity;
+  }
+  g.screenShake.active = true;
+  g.screenShake.intensity += intensity;
+};

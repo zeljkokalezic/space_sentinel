@@ -2,7 +2,7 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, triggerScreenShake } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -64,6 +64,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
         createParticles(g, p.x, p.y, 0xef4444, 5);
         p.active = false;
         g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
+        triggerScreenShake(g, p.type === 'enemy_missile' ? 'bigExplosion' : 'playerHit');
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
       }
     } else {
@@ -77,6 +78,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           e.hp -= actualDmg;
           g.effects.push({ type: 'dmg', x: e.x + (Math.random() - 0.5) * 10, y: e.y + (Math.random() - 0.5) * 10, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
+          triggerScreenShake(g, p.type === 'plasma' || p.type === 'missile' ? 'explosion' : 2);
           if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
           else              { p.active = false; }
           break;

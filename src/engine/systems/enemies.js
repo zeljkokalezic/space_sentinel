@@ -6,7 +6,7 @@
  * use the legacy direct-charge behavior (backward compatible).
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy } from '../combat';
+import { createParticles, killEnemy, triggerScreenShake } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
@@ -306,6 +306,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       if (shieldAbsorbed) SoundManager.play('shield_hit');
       else SoundManager.play('player_hit');
       g.player.hp -= dmg;
+      triggerScreenShake(g, 'playerHit');
       let eDamage = C.weapons.missiles.baseDamage;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
       e.hp -= eDamage;
@@ -319,6 +320,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     // ── Enemy dies ──
     if (e.hp <= 0) {
       killEnemy(g, e, completeMission);
+      triggerScreenShake(g, e.type === 'heavy' || e.type === 'missile_boat' || e.type === 'shielded' ? 'bigExplosion' : 'explosion');
     }
   }
 };

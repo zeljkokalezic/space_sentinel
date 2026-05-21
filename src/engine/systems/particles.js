@@ -7,6 +7,7 @@
  * - trail: Persistent trail particles (projectile trails, movement)
  * - explosion: Large burst with shockwave effect
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 
 /**
  * Particle type configurations.
@@ -135,5 +136,27 @@ export const createParticlesWithType = (g, x, y, color, count, type = 'spark') =
       type,
       size: config.size,
     });
+  }
+};
+
+/**
+ * Screen shake decay — reduces intensity each frame.
+ * Deactivates when intensity drops below minThreshold.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export const updateScreenShake = (dt, g) => {
+  if (!g || !g.screenShake) return;
+  const ss = g.screenShake;
+  if (!ss.active) return;
+
+  const C = GAME_CONFIG.screenShake;
+  ss.intensity -= C.decay * dt;
+  if (ss.intensity < C.minThreshold) {
+    ss.intensity = 0;
+    ss.active = false;
+  } else if (ss.intensity < 0) {
+    ss.intensity = 0;
   }
 };

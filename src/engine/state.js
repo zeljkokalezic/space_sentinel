@@ -201,6 +201,7 @@ export const createGameState = () => ({
   settings: loadSettings(),
   shipSkin: 0,
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
+  screenShake: createDefaultScreenShake(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -275,4 +276,12 @@ export const createDefaultMiniboss = () => ({
   speed: 50,
   fireCooldown: 1.5,
   spiralAngle: 0,
+});
+
+/**
+ * @returns {Object} Default screen shake state
+ */
+export const createDefaultScreenShake = () => ({
+  active: false,
+  intensity: 0,
 });

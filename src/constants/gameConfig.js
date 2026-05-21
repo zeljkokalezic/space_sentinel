@@ -314,4 +314,17 @@ export const GAME_CONFIG = {
       color: '#eab308',
     },
   },
+
+  screenShake: {
+    // Linear decay rate (intensity units per second)
+    decay: 40,
+    // Intensity threshold below which shake deactivates
+    minThreshold: 0.5,
+    // Named presets for common events
+    presets: {
+      playerHit: 4,
+      explosion: 8,
+      bigExplosion: 20,
+    },
+  },
 };

@@ -19,7 +19,7 @@ import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
 import { updatePowerups } from './systems/powerups';
-import { updateParticles, updateEffects } from './systems/particles';
+import { updateParticles, updateEffects, updateScreenShake } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
@@ -113,13 +113,16 @@ export const updatePhysics = (dt, g, cbs) => {
   // ─── Power-up pickup & buff management ──────────────────────────────────────
   updatePowerups(dt, g, completeMission);
 
-  // ─── Particles ────────────────────────────────────────────────────────────────
+ // ─── Particles ────────────────────────────────────────
   updateParticles(dt, g);
 
-  // ─── Effects ──────────────────────────────────────────────────────────────────
+  // ─── Effects ──────────────────────────────────────────
   updateEffects(dt, g);
 
-  // ─── Escort mission logic ────────────────────────────────────────────────────
+  // ─── Screen shake decay ──────────────────────────────
+  updateScreenShake(dt, g);
+
+  // ─── Escort mission logic ────────────────────────────
   if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;
 
   // ─── Beacon mission logic ────────────────────────────────────────────────────
