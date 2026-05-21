@@ -198,7 +198,6 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 ## Performance Optimizations
 - **Spatial Culling:** `cleanup.js` removes entities beyond 3000 units from player
 - **Render Distance:** `renderer3d.js` skips rendering entities beyond 1800 units
-- **LOD:** Distant enemies (>1000 units) rendered at 80% scale
 - **Entity Cleanup:** `cleanup.js` uses filter-based GC on entity arrays (enemies, projectiles, particles, pickups, effects) at 5-second intervals
 
 ## Post-Mission Summary

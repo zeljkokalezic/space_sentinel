@@ -8,10 +8,24 @@ import { getHostileTargets } from './targeting';
 // Radar sweep angle persists across frames
 let radarAngle = 0;
 
+// Module-level radar coordinate transform (hoisted — avoids per-frame function creation)
+const toRTransform = (wx, wy, pX, pY, rX, rY, rRange, rR, rRot) => {
+  const dx = wx - pX, dy = wy - pY;
+  return { px: rX + (dx * Math.cos(rRot) - dy * Math.sin(rRot)) / rRange * rR,
+           py: rY - (dx * Math.sin(rRot) + dy * Math.cos(rRot)) / rRange * rR };
+};
+
 // FPS tracking
 let fpsFrames = 0;
 let fpsLastTime = 0;
 let fpsValue = 60;
+
+// Canvas size tracking — avoid per-frame resize when dimensions unchanged
+let lastCanvasW = 0;
+let lastCanvasH = 0;
+
+// Module reset detection — reset state when a new game starts (totalTime goes to 0)
+let prevTotalTime = -1;
 
 // ── Mute button layout constants ──────────────────────────────────────────────
 export const MUTE_BTN_X_OFFSET = 20;   // px from right edge
@@ -27,11 +41,29 @@ export const MUTE_BTN_SIZE     = 40;   // button is a square
  * @param {function} projectFn — projectToScreen function from renderer3d
  */
 export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
-  if (!canvasEl || (statusRef.current !== 'playing' && statusRef.current !== 'shop')) return;
+  if (!canvasEl || (statusRef.current !== 'playing' && statusRef.current !== 'shop' && statusRef.current !== 'dev')) return;
   const w = window.innerWidth, h = window.innerHeight;
-  canvasEl.width = w; canvasEl.height = h;
-  const c = canvasEl.getContext('2d');
+  // Only resize canvas when dimensions actually change (avoids context reset)
+  if (w !== lastCanvasW || h !== lastCanvasH) {
+    canvasEl.width = w;
+    canvasEl.height = h;
+    lastCanvasW = w;
+    lastCanvasH = h;
+  }
+  // Cache 2D context — only recreate on resize
+  if (!canvasEl._ctx) canvasEl._ctx = canvasEl.getContext('2d');
+  const c = canvasEl._ctx;
   c.clearRect(0, 0, w, h);
+
+  // Reset module-level state when a new game starts (totalTime goes to 0)
+  if (prevTotalTime > 0 && g.totalTime <= 0) {
+    radarAngle = 0;
+    fpsFrames = 0;
+    fpsLastTime = 0;
+    fpsValue = 60;
+  }
+  prevTotalTime = g.totalTime;
+
   const C = GAME_CONFIG;
 
   // ── FPS tracking ─────────────────────────────────────────────────────────────
@@ -40,10 +72,14 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   if (fpsLastTime === 0) fpsLastTime = now; // lazy init on first frame
   const elapsed = now - fpsLastTime;
   if (elapsed >= 1000) {
-    const cappedElapsed = Math.min(elapsed, 5000);
-    fpsValue = Math.round(fpsFrames * 1000 / cappedElapsed);
-    fpsFrames = 0;
-    fpsLastTime = now;
+    // Reset frame count if gap is too large (tab was hidden) to avoid artifact
+    if (elapsed > 2000) { fpsFrames = 0; fpsLastTime = now; }
+    else {
+      const cappedElapsed = Math.min(elapsed, 5000);
+      fpsValue = Math.round(fpsFrames * 1000 / cappedElapsed);
+      fpsFrames = 0;
+      fpsLastTime = now;
+    }
   }
 
   // Top bar
@@ -146,16 +182,21 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.fillStyle='rgba(0,0,0,0.5)'; c.fillRect(w/2-mBarW/2,10,mBarW,10);
     c.fillStyle='#39ff14'; c.fillRect(w/2-mBarW/2,10,mBarW*mProg,10);
     c.fillStyle='#fff'; c.font='bold 16px sans-serif'; c.textAlign='center';
-    const mTxt = g.mission.type==='survive'
-      ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
-      : g.mission.type==='escort'
-      ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
-      : g.mission.type==='defend'
-      ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
-      : g.mission.type==='sabotage'
-      ? `LEVEL ${g.level}: ${g.mission.title} [${g.mission.current} / ${g.mission.target}]`
-      : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
-    c.fillText(mTxt, w/2, 18);
+    // Cache mission text — only rebuild when current/target/type change
+    const mKey = `${g.mission.type}:${Math.floor(g.mission.current)}:${g.mission.target}`;
+    if (g._missionTxtKey !== mKey) {
+      g._missionTxt = g.mission.type==='survive'
+        ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+        : g.mission.type==='escort'
+        ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}m / ${g.mission.target}m]`
+        : g.mission.type==='defend'
+        ? `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)}s / ${g.mission.target}s]`
+        : g.mission.type==='sabotage'
+        ? `LEVEL ${g.level}: ${g.mission.title} [${g.mission.current} / ${g.mission.target}]`
+        : `LEVEL ${g.level}: ${g.mission.title} [${Math.floor(g.mission.current)} / ${g.mission.target}]`;
+      g._missionTxtKey = mKey;
+    }
+    c.fillText(g._missionTxt, w/2, 18);
   }
 
   // ── Mute toggle button (top-right, below top bar) ──────────────────────────
@@ -240,8 +281,8 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   for (let e of g.enemies) {
     if (!e.active || e.hp>=e.maxHp) continue;
     const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
-    c.fillStyle='rgba(57,255,20,0.2)'; c.fillRect(sp.x-20,sp.y-20,40,4);
-    c.fillStyle='#39ff14'; c.fillRect(sp.x-20,sp.y-20,40*Math.max(0,e.hp/e.maxHp),4);
+    c.fillStyle='rgba(239,68,68,0.2)'; c.fillRect(sp.x-20,sp.y-20,40,4);
+    c.fillStyle='#ef4444'; c.fillRect(sp.x-20,sp.y-20,40*Math.max(0,e.hp/e.maxHp),4);
   }
 
   // Escort drone HP bar
@@ -449,7 +490,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.beginPath(); c.moveTo(rX,rY); c.lineTo(rX+Math.cos(sw)*rR,rY+Math.sin(sw)*rR); c.strokeStyle='rgba(57,255,20,0.95)'; c.lineWidth=1.5; c.stroke();
 
   const pYaw=g.player.yaw||0, rRot=Math.PI/2-pYaw;
-  const toR=(wx,wy)=>{ const dx=wx-g.player.x, dy=wy-g.player.y; return { px:rX+(dx*Math.cos(rRot)-dy*Math.sin(rRot))/rRange*rR, py:rY-(dx*Math.sin(rRot)+dy*Math.cos(rRot))/rRange*rR }; };
+  const toR = (wx, wy) => toRTransform(wx, wy, g.player.x, g.player.y, rX, rY, rRange, rR, rRot);
 
   for (let e of g.enemies) {
     if (!e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)>rRange) continue;

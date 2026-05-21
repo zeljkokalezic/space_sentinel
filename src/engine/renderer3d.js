@@ -14,6 +14,35 @@ const _plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 const _target = new THREE.Vector3();
 const _projVec = new THREE.Vector3();
 
+// Module-level reusable collections (avoid per-frame allocation)
+const _activeKeys = new Set();
+const _sharedGeos = new Set();
+const _sharedMats = new Set();
+function initSharedSets(geoms, mats) {
+  _sharedGeos.clear();
+  _sharedMats.clear();
+  for (const geo of Object.values(geoms)) _sharedGeos.add(geo);
+  for (const mat of Object.values(mats)) _sharedMats.add(mat);
+}
+
+// Reusable vectors for laser line geometry
+const _laserV1 = new THREE.Vector3();
+const _laserV2 = new THREE.Vector3();
+
+// Mesh cleanup runs every N frames (avoids O(N) map scan every frame)
+let _cleanupFrameCounter = 0;
+const CLEANUP_INTERVAL = 60;
+
+/**
+ * Cached mesh lookup — creates mesh on first access, reuses thereafter.
+ * NON-REENTRANT: relies on module-level _activeKeys.
+ */
+const getMesh = (obj, meshes, scene, createFn) => {
+  if (!meshes.has(obj)) { const m = createFn(); scene.add(m); meshes.set(obj, m); }
+  _activeKeys.add(obj);
+  return meshes.get(obj);
+};
+
 export const raycastToPlane = (clientX, clientY, camera) => {
   _ndcVec.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
   _raycaster.setFromCamera(_ndcVec, camera);
@@ -74,13 +103,8 @@ export const initThreeScene = (containerEl) => {
 
 export const draw3DFrame = (threeObj, g) => {
   const { scene, camera, renderer, meshes, g: geoms, m: mats } = threeObj;
-  const activeKeys = new Set();
-
-  const getMesh = (obj, createFn) => {
-    if (!meshes.has(obj)) { const m = createFn(); scene.add(m); meshes.set(obj, m); }
-    activeKeys.add(obj);
-    return meshes.get(obj);
-  };
+  _activeKeys.clear();
+  initSharedSets(geoms, mats);
 
   // Chase camera
   const playerYaw = g.player.yaw ?? Math.PI / 2;
@@ -88,21 +112,22 @@ export const draw3DFrame = (threeObj, g) => {
   camera.position.lerp(new THREE.Vector3(g.player.x - camFwdX * 220, g.player.y - camFwdY * 220, 120), 0.03);
   camera.up.set(0, 0, 1);
   camera.lookAt(new THREE.Vector3(g.player.x + camFwdX * 80, g.player.y + camFwdY * 80, 0));
-  camera.updateMatrixWorld(true);
+  camera.updateMatrixWorld(false);
   const freshWM = raycastToPlane(g.mouse.x || window.innerWidth / 2, g.mouse.y || window.innerHeight / 2, camera);
   if (freshWM) g.worldMouse = freshWM;
 
-  // Stars
+  // Stars (static — set position once on creation)
   for (let s of g.stars) {
-    const sm = getMesh(s, () => {
+    getMesh(`star_${s.id ?? s}`, meshes, scene, () => {
       const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: 0x006400, wireframe: true, transparent: true, opacity: s.size / 3 }));
-      m.scale.set(s.size, s.size, s.size); return m;
+      m.scale.set(s.size, s.size, s.size);
+      m.position.set(s.x, s.y, s.z);
+      return m;
     });
-    sm.position.set(s.x, s.y, s.z);
   }
 
   // Player ship
-  const pm = getMesh(g.player, () => {
+  const pm = getMesh('player', meshes, scene, () => {
     const group = new THREE.Group();
     const hullMat = mats.player.clone();
     group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(40, 60, 20), hullMat)));
@@ -124,7 +149,10 @@ export const draw3DFrame = (threeObj, g) => {
   while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
   pm.rotation.z += rotDiff * 0.35;
 
-  const shieldMesh = pm.children.find(c => c.name === 'shield');
+  // Cache shield/turret refs to avoid per-frame children.find()
+  if (!pm.userData.shieldMesh) pm.userData.shieldMesh = pm.children.find(c => c.name === 'shield');
+  if (!pm.userData.turretsGroup) pm.userData.turretsGroup = pm.children.find(c => c.name === 'turrets');
+  const shieldMesh = pm.userData.shieldMesh;
   if (shieldMesh) { shieldMesh.visible = g.player.maxShield > 0; shieldMesh.material.opacity = Math.max(0.1, 0.5 * (g.player.shield / g.player.maxShield)); }
 
   // Apply active skin colors to player mesh (only when skin changes)
@@ -150,7 +178,7 @@ export const draw3DFrame = (threeObj, g) => {
   }
 
   // Dynamic turrets
-  const turretsGroup = pm.children.find(c => c.name === 'turrets');
+  const turretsGroup = pm.userData.turretsGroup;
   if (turretsGroup) {
     const hash = Object.values(g.levels).join('-');
     if (pm.userData.levelsHash !== hash) {
@@ -167,18 +195,19 @@ export const draw3DFrame = (threeObj, g) => {
       });
       turretsGroup.clear();
 
+      const tMat = mats.player.clone();
       const addTurret = (x, y, isDouble) => {
         const tg = new THREE.Group(); tg.position.set(x, -y, 10);
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 6, 12), mats.player); base.rotation.x = Math.PI / 2; tg.add(base);
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 6, 12), tMat); base.rotation.x = Math.PI / 2; tg.add(base);
         if (isDouble) {
-          const b1 = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), mats.player); b1.position.set(-3.5, 7.5, 0); tg.add(b1);
-          const b2 = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), mats.player); b2.position.set(3.5, 7.5, 0); tg.add(b2);
-        } else { const b = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), mats.player); b.position.set(0, 7.5, 0); tg.add(b); }
+          const b1 = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), tMat); b1.position.set(-3.5, 7.5, 0); tg.add(b1);
+          const b2 = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), tMat); b2.position.set(3.5, 7.5, 0); tg.add(b2);
+        } else { const b = new THREE.Mesh(new THREE.BoxGeometry(3, 15, 3), tMat); b.position.set(0, 7.5, 0); tg.add(b); }
         tg.userData.isAiming = true; turretsGroup.add(tg);
       };
       const addMissilePod = (x, y) => {
         const mg = new THREE.Group(); mg.position.set(x, -y, 5);
-        mg.add(new THREE.Mesh(new THREE.BoxGeometry(12, 18, 9), mats.player)); turretsGroup.add(mg);
+        mg.add(new THREE.Mesh(new THREE.BoxGeometry(12, 18, 9), mats.player.clone())); turretsGroup.add(mg);
       };
 
       if (g.levels.autocannon > 0) {
@@ -215,24 +244,26 @@ export const draw3DFrame = (threeObj, g) => {
     const dx = p.x - g.player.x;
     const dy = p.y - g.player.y;
     if (dx * dx + dy * dy > renderDistSq) continue;
-    const m = getMesh(p, () => { const m = new THREE.Mesh(geoms.tetra, mats.pickup); m.scale.set(p.radius, p.radius, p.radius); return m; });
+    const m = getMesh(`pickup_${p.id ?? p}`, meshes, scene, () => { const m = new THREE.Mesh(geoms.tetra, mats.pickup); m.scale.set(p.radius, p.radius, p.radius); return m; });
     m.position.set(p.x, p.y, 0); m.rotation.x += 0.05; m.rotation.y += 0.05;
   }
 
   // Power-ups
-  for (let pu of g.powerups) {
-    if (!pu.active) continue;
-    const dx = pu.x - g.player.x;
-    const dy = pu.y - g.player.y;
-    if (dx * dx + dy * dy > renderDistSq) continue;
-    const m = getMesh(pu, () => {
-      const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: pu.color ? parseInt(pu.color.slice(1), 16) : 0xfbbf24, wireframe: true }));
-      m.scale.set(pu.radius, pu.radius, pu.radius);
-      return m;
-    });
-    m.position.set(pu.x, pu.y, Math.sin(g.totalTime * 3 + pu.id * 10) * 5);
-    m.rotation.x += 0.05;
-    m.rotation.y += 0.05;
+  if (g.powerups) {
+    for (let pu of g.powerups) {
+      if (!pu.active) continue;
+      const dx = pu.x - g.player.x;
+      const dy = pu.y - g.player.y;
+      if (dx * dx + dy * dy > renderDistSq) continue;
+      const m = getMesh(`pu_${pu.id ?? pu}`, meshes, scene, () => {
+        const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: pu.color ? parseInt(pu.color.slice(1), 16) : 0xfbbf24, wireframe: true }));
+        m.scale.set(pu.radius, pu.radius, pu.radius);
+        return m;
+      });
+      m.position.set(pu.x, pu.y, Math.sin(g.totalTime * 3 + pu.id * 10) * 5);
+      m.rotation.x += 0.05;
+      m.rotation.y += 0.05;
+    }
   }
 
   // Projectiles (with distance culling)
@@ -241,7 +272,7 @@ export const draw3DFrame = (threeObj, g) => {
     const dx = p.x - g.player.x;
     const dy = p.y - g.player.y;
     if (dx * dx + dy * dy > renderDistSq) continue;
-    const m = getMesh(p, () => {
+    const m = getMesh(`proj_${p.id ?? p}`, meshes, scene, () => {
       const col = p.isEnemy ? 0xd946ef : 0xff0000;
       const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: col, wireframe: true }));
       m.scale.set(p.radius, p.radius, p.radius); return m;
@@ -250,14 +281,14 @@ export const draw3DFrame = (threeObj, g) => {
     if (p.type === 'missile' || p.type === 'enemy_missile') { m.scale.set(p.radius*0.5, p.radius*2, p.radius*0.5); m.rotation.z = Math.atan2(p.vy, p.vx) - Math.PI/2; }
   }
 
-  // Enemies (with distance culling and LOD)
+  // Enemies (with distance culling)
   for (let e of g.enemies) {
     if (!e.active) continue;
     const dx = e.x - g.player.x;
     const dy = e.y - g.player.y;
     const distSq = dx * dx + dy * dy;
     if (distSq > renderDistSq) continue;
-    const m = getMesh(e, () => {
+    const m = getMesh(`enemy_${e.id ?? e}`, meshes, scene, () => {
       const heavy = e.type === 'heavy';
       let geo = heavy ? new THREE.BoxGeometry(1,1,1) : geoms.cone;
       if (e.type==='shooter') geo = new THREE.BoxGeometry(1,0.5,1);
@@ -271,37 +302,23 @@ export const draw3DFrame = (threeObj, g) => {
 
     // Formation-specific rotation & visual cues
     if (e.formation === 'orbit') {
-      // Face orbit direction (tangent to circle)
       m.rotation.z = (e.orbitAngle || 0) + Math.PI / 2;
     } else if (e.formation === 'swarm') {
-      // Face movement direction
       m.rotation.z = e.angle || Math.atan2(-(g.player.y-e.y), g.player.x-e.x);
     } else if (e.formation === 'screen') {
-      // Uniform facing: all screen enemies face toward player
       m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x);
     } else if (e.formation === 'kamikaze') {
-      // Slight wobble to telegraph the sine-wave movement
       const wobble = Math.sin(g.totalTime * 3 + e.id * 10) * 0.2;
       m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) + wobble;
     } else {
-      // Default: face player
       m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
-    }
-    // LOD: reduce detail for distant enemies (toggle — apply only once)
-    const dist = Math.sqrt(distSq);
-    if (dist > 1000 && !m.userData.lodApplied) {
-      m.scale.multiplyScalar(0.8);
-      m.userData.lodApplied = true;
-    } else if (dist <= 1000 && m.userData.lodApplied) {
-      m.scale.multiplyScalar(1.25);
-      m.userData.lodApplied = false;
     }
   }
 
   // Escort drone
   if (g.escort.active && g.escort.hp > 0 && g.escort.respawnTimer <= 0) {
     const esc = g.escort;
-    const dm = getMesh(esc, () => {
+    const dm = getMesh('escort', meshes, scene, () => {
       const group = new THREE.Group();
       const body = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true }));
       body.scale.set(esc.radius, esc.radius, esc.radius);
@@ -317,7 +334,7 @@ export const draw3DFrame = (threeObj, g) => {
 
   // Beacon (defend mission)
   if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
-    const bm = getMesh(g.beacon, () => {
+    const bm = getMesh('beacon', meshes, scene, () => {
       const m = new THREE.Mesh(geoms.tetra, new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true }));
       m.scale.set(g.beacon.radius, g.beacon.radius, g.beacon.radius);
       return m;
@@ -327,7 +344,7 @@ export const draw3DFrame = (threeObj, g) => {
 
   // Beacon shield ring
   if (g.beacon && g.beacon.active && g.beacon.hp > 0) {
-    const shieldMesh = getMesh('beacon_shield', () => {
+    const shieldMesh = getMesh('beacon_shield', meshes, scene, () => {
       const ringGeom = new THREE.RingGeometry(g.beacon.radius + 5, g.beacon.radius + 10, 16);
       const m = new THREE.Mesh(ringGeom, new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.3 }));
       return m;
@@ -342,7 +359,7 @@ export const draw3DFrame = (threeObj, g) => {
       if (!s.active || s.hp <= 0) continue;
       if (!s.id) s.id = Math.random();
       const key = 'sab_' + s.id;
-      const sm = getMesh(key, () => {
+      const sm = getMesh(key, meshes, scene, () => {
         const m = new THREE.Mesh(
           new THREE.CylinderGeometry(s.radius, s.radius, 8, 8),
           new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true })
@@ -363,7 +380,7 @@ export const draw3DFrame = (threeObj, g) => {
       if (hdx * hdx + hdy * hdy > renderDistSq) continue;
 
       if (h.type === 'asteroid') {
-        const am = getMesh(h.id, () => {
+        const am = getMesh(h.id, meshes, scene, () => {
           const m = new THREE.Mesh(
             new THREE.IcosahedronGeometry(1, 0),
             new THREE.MeshBasicMaterial({ color: 0x6b7280, wireframe: true })
@@ -377,7 +394,7 @@ export const draw3DFrame = (threeObj, g) => {
       } else if (h.type === 'gravityWell') {
         // Inner ring
         const innerKey = h.id + '_inner';
-        const inner = getMesh(innerKey, () => {
+        const inner = getMesh(innerKey, meshes, scene, () => {
           const ring = new THREE.Mesh(
             new THREE.RingGeometry(h.radius * 0.3, h.radius * 0.5, 24),
             new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
@@ -389,7 +406,7 @@ export const draw3DFrame = (threeObj, g) => {
         inner.rotation.z += 0.02;
         // Outer ring
         const outerKey = h.id + '_outer';
-        const outer = getMesh(outerKey, () => {
+        const outer = getMesh(outerKey, meshes, scene, () => {
           const ring = new THREE.Mesh(
             new THREE.RingGeometry(h.radius * 0.6, h.radius * 0.8, 24),
             new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.3 })
@@ -400,8 +417,8 @@ export const draw3DFrame = (threeObj, g) => {
         outer.position.set(h.x, h.y, 0);
         outer.rotation.z -= 0.01;
         // Center marker
-        const centerKey = h.id + '_center';
-        const center = getMesh(centerKey, () => {
+        const centerKey = h.id + '_gw_center';
+        const center = getMesh(centerKey, meshes, scene, () => {
           const m = new THREE.Mesh(
             new THREE.SphereGeometry(1, 8, 8),
             new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true })
@@ -413,7 +430,7 @@ export const draw3DFrame = (threeObj, g) => {
       } else if (h.type === 'plasmaStorm') {
         // Storm zone disc
         const stormKey = h.id + '_zone';
-        const storm = getMesh(stormKey, () => {
+        const storm = getMesh(stormKey, meshes, scene, () => {
           const disc = new THREE.Mesh(
             new THREE.CircleGeometry(1, 32),
             new THREE.MeshBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
@@ -425,7 +442,7 @@ export const draw3DFrame = (threeObj, g) => {
         storm.scale.set(h.radius, h.radius, h.radius);
         // Edge ring
         const edgeKey = h.id + '_edge';
-        const edge = getMesh(edgeKey, () => {
+        const edge = getMesh(edgeKey, meshes, scene, () => {
           const ring = new THREE.Mesh(
             new THREE.RingGeometry(0.9, 1, 32),
             new THREE.MeshBasicMaterial({ color: 0xc084fc, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.5 })
@@ -439,7 +456,7 @@ export const draw3DFrame = (threeObj, g) => {
       } else if (h.type === 'emp') {
         // Hexagonal zone outline
         const empKey = h.id + '_hex';
-        const emp = getMesh(empKey, () => {
+        const emp = getMesh(empKey, meshes, scene, () => {
           const m = new THREE.Mesh(
             new THREE.RingGeometry(h.radius * 0.85, h.radius, 6),
             new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: h.empActive ? 0.8 : 0.25 })
@@ -452,8 +469,8 @@ export const draw3DFrame = (threeObj, g) => {
         // Update opacity based on active state
         if (emp.material) emp.material.opacity = h.empActive ? 0.8 : 0.25;
         // Center marker
-        const empCenterKey = h.id + '_center';
-        const empCenter = getMesh(empCenterKey, () => {
+        const empCenterKey = h.id + '_emp_center';
+        const empCenter = getMesh(empCenterKey, meshes, scene, () => {
           const m = new THREE.Mesh(
             new THREE.SphereGeometry(1, 8, 8),
             new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true })
@@ -472,7 +489,7 @@ export const draw3DFrame = (threeObj, g) => {
     const bdx = boss.x - g.player.x;
     const bdy = boss.y - g.player.y;
     if (bdx * bdx + bdy * bdy <= renderDistSq) {
-      const bm = getMesh(boss, () => {
+      const bm = getMesh('boss', meshes, scene, () => {
         const group = new THREE.Group();
         const geoType = boss.geometry || 'box';
         const geoMap = {
@@ -510,7 +527,7 @@ export const draw3DFrame = (threeObj, g) => {
     const mdx = mb.x - g.player.x;
     const mdy = mb.y - g.player.y;
     if (mdx * mdx + mdy * mdy <= renderDistSq) {
-      const mm = getMesh(mb, () => {
+      const mm = getMesh('miniboss', meshes, scene, () => {
         const group = new THREE.Group();
         const geoType = mb.geometry || 'box';
         const geoMap = {
@@ -557,7 +574,7 @@ export const draw3DFrame = (threeObj, g) => {
       scene.add(marker);
       meshes.set(destKey, marker);
     }
-    activeKeys.add(destKey);
+    _activeKeys.add(destKey);
     const destMesh = meshes.get(destKey);
     destMesh.position.set(dest.targetX, dest.targetY, 0);
     destMesh.children.forEach(c => c.rotation.z += 0.01);
@@ -566,7 +583,7 @@ export const draw3DFrame = (threeObj, g) => {
   // Particles
   for (let p of g.particles) {
     if (!p.active) continue;
-    const m = getMesh(p, () => { const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: p.color ?? 0x39ff14, wireframe: true, transparent: true })); m.scale.set(3,3,3); return m; });
+    const m = getMesh(`part_${p.id ?? p}`, meshes, scene, () => { const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: p.color ?? 0x39ff14, wireframe: true, transparent: true })); m.scale.set(3,3,3); return m; });
     if (m.material && p.color !== undefined) m.material.color.set(p.color);
     m.position.set(p.x, p.y, p.z||0); m.material.opacity = p.maxLife ? p.life / p.maxLife : Math.min(1, p.life);
   }
@@ -574,31 +591,38 @@ export const draw3DFrame = (threeObj, g) => {
   // Laser effects
   for (let e of g.effects) {
     if (e.type !== 'laser') continue;
-    const m = getMesh(e, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser.clone()));
-    if (e.source && e.target) m.geometry.setFromPoints([new THREE.Vector3(e.source.x,e.source.y,0), new THREE.Vector3(e.target.x,e.target.y,0)]);
+    const m = getMesh(`fx_${e.id ?? e}`, meshes, scene, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser.clone()));
+    if (e.source && e.target) {
+      _laserV1.set(e.source.x, e.source.y, 0);
+      _laserV2.set(e.target.x, e.target.y, 0);
+      m.geometry.setFromPoints([_laserV1, _laserV2]);
+    }
     m.material.opacity = Math.min(1, e.life * 10);
   }
 
   // Cleanup dead objects — dispose geometries/materials to free GPU memory
-  const sharedGeos = new Set(Object.values(geoms));
-  const sharedMats = new Set([mats.player, mats.shield, mats.pickup, mats.laser]);
-  const disposeMesh = (mesh) => {
-    if (mesh.geometry && !sharedGeos.has(mesh.geometry)) mesh.geometry.dispose();
-    if (mesh.material) {
-      const matArr = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const mat of matArr) {
-        if (!sharedMats.has(mat)) mat.dispose();
+  // Run every CLEANUP_INTERVAL frames to avoid O(N) map scan every frame
+  _cleanupFrameCounter++;
+  if (_cleanupFrameCounter >= CLEANUP_INTERVAL) {
+    _cleanupFrameCounter = 0;
+    const disposeMesh = (mesh) => {
+      if (mesh.geometry && !_sharedGeos.has(mesh.geometry)) mesh.geometry.dispose();
+      if (mesh.material) {
+        const matArr = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of matArr) {
+          if (!_sharedMats.has(mat)) mat.dispose();
+        }
       }
-    }
-    if (mesh.children) {
-      for (const child of mesh.children) disposeMesh(child);
-    }
-  };
-  for (let [obj, mesh] of meshes.entries()) {
-    if (!activeKeys.has(obj)) {
-      disposeMesh(mesh);
-      scene.remove(mesh);
-      meshes.delete(obj);
+      if (mesh.children) {
+        for (const child of mesh.children) disposeMesh(child);
+      }
+    };
+    for (let [obj, mesh] of meshes.entries()) {
+      if (!_activeKeys.has(obj)) {
+        disposeMesh(mesh);
+        scene.remove(mesh);
+        meshes.delete(obj);
+      }
     }
   }
 

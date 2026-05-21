@@ -105,10 +105,14 @@ export const killEnemy = (g, e, completeMission) => {
   if (g.mission) {
     if (g.mission.type === 'kill') {
       g.mission.current++;
-      if (completeMission && g.mission.current >= g.mission.target) completeMission();
+      if (!g.mission.completed && completeMission && g.mission.current >= g.mission.target) {
+        completeMission();
+      }
     } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
       g.mission.current++;
-      if (completeMission && g.mission.current >= g.mission.target) completeMission();
+      if (!g.mission.completed && completeMission && g.mission.current >= g.mission.target) {
+        completeMission();
+      }
     }
   }
 
