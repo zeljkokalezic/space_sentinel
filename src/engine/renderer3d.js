@@ -268,7 +268,25 @@ export const draw3DFrame = (threeObj, g) => {
       return m;
     });
     m.position.set(e.x, e.y, 0);
-    m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
+
+    // Formation-specific rotation & visual cues
+    if (e.formation === 'orbit') {
+      // Face orbit direction (tangent to circle)
+      m.rotation.z = (e.orbitAngle || 0) + Math.PI / 2;
+    } else if (e.formation === 'swarm') {
+      // Face movement direction
+      m.rotation.z = e.angle || Math.atan2(-(g.player.y-e.y), g.player.x-e.x);
+    } else if (e.formation === 'screen') {
+      // Uniform facing: all screen enemies face toward player
+      m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x);
+    } else if (e.formation === 'kamikaze') {
+      // Slight wobble to telegraph the sine-wave movement
+      const wobble = Math.sin(g.totalTime * 3 + e.id * 10) * 0.2;
+      m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) + wobble;
+    } else {
+      // Default: face player
+      m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
+    }
     // LOD: reduce detail for distant enemies (toggle — apply only once)
     const dist = Math.sqrt(distSq);
     if (dist > 1000 && !m.userData.lodApplied) {

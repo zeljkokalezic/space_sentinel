@@ -226,6 +226,50 @@ export const GAME_CONFIG = {
     announcementDuration: 2,
   },
 
+  formations: {
+    vanguard: {
+      spreadRadius: 300,
+      convergeDelay: 3,
+      convergeSpeedMult: 1.5,
+    },
+    orbit: {
+      orbitRadius: 250,
+      orbitSpeed: 1.5,
+      rushThreshold: 0.4,
+    },
+    swarm: {
+      separationDist: 60,
+      cohesionWeight: 0.5,
+      alignmentWeight: 0.3,
+      maxCount: 8,
+    },
+    kamikaze: {
+      speedMult: 1.8,
+      lateralAmplitude: 40,
+      lateralFreq: 3,
+    },
+    bomber: {
+      approachRadius: 400,
+      fireBurstCount: 3,
+      retreatDist: 150,
+    },
+    screen: {
+      lineSpacing: 80,
+      advanceSpeed: 30,
+      fireThrough: true,
+    },
+  },
+
+  // Level gates: which formations unlock at each level tier
+  formationLevels: {
+    kamikaze: 1,
+    vanguard: 1,
+    orbit: 4,
+    bomber: 4,
+    swarm: 7,
+    screen: 7,
+  },
+
   environmentalHazards: {
     // Probability a combat node has a hazard (scales with level)
     baseChance: 0.15,

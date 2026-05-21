@@ -411,6 +411,16 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.fillText(`${remaining}`, w / 2, h / 2 + 30);
     }
 
+    // Formation name subtitle
+    if (announce.formationName) {
+      const formSize = 24;
+      c.font = `bold ${formSize}px monospace`;
+      c.shadowBlur = 8;
+      c.shadowColor = '#a855f7';
+      c.fillStyle = `rgba(168,85,247,${alpha * 0.9})`;
+      c.fillText(announce.formationName, w / 2, h / 2 + 65);
+    }
+
     c.restore();
   }
 

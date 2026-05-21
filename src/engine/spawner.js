@@ -63,15 +63,59 @@ function getWavePattern(level, totalTime) {
 }
 
 /**
+ * Map wave pattern names to behavioral formations.
+ */
+const WAVE_TO_FORMATION = {
+  random:     ['kamikaze', 'vanguard'],
+  burst:      ['vanguard'],
+  circle:     ['orbit'],
+  vFormation: ['bomber'],
+  swarm:      ['swarm'],
+};
+
+/**
+ * Get available formations for a given level (level-gated).
+ * @param {number} level - Current player level
+ * @returns {string[]} Array of formation names available at this level
+ */
+function getAvailableFormations(level) {
+  const C = GAME_CONFIG;
+  return Object.entries(C.formationLevels)
+    .filter(([, minLevel]) => level >= minLevel)
+    .map(([name]) => name);
+}
+
+/**
+ * Pick a formation for a wave pattern, respecting level gates.
+ * Falls back to 'kamikaze' if nothing else is available.
+ * @param {string} pattern - Wave pattern name
+ * @param {number} level - Current player level
+ * @returns {string} Formation name
+ */
+function pickFormation(pattern, level) {
+  const candidates = WAVE_TO_FORMATION[pattern] || WAVE_TO_FORMATION.random;
+  const available = getAvailableFormations(level);
+
+  // Try candidates first; if none available, pick from what we have
+  const valid = candidates.filter(c => available.includes(c));
+  if (valid.length > 0) {
+    return valid[Math.floor(Math.random() * valid.length)];
+  }
+  return 'kamikaze'; // guaranteed available at level 1
+}
+
+/**
  * Spawn enemies in a specific pattern.
  * @param {object} g - Game state
  * @param {string} pattern - Wave pattern name
  * @param {number} level - Current level
  */
-function spawnWavePattern(g, pattern) {
+function spawnWavePattern(g, pattern, level) {
   const waveConfig = WAVE_PATTERNS[pattern] || WAVE_PATTERNS.random;
   const C = GAME_CONFIG;
   const diffMult = calculateDifficultyMultiplier(g.level, g.totalTime);
+
+  const formation = pickFormation(pattern, level);
 
   for (let i = 0; i < waveConfig.count; i++) {
     let x, y;
@@ -128,7 +172,18 @@ function spawnWavePattern(g, pattern) {
       type = 'fighter';      hp = 30 * diffMult; speed = 100 + Math.random() * 50; radius = 15; color = 0xef4444; fireCooldown = 0; shield = 0; maxShield = 0;
     }
 
-    g.enemies.push({ id: Math.random(), x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type, active: true, fireCooldown });
+    g.enemies.push({
+      id: Math.random(),
+      x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type,
+      active: true,
+      fireCooldown,
+      // Formation properties
+      formation,
+      formationPhase: 'approach',
+      formationTimer: C.formations[formation]?.convergeDelay ?? 0,
+      orbitAngle: Math.random() * Math.PI * 2,
+      formationIndex: i,
+    });
   }
 }
 
@@ -223,7 +278,8 @@ export function spawnEnemy(g) {
   if (g.waveAnnounce && g.waveAnnounce.active) return;
 
   const pattern = getWavePattern(g.level, g.totalTime);
-  spawnWavePattern(g, pattern);
+  const formation = pickFormation(pattern, g.level);
+  spawnWavePattern(g, pattern, g.level);
 
   // Track wave progress (only if waveAnnounce state exists)
   if (g.waveAnnounce) {
@@ -241,6 +297,7 @@ export function spawnEnemy(g) {
         g.waveAnnounce.active = true;
         g.waveAnnounce.wave = g.waveCount;
         g.waveAnnounce.timer = GAME_CONFIG.waveAnnouncer.announcementDuration;
+        g.waveAnnounce.formationName = formation.toUpperCase().replace('_', ' ');
         SoundManager.play('wave_announce');
       }
     }
@@ -250,4 +307,4 @@ export function spawnEnemy(g) {
 /**
  * Export wave patterns for testing.
  */
-export { WAVE_PATTERNS, getWavePattern, spawnWavePattern };
+export { WAVE_PATTERNS, WAVE_TO_FORMATION, getWavePattern, pickFormation, getAvailableFormations, spawnWavePattern };
