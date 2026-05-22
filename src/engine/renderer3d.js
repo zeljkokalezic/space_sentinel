@@ -637,6 +637,30 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
+  // Enemy spawn flash rings — expanding red rings at spawn locations
+  if (g.spawnFlashes) {
+    for (const flash of g.spawnFlashes) {
+      if (!flash.active) continue;
+      const lifeRatio = flash.maxLife ? flash.life / flash.maxLife : 0;
+      const adx = flash.x - g.player.x;
+      const ady = flash.y - g.player.y;
+      if (adx * adx + ady * ady > renderDistSq) continue;
+      const m = getMesh(`sflash_${flash.x}_${flash.y}_${flash.life}`, meshes, scene, () => {
+        const ring = new THREE.Mesh(
+          geoms.deathPulseRing,
+          new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, side: THREE.DoubleSide, depthWrite: false })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        return ring;
+      });
+      const scale = flash.maxRadius > 0 ? flash.radius : 0;
+      m.scale.set(scale, scale, 1);
+      m.position.set(flash.x, flash.y, 0.5);
+      // Bright at start, fade quickly
+      m.material.opacity = Math.max(0, lifeRatio * 0.7);
+    }
+  }
+
   // Attack warning indicators in 3D — red wireframe circles on the ground plane
   if (g.attackWarnings) {
     for (const aw of g.attackWarnings) {

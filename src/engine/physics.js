@@ -33,6 +33,7 @@ import { updateAttackWarnings } from './systems/attackWarnings';
 import { cleanup } from './systems/cleanup';
 import { updateLowHpWarning } from './lowHpWarning';
 import { updateDynamicFov } from './systems/dynamicFov';
+import { updateSpawnFlashes } from './spawner';
 
 export const updatePhysics = (dt, g, cbs) => {
   const { setGameState, setNotificationVersion } = cbs;
@@ -144,6 +145,9 @@ export const updatePhysics = (dt, g, cbs) => {
   // ─── Death pulse shockwaves ──────────────────────────
   updateDeathPulses(dt, g, completeMission);
   if (g.player.hp <= 0) return;
+
+  // ─── Enemy spawn flash effects ───────────────────────
+  updateSpawnFlashes(dt, g);
 
   // ─── Escort mission logic ────────────────────────────
   if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;

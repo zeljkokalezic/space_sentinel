@@ -502,7 +502,7 @@ export const GAME_CONFIG = {
     lifetime: 0.9,
   },
 
-  dynamicFov: {
+ dynamicFov: {
     // Base FOV (degrees) — normal gameplay
     baseFov: 75,
     // FOV during boss fights (narrower = more tension/focus)
@@ -521,5 +521,24 @@ export const GAME_CONFIG = {
     bossDeathDuration: 2,
     // Minimum time at boss FOV before it starts (prevents flicker)
     bossSettleTime: 0.5,
+  },
+
+  enemySpawnFlash: {
+    // Enable/disable spawn flash effects
+    enabled: true,
+    // Maximum ring radius in world units (expands from 0 to this)
+    maxRadius: 80,
+    // Duration of the flash effect in seconds
+    duration: 0.6,
+    // Ring color (red — danger/threat indicator)
+    ringColor: '#ef4444',
+    // Ring line width in pixels
+    lineWidth: 3,
+    // Burst particles spawned with each flash
+    particleCount: 12,
+    // Burst particle color (bright red-orange)
+    particleColor: 0xf97316,
+    // Maximum concurrent spawn flashes (oldest dropped when exceeded)
+    maxFlashes: 20,
   },
 };

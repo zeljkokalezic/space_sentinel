@@ -150,6 +150,23 @@
  * @property {string} attackWarnings[].color — Warning color (hex string)
  * @property {boolean} attackWarnings[].active — Whether warning is active
  * @property {function} attackWarnings[].fireCallback — Function to call when warning expires (fires the projectile)
+ * @property {Array} spawnFlashes — Active enemy spawn flash effects
+ * @property {number} spawnFlashes[].x — World X position (center of flash)
+ * @property {number} spawnFlashes[].y — World Y position (center of flash)
+ * @property {number} spawnFlashes[].radius — Current ring radius (expands from 0 to maxRadius)
+ * @property {number} spawnFlashes[].maxRadius — Maximum ring radius
+ * @property {number} spawnFlashes[].life — Remaining flash lifetime
+ * @property {number} spawnFlashes[].maxLife — Total flash lifetime
+ * @property {string} spawnFlashes[].color — Ring color (hex string)
+ * @property {boolean} spawnFlashes[].active — Whether flash is active
+ * @property {Array} scrapFloats — Active scrap collection floating number effects
+ * @property {number} scrapFloats[].x — World X position
+ * @property {number} scrapFloats[].y — World Y position (floats upward over time)
+ * @property {string} scrapFloats[].text — Display text (e.g. "+1")
+ * @property {number} scrapFloats[].life — Remaining lifetime
+ * @property {number} scrapFloats[].maxLife — Total lifetime
+ * @property {string} scrapFloats[].color — Text color (hex string)
+ * @property {boolean} scrapFloats[].active — Whether float is active
  * @property {number} shipSkin — Active skin index (0-4)
  * @property {boolean[]} unlockedSkins — Which skins are unlocked
  */
@@ -229,6 +246,8 @@ export const createGameState = () => ({
   playerIFrames: createDefaultPlayerIFrames(),
   attackWarnings: [],
   dynamicFov: createDefaultDynamicFov(),
+  spawnFlashes: [],
+  scrapFloats: [],
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 

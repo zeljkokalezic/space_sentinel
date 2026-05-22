@@ -768,6 +768,21 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     }
   }
 
+  // Enemy spawn flash rings on radar
+  if (g.spawnFlashes) {
+    for (const flash of g.spawnFlashes) {
+      if (!flash.active) continue;
+      const fd = Math.hypot(flash.x - g.player.x, flash.y - g.player.y);
+      if (fd > rRange) continue;
+      const {px, py} = toR(flash.x, flash.y);
+      const lifeRatio = flash.maxLife ? flash.life / flash.maxLife : 0;
+      const radarRadius = (flash.radius / rRange) * rR;
+      c.strokeStyle = `rgba(239,68,68,${Math.max(0.1, lifeRatio * 0.6)})`;
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.stroke();
+    }
+  }
+
   // Attack warning indicators on radar
   if (g.attackWarnings) {
     for (const aw of g.attackWarnings) {

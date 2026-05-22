@@ -184,6 +184,9 @@ function spawnWavePattern(g, pattern, level) {
       orbitAngle: Math.random() * Math.PI * 2,
       formationIndex: i,
     });
+
+    // Create spawn flash effect at enemy spawn location
+    createSpawnFlash(g, x, y);
   }
 }
 
@@ -303,6 +306,90 @@ export function spawnEnemy(g) {
     }
   }
 };
+
+/**
+ * Create an enemy spawn flash effect at the given position.
+ * Spawns an expanding ring and burst particles to visually warn
+ * the player of new enemy threats.
+ *
+ * @param {object} g - Game state
+ * @param {number} x - World X position
+ * @param {number} y - World Y position
+ */
+export function createSpawnFlash(g, x, y) {
+  if (!g) return;
+
+  const C = GAME_CONFIG.enemySpawnFlash;
+  if (!C.enabled) return;
+
+  // Ensure spawnFlashes array exists
+  if (!g.spawnFlashes) g.spawnFlashes = [];
+
+  // Enforce max concurrent flashes — drop oldest when limit reached
+  if (g.spawnFlashes.length >= C.maxFlashes) {
+    g.spawnFlashes.shift();
+  }
+
+  // Create the expanding ring flash
+  g.spawnFlashes.push({
+    x, y,
+    radius: 0,
+    maxRadius: C.maxRadius,
+    life: C.duration,
+    maxLife: C.duration,
+    color: C.ringColor,
+    active: true,
+  });
+
+  // Play spawn sound
+  SoundManager.play('enemy_spawn');
+
+  // Spawn burst particles at the flash location
+  if (g.particles && C.particleCount > 0) {
+    for (let i = 0; i < C.particleCount; i++) {
+      const angle = (i / C.particleCount) * Math.PI * 2;
+      const speed = 60 + Math.random() * 40;
+      g.particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        vz: 0,
+        life: C.duration * 0.7,
+        maxLife: C.duration * 0.7,
+        color: C.particleColor,
+        active: true,
+        type: 'spark',
+        size: 2,
+      });
+    }
+  }
+}
+
+/**
+ * Update all spawn flash effects — expand rings and manage lifecycle.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export function updateSpawnFlashes(dt, g) {
+  if (!g || !g.spawnFlashes) return;
+
+  for (const flash of g.spawnFlashes) {
+    if (!flash.active) continue;
+
+    flash.life -= dt;
+    if (flash.life <= 0) {
+      flash.life = 0;
+      flash.active = false;
+      continue;
+    }
+
+    // Expand ring radius proportionally to elapsed time
+    const maxLife = flash.maxLife || flash.life;
+    const progress = 1 - (flash.life / maxLife);
+    flash.radius = Math.min(flash.maxRadius, flash.maxRadius * progress);
+  }
+}
 
 /**
  * Export wave patterns for testing.

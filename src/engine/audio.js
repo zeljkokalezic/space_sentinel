@@ -592,6 +592,19 @@ function playShieldBreak(ctx, gainNode, now) {
   return { duration: dur, nodes: [noiseSource, noiseFilter, osc, oscGain] };
 }
 
+/** enemy_spawn — Quick sharp pop signaling new enemy appearance */
+function playEnemySpawn(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(600, now);
+  osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.1);
+  const dur = applyEnvelope(gainNode, 0.002, 0.02, 0.06, now);
+  return { duration: dur, nodes: [osc] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -624,6 +637,7 @@ const SOUND_GENERATORS = {
   boss_spawn: playBossSpawn,
   boss_intro: playBossIntro,
   heartbeat: playHeartbeat,
+  enemy_spawn: playEnemySpawn,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);
