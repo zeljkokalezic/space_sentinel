@@ -211,57 +211,67 @@ describe('updateScreenShake', () => {
  * ────────────────────────────────────────────── */
 describe('getScreenShakeOffset', () => {
   it('returns {x: 0, y: 0} for zero intensity', () => {
-    const offset = getScreenShakeOffset(0);
+    const offset = getScreenShakeOffset(0, 0);
     expect(offset.x).toBe(0);
     expect(offset.y).toBe(0);
   });
 
   it('returns {x: 0, y: 0} for negative intensity', () => {
-    const offset = getScreenShakeOffset(-5);
+    const offset = getScreenShakeOffset(-5, 0);
     expect(offset.x).toBe(0);
     expect(offset.y).toBe(0);
   });
 
   it('returns non-zero offset for positive intensity', () => {
-    const offset = getScreenShakeOffset(10);
+    const offset = getScreenShakeOffset(10, 0.5);
     // The offset should be bounded by intensity
     expect(Math.abs(offset.x)).toBeLessThanOrEqual(10);
     expect(Math.abs(offset.y)).toBeLessThanOrEqual(10);
-    // At least one axis should have some offset (with very high probability)
+    // At least one axis should have some offset
     expect(Math.abs(offset.x) + Math.abs(offset.y)).toBeGreaterThan(0);
   });
 
   it('returns offset proportional to intensity', () => {
-    const small = getScreenShakeOffset(2);
-    const large = getScreenShakeOffset(20);
-    // Large intensity should generally produce larger offsets
-    // We use >= here since there's a small chance of near-zero random
+    const t = 0.5;
+    const small = getScreenShakeOffset(2, t);
+    const large = getScreenShakeOffset(20, t);
+    // Large intensity should produce larger offsets
     const smallMag = Math.hypot(small.x, small.y);
     const largeMag = Math.hypot(large.x, large.y);
     expect(largeMag).toBeGreaterThanOrEqual(smallMag);
   });
 
-  it('produces random offsets (not always the same)', () => {
-    // Generate many samples; expect variety
+  it('produces different offsets over time', () => {
+    // Generate samples at different time values; expect variety
     const results = new Set();
-    for (let i = 0; i < 20; i++) {
-      const o = getScreenShakeOffset(10);
+    for (let t = 0; t < 5; t += 0.1) {
+      const o = getScreenShakeOffset(10, t);
       results.add(`${Math.round(o.x)},${Math.round(o.y)}`);
     }
     expect(results.size).toBeGreaterThan(1);
   });
 
+  it('produces smooth oscillation (not jumpy)', () => {
+    const t = 1.0;
+    const dt = 0.016; // ~60fps
+    const o1 = getScreenShakeOffset(10, t);
+    const o2 = getScreenShakeOffset(10, t + dt);
+    // Consecutive frames should not jump more than the intensity
+    const jump = Math.hypot(o2.x - o1.x, o2.y - o1.y);
+    expect(jump).toBeLessThan(10);
+  });
+
   it('offset magnitude is bounded by intensity', () => {
     const intensity = 15;
-    for (let i = 0; i < 100; i++) {
-      const o = getScreenShakeOffset(intensity);
+    for (let t = 0; t < 10; t += 0.1) {
+      const o = getScreenShakeOffset(intensity, t);
       expect(Math.abs(o.x)).toBeLessThanOrEqual(intensity);
       expect(Math.abs(o.y)).toBeLessThanOrEqual(intensity);
     }
   });
 
   it('handles very large intensity', () => {
-    const o = getScreenShakeOffset(1000);
+    const o = getScreenShakeOffset(1000, 2);
     expect(Math.abs(o.x)).toBeLessThanOrEqual(1000);
     expect(Math.abs(o.y)).toBeLessThanOrEqual(1000);
   });

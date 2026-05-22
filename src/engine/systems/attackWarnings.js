@@ -82,4 +82,6 @@ export const updateAttackWarnings = (dt, g) => {
       }
     }
   }
+
+  g.attackWarnings = g.attackWarnings.filter(w => w.active);
 };

@@ -201,6 +201,7 @@ export const createGameState = () => ({
     x: 0, y: 0, vx: 0, vy: 0, radius: 38,
     hp: 300, maxHp: 300,
     shield: 20, maxShield: 20,
+    _shieldWasDepleted: false,
     speed: 120, magnetRadius: 150,
     yaw: Math.PI / 2,
   },

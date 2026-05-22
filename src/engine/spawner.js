@@ -7,6 +7,8 @@ import { BOSS_ROSTER, MINIBOSS_ROSTER } from '../constants/bosses';
 import { calculateDifficultyMultiplier } from './difficulty';
 import { SoundManager } from './audio';
 
+let _enemyIdCounter = 0;
+
 /**
  * Wave pattern definitions for structured enemy spawning.
  */
@@ -173,7 +175,7 @@ function spawnWavePattern(g, pattern, level) {
     }
 
     g.enemies.push({
-      id: Math.random(),
+      id: ++_enemyIdCounter,
       x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type,
       active: true,
       fireCooldown,

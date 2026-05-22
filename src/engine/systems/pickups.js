@@ -119,13 +119,4 @@ export const updatePickups = (dt, g, completeMission) => {
       sf.y -= C.scrapCollection.floatSpeed * dt;
     }
   }
-
-  // Update screen flash
-  if (g.screenFlash && g.screenFlash.active) {
-    g.screenFlash.remaining -= dt;
-    if (g.screenFlash.remaining <= 0) {
-      g.screenFlash.active = false;
-      g.screenFlash.remaining = 0;
-    }
-  }
 }

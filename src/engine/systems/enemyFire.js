@@ -56,8 +56,10 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
     // Spawn warning indicator at predicted impact location
     spawnAttackWarning(g, predictedX, predictedY, wc.duration, wc.radius, () => {
-      // Fire callback — actually launch the projectile
-      fireProjectile(g, enemy.x, enemy.y, angle, C.weapons.missiles.baseSpeed, C.enemyWeapons.shooter.damage * currentDiffMult, 'enemy_bullet');
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle, C.weapons.missiles.baseSpeed, C.enemyWeapons.shooter.damage * currentDiffMult, 'enemy_bullet');
     });
 
     // Set warning timer on enemy to prevent re-firing during warning phase
@@ -73,10 +75,16 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
     // Spawn warning indicators for both missiles
     spawnAttackWarning(g, targetX - 30, targetY, wc.duration, wc.radius, () => {
-      fireProjectile(g, enemy.x, enemy.y, angle - 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle - 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
     });
     spawnAttackWarning(g, targetX + 30, targetY, wc.duration, wc.radius, () => {
-      fireProjectile(g, enemy.x, enemy.y, angle + 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle + 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
     });
 
     // Set warning timer on enemy to prevent re-firing during warning phase

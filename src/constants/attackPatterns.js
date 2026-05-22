@@ -13,6 +13,7 @@
  */
 
 import { fireProjectile } from '../engine/combat';
+import { GAME_CONFIG } from './gameConfig';
 
 /**
  * single_aimed — One projectile directly at player.

@@ -47,9 +47,8 @@ const getMesh = (obj, meshes, scene, createFn) => {
 export const raycastToPlane = (clientX, clientY, camera) => {
   _ndcVec.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
   _raycaster.setFromCamera(_ndcVec, camera);
-  _target.set(0, 0, 0);
-  _raycaster.ray.intersectPlane(_plane, _target);
-  if (!_target) return null;
+  const hit = _raycaster.ray.intersectPlane(_plane, _target);
+  if (!hit) return null;
   return { x: _target.x, y: _target.y };
 };
 
@@ -114,7 +113,7 @@ export const draw3DFrame = (threeObj, g) => {
 
   // Screen shake offset (respects settings)
   const shakeEnabled = g.settings?.screenShake !== false;
-  const shake = shakeEnabled && g.screenShake?.active ? getScreenShakeOffset(g.screenShake.intensity) : { x: 0, y: 0 };
+  const shake = shakeEnabled && g.screenShake?.active ? getScreenShakeOffset(g.screenShake.intensity, g.totalTime) : { x: 0, y: 0 };
 
   camera.position.lerp(new THREE.Vector3(g.player.x - camFwdX * 220 + shake.x, g.player.y - camFwdY * 220 + shake.y, 120), 0.03);
   camera.up.set(0, 0, 1);

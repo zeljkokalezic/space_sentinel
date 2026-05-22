@@ -385,7 +385,7 @@ export const GAME_CONFIG = {
     },
   },
 
- lowHpWarning: {
+  lowHpWarning: {
     // HP ratio thresholds (fraction of maxHp)
     warningThreshold: 0.3,   // Warning activates below 30% HP
     criticalThreshold: 0.15, // Critical below 15% HP

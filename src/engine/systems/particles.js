@@ -101,7 +101,6 @@ export const updateParticles = (dt, g) => {
  */
 export const updateEffects = (dt, g) => {
   const C = GAME_CONFIG.damageNumbers;
-  const celeb = GAME_CONFIG.comboCelebration;
   for (let e of g.effects) {
     e.life -= dt;
     if (e.type === 'dmg') {
@@ -144,7 +143,7 @@ export const createParticlesWithType = (g, x, y, color, count, type = 'spark') =
   const quality = g.settings?.particlesQuality;
   const qualityMult = quality === 'low' ? 0.35 : quality === 'medium' ? 0.65 : 1;
   const motionMult = g.settings?.reducedMotion ? 0.5 : 1;
-  const actualCount = Math.max(0, Math.round(count * qualityMult * motionMult));
+  const actualCount = count > 0 ? Math.max(1, Math.round(count * qualityMult * motionMult)) : 0;
   for (let i = 0; i < actualCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * (config.speedMax - config.speedMin) + config.speedMin;

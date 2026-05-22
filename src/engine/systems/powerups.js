@@ -2,7 +2,7 @@
  * systems/powerups.js — Power-up pickup and buff management.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy, triggerPowerupAura } from '../combat';
+import { createParticles, killEnemy, triggerPowerupAura, triggerShieldRestoration } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -65,6 +65,10 @@ export const updatePowerups = (dt, g, completeMission) => {
         g.activeBuffs[pu.type] = { timer: cfg.duration, applied: true };
         if (pu.type === 'shieldBoost') {
           g.player.shield = g.player.maxShield;
+          if (g.player._shieldWasDepleted) {
+            g.player._shieldWasDepleted = false;
+            triggerShieldRestoration(g);
+          }
         }
         createParticles(g, g.player.x, g.player.y, pu.color, 15);
       }

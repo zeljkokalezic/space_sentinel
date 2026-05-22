@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { createTestState } from './helpers';
 import { triggerScrapCollection, updatePickups } from '../engine/systems/pickups';
+import { updateEffects } from '../engine/systems/particles';
 
 /* ──────────────────────────────────────────────
  * Config: GAME_CONFIG.scrapCollection
@@ -256,7 +257,7 @@ describe('screen flash lifecycle', () => {
       opacity: 0.06,
     };
 
-    updatePickups(0.1, g, () => {});
+    updateEffects(0.1, g);
 
     expect(g.screenFlash.remaining).toBeCloseTo(0.1, 2);
   });
@@ -268,7 +269,7 @@ describe('screen flash lifecycle', () => {
       opacity: 0.06,
     };
 
-    updatePickups(0.15, g, () => {});
+    updateEffects(0.15, g);
 
     expect(g.screenFlash.active).toBe(false);
     expect(g.screenFlash.remaining).toBe(0);
