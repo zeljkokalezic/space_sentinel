@@ -517,6 +517,30 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     }
   }
 
+  // ── Scrap Collection Floats ──────────────────────────────────────────────────
+  if (g.scrapFloats) {
+    const scC = GAME_CONFIG.scrapCollection;
+    for (const sf of g.scrapFloats) {
+      if (!sf.active) continue;
+      const sp = projectFn(camera, sf.x, sf.y, 0);
+      if (!sp.visible) continue;
+
+      const alpha = Math.min(1, (sf.life / (sf.maxLife || scC.floatLife)) * 1.5);
+      const fontSize = scC.baseFontSize || 14;
+
+      c.save();
+      c.globalAlpha = alpha;
+      c.fillStyle = sf.color || scC.floatColor || '#fbbf24';
+      c.font = `bold ${fontSize}px monospace`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.shadowColor = 'rgba(0,0,0,0.6)';
+      c.shadowBlur = 2;
+      c.fillText(sf.text, sp.x, sp.y);
+      c.restore();
+    }
+  }
+
   // ── Wave Announcement ────────────────────────────────────────────────────────
   if (g.waveAnnounce && g.waveAnnounce.active && GAME_CONFIG.waveAnnouncer) {
     const announce = g.waveAnnounce;
@@ -869,7 +893,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     }
   }
 
-  // ── Screen Flash (combo milestone, impacts, etc.) ────────────────────────────
+// ── Screen Flash (combo milestone, impacts, etc.) ────────────────────────────
   if (g.screenFlash && g.screenFlash.active && g.screenFlash.remaining > 0) {
     const flash = g.screenFlash;
     const flashCfg = GAME_CONFIG.comboCelebration;

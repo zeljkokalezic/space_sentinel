@@ -541,4 +541,34 @@ export const GAME_CONFIG = {
     // Maximum concurrent spawn flashes (oldest dropped when exceeded)
     maxFlashes: 20,
   },
+
+  scrapCollection: {
+    // Enable/disable scrap collection effects
+    enabled: true,
+    // Burst particles spawned at collection point
+    particleCount: 8,
+    // Particle color (gold — scrap value)
+    particleColor: 0xfbbf24,
+    // Particle speed range
+    particleSpeedMin: 40,
+    particleSpeedMax: 100,
+    // Particle lifetime in seconds
+    particleLife: 0.4,
+    // Floating "+N" number lifetime in seconds
+    floatLife: 1.0,
+    // Float speed upward (world units per second)
+    floatSpeed: 40,
+    // Text color for the floating number
+    floatColor: '#fbbf24',
+    // Base font size for the floating number
+    baseFontSize: 14,
+    // Screen flash opacity on collection (0-1)
+    flashOpacity: 0.06,
+    // Screen flash duration in seconds
+    flashDuration: 0.1,
+    // Minimum scrap value to trigger screen flash
+    flashMinValue: 3,
+    // Maximum concurrent floating numbers
+    maxFloats: 30,
+  },
 };

@@ -605,6 +605,29 @@ function playEnemySpawn(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** scrap_collect — Bright metallic "cha-ching" coin pickup sound */
+function playScrapCollect(ctx, gainNode, now) {
+  // High metallic ping
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(1800, now);
+  osc1.frequency.exponentialRampToValueAtTime(2400, now + 0.03);
+  osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+  osc1.connect(gainNode);
+  osc1.start(now);
+  osc1.stop(now + 0.15);
+  // Secondary shimmer
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(2800, now + 0.02);
+  osc2.frequency.exponentialRampToValueAtTime(1600, now + 0.12);
+  osc2.connect(gainNode);
+  osc2.start(now + 0.02);
+  osc2.stop(now + 0.15);
+  const dur = applyEnvelope(gainNode, 0.002, 0.02, 0.1, now);
+  return { duration: dur, nodes: [osc1, osc2] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -638,6 +661,7 @@ const SOUND_GENERATORS = {
   boss_intro: playBossIntro,
   heartbeat: playHeartbeat,
   enemy_spawn: playEnemySpawn,
+  scrap_collect: playScrapCollect,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);
