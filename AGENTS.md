@@ -222,6 +222,26 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Adding new variants:** Add entry to `BOSS_ROSTER`/`MINIBOSS_ROSTER` with id, name, colors, geometry, attackPatterns
 - **Adding new attacks:** Add function to `attackPatterns.js`, reference by key in variant config
 
+## Boss Rage Mode
+- **Purpose:** Dramatic visual and audio escalation when bosses enter phase 3 (final phase, ≤33% HP), signaling increased danger and creating tension
+- **Trigger:** Automatically activated in `bossCore.js` when `newPhase === 3 && !boss.rage`
+- **State:** `boss.rage` (boolean), `boss.rageAuraTimer` (seconds since rage started), `boss.rageEmberTimer` (cooldown for ember emission)
+- **Config:** `GAME_CONFIG.boss.rage` — `rageColor: 0xff3333`, `auraBaseRadius: 80`, `auraMaxRadius: 120`, `auraPulsePeriod: 1.5`, `emberSpawnRate: 0.08`, `emberCount: 3`, `emberColor: 0xff6600`, `screenShakePreset: 'bigExplosion'`, `hitStopPreset: 'bossHit'`, `enragedPopupLife: 1.5`
+- **Effects on activation:**
+  - Screen shake (`bigExplosion` preset) + hit stop (`bossHit` preset)
+  - Dual particle burst (rage color + boss normal color)
+  - "⚠ ENRAGED" popup effect (red, shaking + pulsing, 1.5s lifetime)
+  - Audio: `boss_rage` sound (3-layer: deep growl + harsh buzz + rising shriek)
+- **Continuous while enraged:**
+  - Ember particles: 3 per 0.08s, orange (0xff6600), radial emission from boss surface
+  - 3D aura ring: Pulsing red ring (80-120 radius, sine wave on `rageAuraTimer`)
+  - Radar indicator: Pulsing red ring around boss dot (larger dot when enraged)
+- **Rendering:**
+  - 3D: `renderer3d.js` — `THREE.RingGeometry` aura ring for boss + scaled-down for miniboss
+  - 2D: `renderer2d.js` — `enraged` effect type (shaking red text), boss/miniboss radar dots with pulsing rage ring
+- **Applies to both bosses and mini-bosses** (same rage config, scaled aura for minibosses at 70% size)
+- **Audio:** `boss_rage` in `audio.js` — 3-layer sound: sawtooth growl (60-120Hz), square buzz (200-350Hz), sine shriek (400-1200Hz)
+
 ## Mini-Boss System
 - **Purpose:** Scaled-down boss fight every 3 levels as intermediate challenge
 - **State:** `g.miniboss` object with same structure as `g.boss` (active, x, y, hp, maxHp, phase, attackTimer, chargeTimer, chargeTarget, isCharging, radius, speed, fireCooldown, spiralAngle)
