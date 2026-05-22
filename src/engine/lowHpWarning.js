@@ -59,7 +59,7 @@ export const getLowHpWarningLevel = (hp, maxHp) => {
  * @param {object} g — Game state
  */
 export const updateLowHpWarning = (dt, g) => {
-  if (!g.lowHpWarning) return; // Guard: may not exist in test mocks
+  if (!g.lowHpWarning || !g.player) return; // Guard: may not exist in test mocks or before player init
 
   const C = GAME_CONFIG.lowHpWarning;
 

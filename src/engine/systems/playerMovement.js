@@ -12,9 +12,15 @@ import { GAME_CONFIG } from '../../constants/gameConfig';
  * @param {object} g  — Game state
  * @param {number} yaw — Ship yaw angle
  */
-function spawnThrustTrail(g, yaw) {
+function spawnThrustTrail(g, yaw, dt) {
   const C = GAME_CONFIG.thrustTrail;
   if (!C.enabled) return;
+
+  // Rate limit: only spawn every N seconds (default: every 3rd frame at 60fps)
+  if (!g.player._thrustTrailTimer) g.player._thrustTrailTimer = 0;
+  g.player._thrustTrailTimer -= dt;
+  if (g.player._thrustTrailTimer > 0) return;
+  g.player._thrustTrailTimer = C.spawnInterval || 0.05;
 
   const count = C.particlesPerFrame + Math.max(0, (g.levels.thrusters - 1) * C.particlesPerThrusterLevel);
 
@@ -114,7 +120,7 @@ export const updatePlayer = (dt, g) => {
 
   // Spawn thrust trail particles when thrusting forward
   if (thrust > 0) {
-    spawnThrustTrail(g, g.player.yaw);
+    spawnThrustTrail(g, g.player.yaw, dt);
   }
 
   g.player.x += g.player.vx * dt;

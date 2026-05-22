@@ -154,11 +154,9 @@ export const updateScreenShake = (dt, g) => {
 
   const C = GAME_CONFIG.screenShake;
   ss.intensity -= C.decay * dt;
-  if (ss.intensity < C.minThreshold) {
+  if (ss.intensity <= 0) {
     ss.intensity = 0;
     ss.active = false;
-  } else if (ss.intensity < 0) {
-    ss.intensity = 0;
   }
 };
 

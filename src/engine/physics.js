@@ -134,7 +134,7 @@ export const updatePhysics = (dt, g, cbs) => {
   updateLowHpWarning(dt, g);
 
   // ─── Death pulse shockwaves ──────────────────────────
-  updateDeathPulses(dt, g);
+  updateDeathPulses(dt, g, completeMission);
   if (g.player.hp <= 0) return;
 
   // ─── Escort mission logic ────────────────────────────

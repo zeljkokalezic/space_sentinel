@@ -302,38 +302,38 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
         const pushAngle = Math.atan2(e.y - g.player.y, e.x - g.player.x);
         e.x += Math.cos(pushAngle) * 40;
         e.y += Math.sin(pushAngle) * 40;
-        continue;
+      } else {
+        const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
+        let dmg = baseDmg * currentDiffMult;
+        let shieldAbsorbed = false;
+        const playerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
+        if (g.player.shield > 0) {
+          const absorb = Math.min(g.player.shield, dmg);
+          g.player.shield -= absorb; dmg -= absorb;
+          if (absorb > 0) shieldAbsorbed = true;
+        }
+        if (playerShieldWasFull && g.player.shield <= 0) {
+          checkShieldBreak(g, g.player, g.player.x, g.player.y);
+        }
+        if (shieldAbsorbed) SoundManager.play('shield_hit');
+        else SoundManager.play('player_hit');
+        g.player.hp -= dmg;
+        triggerScreenShake(g, 'playerHit');
+        triggerHitStop(g, 'playerHit');
+        triggerPlayerIFrames(g);
+        let eDamage = C.weapons.missiles.baseDamage;
+        const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
+        if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
+        e.hp -= eDamage;
+        if (enemyShieldWasFull && e.shield <= 0) {
+          checkShieldBreak(g, e, e.x, e.y);
+        }
+        g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
+        e.x += Math.cos(angle + Math.PI) * 30;
+        e.y += Math.sin(angle + Math.PI) * 30;
+        createParticles(g, e.x, e.y, 0xef4444, 10);
+        if (g.player.hp <= 0) { setGameState('gameover'); return; }
       }
-      const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
-      let dmg = baseDmg * currentDiffMult;
-      let shieldAbsorbed = false;
-      const playerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
-      if (g.player.shield > 0) {
-        const absorb = Math.min(g.player.shield, dmg);
-        g.player.shield -= absorb; dmg -= absorb;
-        if (absorb > 0) shieldAbsorbed = true;
-      }
-      if (playerShieldWasFull && g.player.shield <= 0) {
-        checkShieldBreak(g, g.player, g.player.x, g.player.y);
-      }
-      if (shieldAbsorbed) SoundManager.play('shield_hit');
-      else SoundManager.play('player_hit');
-      g.player.hp -= dmg;
-      triggerScreenShake(g, 'playerHit');
-      triggerHitStop(g, 'playerHit');
-      triggerPlayerIFrames(g);
-      let eDamage = C.weapons.missiles.baseDamage;
-      const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
-      if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
-      e.hp -= eDamage;
-      if (enemyShieldWasFull && e.shield <= 0) {
-        checkShieldBreak(g, e, e.x, e.y);
-      }
-      g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
-      e.x += Math.cos(angle + Math.PI) * 30;
-      e.y += Math.sin(angle + Math.PI) * 30;
-      createParticles(g, e.x, e.y, 0xef4444, 10);
-      if (g.player.hp <= 0) { setGameState('gameover'); return; }
     }
 
     // ── Enemy dies ──

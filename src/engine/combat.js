@@ -5,6 +5,7 @@
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { SoundManager } from './audio';
 import { getHostileTargets } from './targeting';
+import { createParticlesWithType } from './systems/particles';
 
 /**
  * Returns the nearest active enemy to (x, y), or null if none exist.
@@ -59,29 +60,17 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
 
 /**
  * Spawns burst particles at (x, y) in the particle pool.
+ * Delegates to createParticlesWithType for unified quality/motion handling.
+ *
  * @param {object} g      - Live game state object
  * @param {number} x      - World X position
  * @param {number} y      - World Y position
  * @param {number} color  - Hex colour integer
  * @param {number} count  - Number of particles to emit
+ * @param {string} [type] - Particle type ('spark', 'smoke', 'trail', 'explosion')
  */
-export const createParticles = (g, x, y, color, count) => {
-  const C = GAME_CONFIG;
-  const quality = g.settings?.particlesQuality;
-  const qualityMult = quality === 'low' ? 0.35 : quality === 'medium' ? 0.65 : 1;
-  const motionMult = g.settings?.reducedMotion ? 0.5 : 1;
-  const actualCount = Math.max(0, Math.round(count * qualityMult * motionMult));
-  for (let i = 0; i < actualCount; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * (C.particles.speedMax - C.particles.speedMin) + C.particles.speedMin;
-    g.particles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      vz: (Math.random() - 0.5) * speed,
-      life: C.particles.life, maxLife: C.particles.life, color, active: true,
-    });
-  }
+export const createParticles = (g, x, y, color, count, type = 'spark') => {
+  createParticlesWithType(g, x, y, color, count, type);
 };
 
 /**
@@ -97,6 +86,9 @@ export const killEnemy = (g, e, completeMission) => {
   const C = GAME_CONFIG;
 
   e.active = false;
+
+  // Clean up death pulse tracking set to prevent memory leak
+  if (e._hitByDeathPulses) { e._hitByDeathPulses.clear(); delete e._hitByDeathPulses; }
 
   // Stats
   if (g.stats) g.stats.enemiesDestroyed++;
@@ -208,6 +200,11 @@ export const triggerHitStop = (g, presetOrDuration) => {
 };
 
 /**
+ * Death pulse counter for unique IDs.
+ */
+let _deathPulseId = 0;
+
+/**
  * Trigger a death pulse — an expanding shockwave ring that damages
  * nearby enemies and the player. Called when eligible enemy types die.
  *
@@ -224,6 +221,7 @@ export const triggerDeathPulse = (g, x, y, enemyType) => {
   const maxRadius = C.baseRadius + ((g.level ?? 1) - 1) * C.radiusPerLevel;
 
   g.deathPulses.push({
+    id: ++_deathPulseId,
     x, y,
     radius: 0,
     maxRadius,
@@ -308,6 +306,7 @@ export const checkShieldBreak = (g, entity, x, y) => {
  */
 export const triggerPlayerIFrames = (g) => {
   if (!g || !g.playerIFrames) return;
+  if (g.playerIFrames.active) return; // Already active, don't reset timer
   const C = GAME_CONFIG.playerIFrames;
 
   g.playerIFrames.active = true;

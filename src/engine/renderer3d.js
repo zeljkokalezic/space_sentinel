@@ -89,6 +89,7 @@ export const initThreeScene = (containerEl) => {
     sphere: new THREE.SphereGeometry(1, 8, 8),
     cone:   new THREE.ConeGeometry(1, 2, 8),
     tetra:  new THREE.TetrahedronGeometry(1),
+    deathPulseRing: new THREE.RingGeometry(0.95, 1, 32), // Shared ring for death pulses (scaled at runtime)
   };
   const mats = {
     player: new THREE.MeshBasicMaterial({ color: 0x39ff14, wireframe: true }),
@@ -158,6 +159,10 @@ export const draw3DFrame = (threeObj, g) => {
   // Cache shield/turret refs to avoid per-frame children.find()
   if (!pm.userData.shieldMesh) pm.userData.shieldMesh = pm.children.find(c => c.name === 'shield');
   if (!pm.userData.turretsGroup) pm.userData.turretsGroup = pm.children.find(c => c.name === 'turrets');
+  // Cache hull meshes (children[0]=hull, [1]=wing, [2]=bridge) for i-frames blink
+  if (!pm.userData.hullMeshes) {
+    pm.userData.hullMeshes = [pm.children[0], pm.children[1], pm.children[2]];
+  }
   const shieldMesh = pm.userData.shieldMesh;
   if (shieldMesh) { shieldMesh.visible = g.player.maxShield > 0; shieldMesh.material.opacity = Math.max(0.1, 0.5 * (g.player.shield / g.player.maxShield)); }
 
@@ -183,13 +188,13 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
-  // Invincibility frames — blink player mesh when invincible
+  // Invincibility frames — blink hull meshes only (keep shield, engine glow, turrets visible)
   if (g.playerIFrames && g.playerIFrames.active) {
     const blinkVisible = g.playerIFrames.isInvincible;
-    pm.visible = blinkVisible;
+    pm.userData.hullMeshes.forEach(m => { if (m) m.visible = blinkVisible; });
   } else {
-    // Ensure player is visible when not in i-frames
-    if (!pm.visible) pm.visible = true;
+    // Ensure hull meshes are visible when not in i-frames
+    pm.userData.hullMeshes.forEach(m => { if (m && !m.visible) m.visible = true; });
   }
 
   // Dynamic turrets
@@ -608,16 +613,16 @@ export const draw3DFrame = (threeObj, g) => {
     for (const pulse of g.deathPulses) {
       if (!pulse.active) continue;
       const lifeRatio = pulse.maxLife ? pulse.life / pulse.maxLife : 0;
-      const m = getMesh(`dpulse_${pulse}`, meshes, scene, () => {
+      const m = getMesh(`dpulse_${pulse.id}`, meshes, scene, () => {
         const ring = new THREE.Mesh(
-          new THREE.RingGeometry(pulse.maxRadius - 2, pulse.maxRadius, 32),
+          geoms.deathPulseRing,
           new THREE.MeshBasicMaterial({ color: pulse.color ?? 0xf97316, transparent: true, side: THREE.DoubleSide, depthWrite: false })
         );
         ring.rotation.x = -Math.PI / 2;
         return ring;
       });
-      // Scale ring to current radius
-      const scale = pulse.maxRadius > 0 ? pulse.radius / pulse.maxRadius : 0;
+      // Scale ring to current radius (base geometry is unit ring, scale by maxRadius * progress)
+      const scale = pulse.maxRadius > 0 ? pulse.radius : 0;
       m.scale.set(scale, scale, 1);
       m.position.set(pulse.x, pulse.y, 1);
       // Fade: bright at start, fade toward end

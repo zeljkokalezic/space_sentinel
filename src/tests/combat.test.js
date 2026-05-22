@@ -273,7 +273,8 @@ describe('fireProjectile', () => {
 });
 
 /* ──────────────────────────────────────────────
- * createParticles(g, x, y, color, count)
+ * createParticles(g, x, y, color, count, type)
+ * Delegates to createParticlesWithType — uses PARTICLE_TYPES config
  * ────────────────────────────────────────────── */
 describe('createParticles', () => {
   let g;
@@ -293,16 +294,17 @@ describe('createParticles', () => {
     expect(g.particles.length).toBe(0);
   });
 
-  it('each particle has correct properties: vx, vy, vz, life, maxLife, color, active=true', () => {
+  it('each particle has correct properties: vx, vy, vz, life, maxLife, color, active=true, type', () => {
     createParticles(g, 100, 200, 0x00ff00, 3);
     for (const p of g.particles) {
       expect(typeof p.vx).toBe('number');
       expect(typeof p.vy).toBe('number');
       expect(typeof p.vz).toBe('number');
-      expect(p.life).toBe(GAME_CONFIG.particles.life);
-      expect(p.maxLife).toBe(GAME_CONFIG.particles.life);
+      expect(p.life).toBe(0.6); // PARTICLE_TYPES.spark.life
+      expect(p.maxLife).toBe(0.6);
       expect(p.color).toBe(0x00ff00);
       expect(p.active).toBe(true);
+      expect(p.type).toBe('spark');
     }
   });
 
@@ -313,27 +315,27 @@ describe('createParticles', () => {
     expect(uniqueAngles.size).toBeGreaterThan(1);
   });
 
-  it('particle life matches GAME_CONFIG.particles.life', () => {
+  it('particle life matches PARTICLE_TYPES.spark.life (via createParticlesWithType)', () => {
     createParticles(g, 0, 0, 0xffffff, 10);
     for (const p of g.particles) {
-      expect(p.life).toBe(GAME_CONFIG.particles.life);
-      expect(p.maxLife).toBe(GAME_CONFIG.particles.life);
+      expect(p.life).toBe(0.6);
+      expect(p.maxLife).toBe(0.6);
     }
   });
 
-  it('particle speed is within GAME_CONFIG.particles speed range', () => {
+  it('particle speed is within PARTICLE_TYPES.spark speed range (50-200)', () => {
     createParticles(g, 0, 0, 0xffffff, 50);
     for (const p of g.particles) {
       const speed = Math.hypot(p.vx, p.vy);
-      expect(speed).toBeGreaterThanOrEqual(GAME_CONFIG.particles.speedMin - 1);
-      expect(speed).toBeLessThanOrEqual(GAME_CONFIG.particles.speedMax + 1);
+      expect(speed).toBeGreaterThanOrEqual(49);
+      expect(speed).toBeLessThanOrEqual(201);
     }
   });
 
   it('particle vz is within expected range (negative to positive)', () => {
     createParticles(g, 0, 0, 0xffffff, 50);
     for (const p of g.particles) {
-      const maxVz = GAME_CONFIG.particles.speedMax;
+      const maxVz = 200; // PARTICLE_TYPES.spark.speedMax
       expect(p.vz).toBeGreaterThanOrEqual(-maxVz);
       expect(p.vz).toBeLessThanOrEqual(maxVz);
     }

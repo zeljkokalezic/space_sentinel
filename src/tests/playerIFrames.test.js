@@ -107,12 +107,12 @@ describe('triggerPlayerIFrames', () => {
     expect(state.playerIFrames.blinkTimer).toBe(0);
   });
 
-  it('extends duration if called while already active', () => {
+  it('does NOT reset timer if called while already active (prevents infinite invulnerability)', () => {
     const state = createTestState();
     state.playerIFrames.active = true;
     state.playerIFrames.remaining = 0.1;
     triggerPlayerIFrames(state);
-    expect(state.playerIFrames.remaining).toBe(GAME_CONFIG.playerIFrames.duration);
+    expect(state.playerIFrames.remaining).toBe(0.1);
   });
 
   it('handles null/undefined state gracefully', () => {

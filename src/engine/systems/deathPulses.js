@@ -14,21 +14,19 @@
  * 5. Removed when life expires
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerDeathPulse, triggerPlayerIFrames, checkShieldBreak } from '../combat';
+import { createParticles, triggerPlayerIFrames, checkShieldBreak, killEnemy } from '../combat';
 
 /**
  * Update all active death pulses: expand rings, check collisions, apply damage.
  *
  * @param {number} dt — Delta time in seconds
  * @param {object} g — Game state
+ * @param {function} [completeMission] — Optional callback to complete the current mission
  * @returns {boolean} Always false (death pulses don't end the game)
  */
-export const updateDeathPulses = (dt, g) => {
+export const updateDeathPulses = (dt, g, completeMission) => {
   if (!g || !g.deathPulses) return false;
   const C = GAME_CONFIG.deathPulse;
-
-  // Track chain-kill pulses to add after iteration (avoids mutating during loop)
-  const chainPulses = [];
 
   for (let i = g.deathPulses.length - 1; i >= 0; i--) {
     const pulse = g.deathPulses[i];
@@ -79,15 +77,9 @@ export const updateDeathPulses = (dt, g) => {
             e.y += (e.y - pulse.y) / dist * pushForce * dt * 3;
           }
 
-          // Check if enemy died from pulse
+          // Check if enemy died from pulse — use killEnemy for proper rewards
           if (e.hp <= 0 && e.active) {
-            e.active = false;
-            createParticles(g, e.x, e.y, e.color, 10);
-
-            // Chain kill: eligible enemies may trigger secondary pulse
-            if (C.eligibleTypes.includes(e.type) && Math.random() < C.chainKillChance) {
-              chainPulses.push({ x: e.x, y: e.y, type: e.type });
-            }
+            killEnemy(g, e, completeMission);
           }
         }
       }
@@ -135,11 +127,6 @@ export const updateDeathPulses = (dt, g) => {
         }
       }
     }
-  }
-
-  // ─── Apply chain-kill pulses ─────────────────────────────────────
-  for (const cp of chainPulses) {
-    triggerDeathPulse(g, cp.x, cp.y, cp.type);
   }
 
   return false;
