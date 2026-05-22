@@ -123,6 +123,8 @@ export const killEnemy = (g, e, completeMission) => {
     g.combo.multiplier = mult;
     if (g.combo.count === 5 || g.combo.count === 10 || g.combo.count === 15) {
       SoundManager.play('combo_milestone');
+      // Trigger milestone celebration effect
+      triggerComboMilestone(g, g.combo.count);
     }
   }
 
@@ -313,6 +315,61 @@ export const triggerPlayerIFrames = (g) => {
   g.playerIFrames.remaining = C.duration;
   g.playerIFrames.isInvincible = true;
   g.playerIFrames.blinkTimer = 0;
+};
+
+/**
+ * Trigger combo milestone celebration — visual fanfare when the player
+ * reaches a combo milestone (5, 10, 15 kills). Creates a popup effect,
+ * screen flash, combo counter bounce, and particle burst.
+ *
+ * @param {object} g — Live game state
+ * @param {number} count — The combo count that triggered the milestone
+ */
+export const triggerComboMilestone = (g, count) => {
+  if (!g || !g.effects) return;
+  const C = GAME_CONFIG.comboCelebration;
+
+  // Determine color for this milestone tier
+  const color = C.colors[count] || C.colors[5];
+
+  // Milestone popup effect (screen-space, centered)
+  g.effects.push({
+    type: 'combo_milestone',
+    count,
+    color,
+    life: C.popupLife,
+    maxLife: C.popupLife,
+    // Bounce animation timer
+    bounceTimer: 0,
+  });
+
+  // Screen flash effect
+  if (g.screenFlash === undefined) {
+    g.screenFlash = { active: false, remaining: 0, color: '#ffffff' };
+  }
+  g.screenFlash.active = true;
+  g.screenFlash.remaining = C.flashDuration;
+  g.screenFlash.color = color;
+
+  // Particle burst at player position (world-space celebration)
+  if (g.particles) {
+    for (let i = 0; i < C.particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 120;
+      g.particles.push({
+        x: g.player.x,
+        y: g.player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.6 + Math.random() * 0.4,
+        maxLife: 1,
+        color: parseInt(color.replace('#', '0x')),
+        active: true,
+        type: 'spark',
+        size: 3 + Math.random() * 3,
+      });
+    }
+  }
 };
 
 /**

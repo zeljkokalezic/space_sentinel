@@ -101,6 +101,7 @@ export const updateParticles = (dt, g) => {
  */
 export const updateEffects = (dt, g) => {
   const C = GAME_CONFIG.damageNumbers;
+  const celeb = GAME_CONFIG.comboCelebration;
   for (let e of g.effects) {
     e.life -= dt;
     if (e.type === 'dmg') {
@@ -113,6 +114,19 @@ export const updateEffects = (dt, g) => {
       }
     }
     if (e.type === 'shield_down') e.y += 30 * dt;
+    if (e.type === 'combo_milestone') {
+      // Bounce animation timer
+      e.bounceTimer += dt;
+    }
+  }
+
+  // Update screen flash
+  if (g.screenFlash && g.screenFlash.active) {
+    g.screenFlash.remaining -= dt;
+    if (g.screenFlash.remaining <= 0) {
+      g.screenFlash.active = false;
+      g.screenFlash.remaining = 0;
+    }
   }
 };
 

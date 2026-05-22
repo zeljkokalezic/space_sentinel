@@ -96,10 +96,48 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   if (g.combo && g.combo.count > 0) {
     const comboColors = { 1: '#ffffff', 1.5: '#fbbf24', 2: '#f97316', 3: '#ef4444' }
     const comboColor = comboColors[g.combo.multiplier] || '#ffffff'
-    c.fillStyle = comboColor
-    c.font = 'bold 24px monospace'
-    c.textAlign = 'center'
-    c.fillText(`${g.combo.count}x COMBO`, w / 2, 60)
+
+    // Check for active milestone celebration to apply bounce
+    let comboScale = 1;
+    let comboGlow = false;
+    const celebCfg = GAME_CONFIG.comboCelebration;
+    for (let eff of g.effects) {
+      if (eff.type === 'combo_milestone' && eff.life > 0) {
+        comboGlow = true;
+        const bounceProgress = Math.min(eff.bounceTimer / celebCfg.bounceDuration, 1);
+        // Elastic-ish bounce: overshoot then settle
+        if (bounceProgress < 0.3) {
+          const t = bounceProgress / 0.3;
+          comboScale = 1 + (celebCfg.bounceScale - 1) * t;
+        } else if (bounceProgress < 0.6) {
+          const t = (bounceProgress - 0.3) / 0.3;
+          comboScale = celebCfg.bounceScale - (celebCfg.bounceScale - 0.9) * t;
+        } else {
+          const t = (bounceProgress - 0.6) / 0.4;
+          comboScale = 0.9 + (1 - 0.9) * t;
+        }
+        break;
+      }
+    }
+
+    c.save();
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+
+    const comboText = `${g.combo.count}x COMBO`;
+    const baseComboSize = 24;
+    const fontSize = Math.round(baseComboSize * comboScale);
+
+    if (comboGlow) {
+      c.shadowColor = comboColor;
+      c.shadowBlur = 20;
+    }
+
+    c.fillStyle = comboColor;
+    c.font = `bold ${fontSize}px monospace`;
+    c.fillText(comboText, w / 2, 60);
+    c.restore();
+
     // Timer bar
     const barWidth = 120
     const barHeight = 6
@@ -450,6 +488,32 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
         c.textAlign = 'center';
         c.fillText(e.text, w / 2, h / 3 - 40);
       }
+    } else if (e.type==='combo_milestone') {
+      const celebCfg = GAME_CONFIG.comboCelebration;
+      const alpha = Math.min(1, (e.life / e.maxLife) * 1.5);
+      const color = e.color || '#fbbf24';
+
+      // Floating "MILESTONE!" text above combo counter
+      const floatY = 60 - 35 - Math.sin(e.bounceTimer * Math.PI) * 15;
+
+      // Outer glow
+      c.save();
+      c.shadowColor = color;
+      c.shadowBlur = 25;
+      c.fillStyle = color;
+      c.globalAlpha = alpha;
+      c.font = `bold ${celebCfg.popupFontSize}px monospace`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(celebCfg.label, w / 2, floatY);
+
+      // Inner bright text
+      c.shadowBlur = 10;
+      c.shadowColor = '#ffffff';
+      c.fillStyle = '#ffffff';
+      c.globalAlpha = alpha * 0.9;
+      c.fillText(celebCfg.label, w / 2, floatY);
+      c.restore();
     }
   }
 
@@ -788,6 +852,17 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.textAlign = 'center';
       c.fillText('⚠ LOW HULL', w / 2, h / 2 + 40);
     }
+  }
+
+  // ── Screen Flash (combo milestone, impacts, etc.) ────────────────────────────
+  if (g.screenFlash && g.screenFlash.active && g.screenFlash.remaining > 0) {
+    const flash = g.screenFlash;
+    const flashCfg = GAME_CONFIG.comboCelebration;
+    const alpha = (flash.remaining / flashCfg.flashDuration) * flashCfg.flashAlpha;
+    c.fillStyle = flash.color || '#ffffff';
+    c.globalAlpha = alpha;
+    c.fillRect(0, 0, w, h);
+    c.globalAlpha = 1;
   }
 
   // ── FPS display (overlay on top bar) ──────────────────────────────────────────

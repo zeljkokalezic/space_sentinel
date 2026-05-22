@@ -178,6 +178,31 @@ export const GAME_CONFIG = {
     ],
   },
 
+  comboCelebration: {
+    // Milestone popup lifetime in seconds
+    popupLife: 1.5,
+    // Milestone popup font size
+    popupFontSize: 32,
+    // Combo counter bounce scale factor
+    bounceScale: 1.8,
+    // Combo counter bounce duration (seconds)
+    bounceDuration: 0.4,
+    // Screen flash duration (seconds)
+    flashDuration: 0.15,
+    // Screen flash max alpha
+    flashAlpha: 0.25,
+    // Particle burst count around combo area
+    particleCount: 20,
+    // Milestone label text
+    label: 'MILESTONE!',
+    // Colors for each milestone tier
+    colors: {
+      5: '#fbbf24',   // gold
+      10: '#f97316',  // orange
+      15: '#ef4444',  // red
+    },
+  },
+
   powerups: {
     dropChance: 0.05,
     types: {

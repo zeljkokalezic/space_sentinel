@@ -210,6 +210,7 @@ export const createGameState = () => ({
   paused: false,
   audio: { muted: false, volume: 0.5 },
   combo: { count: 0, timer: 0, multiplier: 1 },
+  screenFlash: { active: false, remaining: 0, color: '#ffffff' },
   powerups: [],
   activeBuffs: {},
   waveAnnounce: { active: false, wave: 1, timer: 0 },
