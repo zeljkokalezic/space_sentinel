@@ -144,7 +144,10 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Death pulse shockwaves ──────────────────────────
   updateDeathPulses(dt, g, completeMission);
-  if (g.player.hp <= 0) return;
+  if (g.player.hp <= 0) {
+    setGameState('gameover');
+    return;
+  }
 
   // ─── Enemy spawn flash effects ───────────────────────
   updateSpawnFlashes(dt, g);

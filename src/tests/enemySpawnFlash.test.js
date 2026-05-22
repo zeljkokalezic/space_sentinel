@@ -102,6 +102,15 @@ describe('createSpawnFlash', () => {
     expect(g.spawnFlashes[0].active).toBe(true);
   });
 
+  it('assigns stable unique ids for renderer caching', () => {
+    createSpawnFlash(g, 0, 0);
+    createSpawnFlash(g, 0, 0);
+
+    expect(g.spawnFlashes[0].id).toBeDefined();
+    expect(g.spawnFlashes[1].id).toBeDefined();
+    expect(g.spawnFlashes[0].id).not.toBe(g.spawnFlashes[1].id);
+  });
+
   it('respects maxFlashes limit — drops oldest when full', () => {
     const max = GAME_CONFIG.enemySpawnFlash.maxFlashes;
     for (let i = 0; i < max + 3; i++) {

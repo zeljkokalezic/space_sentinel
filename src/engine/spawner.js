@@ -8,6 +8,7 @@ import { calculateDifficultyMultiplier } from './difficulty';
 import { SoundManager } from './audio';
 
 let _enemyIdCounter = 0;
+let _spawnFlashIdCounter = 0;
 
 /**
  * Wave pattern definitions for structured enemy spawning.
@@ -334,6 +335,7 @@ export function createSpawnFlash(g, x, y) {
 
   // Create the expanding ring flash
   g.spawnFlashes.push({
+    id: ++_spawnFlashIdCounter,
     x, y,
     radius: 0,
     maxRadius: C.maxRadius,

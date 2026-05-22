@@ -710,7 +710,8 @@ export const draw3DFrame = (threeObj, g) => {
       const adx = flash.x - g.player.x;
       const ady = flash.y - g.player.y;
       if (adx * adx + ady * ady > renderDistSq) continue;
-      const m = getMesh(`sflash_${flash.x}_${flash.y}_${flash.life}`, meshes, scene, () => {
+      const flashKey = flash.id ?? `${flash.x}_${flash.y}_${flash.maxLife ?? 0}`;
+      const m = getMesh(`sflash_${flashKey}`, meshes, scene, () => {
         const ring = new THREE.Mesh(
           geoms.deathPulseRing,
           new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, side: THREE.DoubleSide, depthWrite: false })

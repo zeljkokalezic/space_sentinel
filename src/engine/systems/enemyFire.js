@@ -56,6 +56,7 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
     // Spawn warning indicator at predicted impact location
     spawnAttackWarning(g, predictedX, predictedY, wc.duration, wc.radius, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
       const tx = g.escort?.active ? g.escort.x : g.player.x;
       const ty = g.escort?.active ? g.escort.y : g.player.y;
       const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
@@ -75,12 +76,14 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
     // Spawn warning indicators for both missiles
     spawnAttackWarning(g, targetX - 30, targetY, wc.duration, wc.radius, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
       const tx = g.escort?.active ? g.escort.x : g.player.x;
       const ty = g.escort?.active ? g.escort.y : g.player.y;
       const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
       fireProjectile(g, enemy.x, enemy.y, currentAngle - 0.5, C.enemyWeapons.missile_boat.missileSpeed, C.enemyWeapons.missile_boat.missileDamage * currentDiffMult, 'enemy_missile');
     });
     spawnAttackWarning(g, targetX + 30, targetY, wc.duration, wc.radius, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
       const tx = g.escort?.active ? g.escort.x : g.player.x;
       const ty = g.escort?.active ? g.escort.y : g.player.y;
       const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
