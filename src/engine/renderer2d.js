@@ -596,6 +596,21 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     }
   }
 
+  // Death pulse shockwave rings on radar
+  if (g.deathPulses) {
+    for (const pulse of g.deathPulses) {
+      if (!pulse.active) continue;
+      const pd = Math.hypot(pulse.x - g.player.x, pulse.y - g.player.y);
+      if (pd > rRange) continue;
+      const {px, py} = toR(pulse.x, pulse.y);
+      const lifeRatio = pulse.maxLife ? pulse.life / pulse.maxLife : 0;
+      const radarRadius = (pulse.radius / rRange) * rR;
+      c.strokeStyle = `rgba(249,115,22,${Math.max(0.1, lifeRatio * 0.7)})`;
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.stroke();
+    }
+  }
+
   // Mission objective marker (for kill/collect missions, shows nearest enemy direction)
   if (g.mission && !g.mission.completed && (g.mission.type === 'kill' || g.mission.type === 'collect')) {
     let nearest = null;

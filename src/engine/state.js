@@ -130,6 +130,17 @@
  * @property {number} [hazards[].vy] — Velocity Y (plasma storm)
  * @property {number} [hazards[].timer] — Timer for storm lifetime or EMP cooldown
  * @property {number} [hazards[].empActive] — Whether EMP is currently active (0/1)
+ * @property {Array} deathPulses — Active death pulse shockwave rings
+ * @property {number} deathPulses[].x — World X position (origin of pulse)
+ * @property {number} deathPulses[].y — World Y position (origin of pulse)
+ * @property {number} deathPulses[].radius — Current ring radius
+ * @property {number} deathPulses[].maxRadius — Maximum ring radius
+ * @property {number} deathPulses[].damage — Damage to entities within ring
+ * @property {number} deathPulses[].life — Remaining pulse lifetime
+ * @property {number} deathPulses[].maxLife — Total pulse lifetime
+ * @property {number} deathPulses[].color — Ring color (hex)
+ * @property {boolean} deathPulses[].active — Whether pulse is active
+ * @property {boolean} deathPulses[].hasDamagedPlayer — Whether player was already hit
  * @property {number} shipSkin — Active skin index (0-4)
  * @property {boolean[]} unlockedSkins — Which skins are unlocked
  */
@@ -198,11 +209,13 @@ export const createGameState = () => ({
   boss: createDefaultBoss(),
   miniboss: createDefaultMiniboss(),
   hazards: [],
+  deathPulses: [],
   settings: loadSettings(),
   shipSkin: 0,
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
   screenShake: createDefaultScreenShake(),
   lowHpWarning: createDefaultLowHpWarning(),
+  hitStop: createDefaultHitStop(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -296,4 +309,12 @@ export const createDefaultLowHpWarning = () => ({
   isCritical: false,
   pulseTimer: 0,
   heartbeatTimer: 0,
+});
+
+/**
+ * @returns {Object} Default hit stop state
+ */
+export const createDefaultHitStop = () => ({
+  active: false,
+  remaining: 0,
 });

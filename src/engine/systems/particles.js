@@ -160,3 +160,25 @@ export const updateScreenShake = (dt, g) => {
     ss.intensity = 0;
   }
 };
+
+/**
+ * Hit stop countdown — pauses physics while counting down.
+ * Returns true while active (signals physics should be skipped).
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ * @returns {boolean} true if hit stop is active (physics should be skipped)
+ */
+export const updateHitStop = (dt, g) => {
+  if (!g || !g.hitStop) return false;
+  const hs = g.hitStop;
+  if (!hs.active) return false;
+
+  hs.remaining -= dt;
+  if (hs.remaining <= 0) {
+    hs.remaining = 0;
+    hs.active = false;
+    return false;
+  }
+  return true;
+};

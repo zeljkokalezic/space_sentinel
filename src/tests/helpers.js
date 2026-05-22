@@ -131,6 +131,7 @@ export const createTestState = (overrides = {}) => {
       pulseTimer: 0,
       heartbeatTimer: 0,
     },
+    deathPulses: [],
   };
 
   // Deep-merge player overrides if provided

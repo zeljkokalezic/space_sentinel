@@ -19,7 +19,7 @@ import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
 import { updatePowerups } from './systems/powerups';
-import { updateParticles, updateEffects, updateScreenShake } from './systems/particles';
+import { updateParticles, updateEffects, updateScreenShake, updateHitStop } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
@@ -28,6 +28,7 @@ import { updateMiniboss } from './systems/miniboss';
 import { updateAudio } from './systems/audio';
 import { updateWaveAnnounce } from './systems/waveAnnounce';
 import { updateEnvironmentalHazards } from './systems/environmentalHazards';
+import { updateDeathPulses } from './systems/deathPulses';
 import { cleanup } from './systems/cleanup';
 import { updateLowHpWarning } from './lowHpWarning';
 
@@ -39,6 +40,9 @@ export const updatePhysics = (dt, g, cbs) => {
     g._lastNotifVersion = g.achievementVersion;
     setNotificationVersion(g.achievementVersion);
   }
+
+  // ─── Hit stop (freeze frame) — skip physics while counting down ────────────
+  if (updateHitStop(dt, g)) return;
 
   // ─── Transition timer (runs after mission complete, before returning to map) ───
   if (updateTransition(dt, g, cbs)) return;
@@ -125,6 +129,10 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Low HP warning (visual + audio) ─────────────────
   updateLowHpWarning(dt, g);
+
+  // ─── Death pulse shockwaves ──────────────────────────
+  updateDeathPulses(dt, g);
+  if (g.player.hp <= 0) return;
 
   // ─── Escort mission logic ────────────────────────────
   if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;

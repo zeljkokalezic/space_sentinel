@@ -328,7 +328,7 @@ export const GAME_CONFIG = {
     },
   },
 
-  lowHpWarning: {
+ lowHpWarning: {
     // HP ratio thresholds (fraction of maxHp)
     warningThreshold: 0.3,   // Warning activates below 30% HP
     criticalThreshold: 0.15, // Critical below 15% HP
@@ -339,5 +339,33 @@ export const GAME_CONFIG = {
     // Heartbeat audio interval in seconds (normal HP warning)
     heartbeatInterval: 1.0,
     // Critical HP halves the interval (0.5s between beats)
+  },
+
+  hitStop: {
+    // Named presets for freeze-frame duration (seconds)
+    presets: {
+      hit: 0.03,
+      bigHit: 0.06,
+      bossHit: 0.1,
+      bossDeath: 0.2,
+      playerHit: 0.05,
+    },
+  },
+
+  deathPulse: {
+    // Enemy types that emit a shockwave on death
+    eligibleTypes: ['heavy', 'shielded', 'missile_boat'],
+    // Base damage to nearby entities
+    baseDamage: 15,
+    damagePerLevel: 2,
+    // Explosion radius (world units)
+    baseRadius: 120,
+    radiusPerLevel: 5,
+    // Visual: expanding ring duration (seconds)
+    ringDuration: 0.4,
+    // Color of the ring effect
+    ringColor: 0xf97316,
+    // Chance that a chain-killed enemy also triggers a secondary pulse
+    chainKillChance: 0.3,
   },
 };

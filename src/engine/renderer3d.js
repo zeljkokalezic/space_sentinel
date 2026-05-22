@@ -594,6 +594,28 @@ export const draw3DFrame = (threeObj, g) => {
     m.position.set(p.x, p.y, p.z||0); m.material.opacity = p.maxLife ? p.life / p.maxLife : Math.min(1, p.life);
   }
 
+  // Death pulse shockwave rings
+  if (g.deathPulses) {
+    for (const pulse of g.deathPulses) {
+      if (!pulse.active) continue;
+      const lifeRatio = pulse.maxLife ? pulse.life / pulse.maxLife : 0;
+      const m = getMesh(`dpulse_${pulse}`, meshes, scene, () => {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(pulse.maxRadius - 2, pulse.maxRadius, 32),
+          new THREE.MeshBasicMaterial({ color: pulse.color ?? 0xf97316, transparent: true, side: THREE.DoubleSide, depthWrite: false })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        return ring;
+      });
+      // Scale ring to current radius
+      const scale = pulse.maxRadius > 0 ? pulse.radius / pulse.maxRadius : 0;
+      m.scale.set(scale, scale, 1);
+      m.position.set(pulse.x, pulse.y, 1);
+      // Fade: bright at start, fade toward end
+      m.material.opacity = Math.max(0, lifeRatio * 0.8);
+    }
+  }
+
   // Laser effects
   for (let e of g.effects) {
     if (e.type !== 'laser') continue;

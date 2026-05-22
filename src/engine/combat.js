@@ -154,6 +154,11 @@ export const killEnemy = (g, e, completeMission) => {
   // Scrap pickup
   const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
   g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 });
+
+  // Death pulse for eligible enemy types
+  if (C.deathPulse && C.deathPulse.eligibleTypes && C.deathPulse.eligibleTypes.includes(e.type)) {
+    triggerDeathPulse(g, e.x, e.y, e.type);
+  }
 };
 
 /**
@@ -175,4 +180,63 @@ export const triggerScreenShake = (g, presetOrIntensity) => {
   }
   g.screenShake.active = true;
   g.screenShake.intensity += intensity;
+};
+
+/**
+ * Trigger hit stop (freeze frame) by setting duration.
+ * Uses max of current remaining and new duration to prevent shorter
+ * triggers from interrupting longer ones.
+ * Accepts either a preset name ('hit', 'bigHit', 'bossHit', 'bossDeath', 'playerHit')
+ * or a raw numeric duration in seconds.
+ *
+ * @param {object} g — Live game state
+ * @param {string|number} presetOrDuration — Preset name or duration in seconds
+ */
+export const triggerHitStop = (g, presetOrDuration) => {
+  if (!g || !g.hitStop) return;
+  const C = GAME_CONFIG.hitStop;
+  let duration = 0;
+  if (typeof presetOrDuration === 'string') {
+    duration = C.presets?.[presetOrDuration] ?? 0;
+  } else if (typeof presetOrDuration === 'number') {
+    duration = presetOrDuration;
+  }
+  if (duration > g.hitStop.remaining) {
+    g.hitStop.remaining = duration;
+  }
+  g.hitStop.active = true;
+};
+
+/**
+ * Trigger a death pulse — an expanding shockwave ring that damages
+ * nearby enemies and the player. Called when eligible enemy types die.
+ *
+ * @param {object} g — Live game state
+ * @param {number} x — World X position
+ * @param {number} y — World Y position
+ * @param {string} enemyType — The type of enemy that died (used for visual reference)
+ */
+export const triggerDeathPulse = (g, x, y, enemyType) => {
+  if (!g || !g.deathPulses) return;
+  const C = GAME_CONFIG.deathPulse;
+
+  const damage = C.baseDamage + ((g.level ?? 1) - 1) * C.damagePerLevel;
+  const maxRadius = C.baseRadius + ((g.level ?? 1) - 1) * C.radiusPerLevel;
+
+  g.deathPulses.push({
+    x, y,
+    radius: 0,
+    maxRadius,
+    damage,
+    life: C.ringDuration,
+    maxLife: C.ringDuration,
+    color: C.ringColor,
+    active: true,
+    enemyType,
+    hasDamagedPlayer: false,
+  });
+
+  // Screen shake + hit stop for dramatic effect
+  triggerScreenShake(g, 'explosion');
+  triggerHitStop(g, 'bigHit');
 };
