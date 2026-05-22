@@ -7,7 +7,7 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
-import { createParticles } from '../combat';
+import { createParticles, checkShieldBreak } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -113,12 +113,16 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
   if (dist < boss.radius + player.radius) {
     const dmg = scaledRamDamage * currentDiffMult;
     let hpDamage = dmg;
+    const bossRamShieldWasFull = player.shield > 0 && player.maxShield > 0;
     if (player.shield > 0) {
       const absorb = Math.min(player.shield, dmg);
       player.shield -= absorb;
       hpDamage = dmg - absorb;
     }
     player.hp -= hpDamage;
+    if (bossRamShieldWasFull && player.shield <= 0) {
+      checkShieldBreak(g, player, player.x, player.y);
+    }
     if (player.hp <= 0) {
       setGameState('gameover');
       return true;

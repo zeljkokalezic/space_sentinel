@@ -240,3 +240,61 @@ export const triggerDeathPulse = (g, x, y, enemyType) => {
   triggerScreenShake(g, 'explosion');
   triggerHitStop(g, 'bigHit');
 };
+
+/**
+ * Check if an entity's shield just broke (dropped from >0 to <=0)
+ * and trigger the shield break effect if so.
+ *
+ * Call this AFTER reducing an entity's shield value.
+ * The caller is responsible for tracking whether the shield has
+ * already broken (e.g. by not calling when shield was already 0).
+ *
+ * @param {object} g — Live game state
+ * @param {object} entity — Entity whose shield was reduced (has .shield and .maxShield)
+ * @param {number} x — World X position for effects
+ * @param {number} y — World Y position for effects
+ */
+export const checkShieldBreak = (g, entity, x, y) => {
+  if (!g || !entity) return;
+
+  // Only trigger if entity had a shield (maxShield > 0) and it's now depleted
+  if (typeof entity.maxShield !== 'number' || entity.maxShield <= 0 || entity.shield > 0) return;
+
+  const C = GAME_CONFIG.shieldBreak;
+
+  // Shatter particles — electric blue shield energy dissipating
+  for (let i = 0; i < C.particleCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 80 + Math.random() * 160;
+    (g.particles || []).push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      vz: (Math.random() - 0.5) * speed * 0.5,
+      life: 0.8,
+      maxLife: 0.8,
+      color: C.particleColor,
+      active: true,
+      type: 'spark',
+      size: 3,
+    });
+  }
+
+  // "SHIELD DOWN" popup effect
+  if (g.effects) {
+    g.effects.push({
+      type: 'shield_down',
+      x, y,
+      text: C.popupText,
+      life: C.popupLife,
+      color: C.popupColor,
+    });
+  }
+
+  // Screen shake + hit stop for dramatic effect
+  triggerScreenShake(g, C.screenShakePreset);
+  triggerHitStop(g, C.hitStopPreset);
+
+  // Audio feedback
+  SoundManager.play('shield_break');
+};

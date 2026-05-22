@@ -561,6 +561,37 @@ function playHeartbeat(ctx, gainNode, now) {
   return { duration: 0.25, nodes: [osc1, osc2, gain1, gain2] };
 }
 
+/** shield_break — Electric shatter: high-frequency noise burst with descending pitch */
+function playShieldBreak(ctx, gainNode, now) {
+  // Layer 1: High-frequency electric crackle (noise burst)
+  const noise = createWhiteNoiseBuffer(ctx, 0.5);
+  const noiseSource = ctx.createBufferSource();
+  noiseSource.buffer = noise;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.setValueAtTime(4000, now);
+  noiseFilter.frequency.exponentialRampToValueAtTime(500, now + 0.3);
+  noiseFilter.Q.setValueAtTime(2, now);
+  noiseSource.connect(noiseFilter);
+  noiseFilter.connect(gainNode);
+  noiseSource.start(now);
+
+  // Layer 2: Descending electric hum (shield energy dissipating)
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(2000, now);
+  osc.frequency.exponentialRampToValueAtTime(200, now + 0.35);
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0.4, now);
+  osc.connect(oscGain);
+  oscGain.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.4);
+
+  const dur = applyEnvelope(gainNode, 0.005, 0.08, 0.3, now);
+  return { duration: dur, nodes: [noiseSource, noiseFilter, osc, oscGain] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -573,6 +604,7 @@ const SOUND_GENERATORS = {
   explosion: playExplosion,
   pickup: playPickup,
   shield_hit: playShieldHit,
+  shield_break: playShieldBreak,
   player_hit: playPlayerHit,
   mission_complete: playMissionComplete,
   game_over: playGameOver,

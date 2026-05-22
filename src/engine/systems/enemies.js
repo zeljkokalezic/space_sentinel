@@ -6,7 +6,7 @@
  * use the legacy direct-charge behavior (backward compatible).
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy, triggerScreenShake, triggerHitStop } from '../combat';
+import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, checkShieldBreak } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
@@ -298,10 +298,14 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
       let dmg = baseDmg * currentDiffMult;
       let shieldAbsorbed = false;
+      const playerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
       if (g.player.shield > 0) {
         const absorb = Math.min(g.player.shield, dmg);
         g.player.shield -= absorb; dmg -= absorb;
         if (absorb > 0) shieldAbsorbed = true;
+      }
+      if (playerShieldWasFull && g.player.shield <= 0) {
+        checkShieldBreak(g, g.player, g.player.x, g.player.y);
       }
       if (shieldAbsorbed) SoundManager.play('shield_hit');
       else SoundManager.play('player_hit');
@@ -309,8 +313,12 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       triggerScreenShake(g, 'playerHit');
       triggerHitStop(g, 'playerHit');
       let eDamage = C.weapons.missiles.baseDamage;
+      const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
       e.hp -= eDamage;
+      if (enemyShieldWasFull && e.shield <= 0) {
+        checkShieldBreak(g, e, e.x, e.y);
+      }
       g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
       e.x += Math.cos(angle + Math.PI) * 30;
       e.y += Math.sin(angle + Math.PI) * 30;

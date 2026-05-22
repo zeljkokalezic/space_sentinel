@@ -7,7 +7,7 @@
  * @returns {boolean} true if player died (gameover)
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy } from '../combat';
+import { createParticles, killEnemy, checkShieldBreak } from '../combat';
 
 export const updateEnvironmentalHazards = (dt, g, completeMission, setGameState) => {
   // Guard for backwards compatibility with tests
@@ -190,6 +190,7 @@ const updatePlasmaStorm = (dt, h, g, completeMission) => {
   if (pdist < radius) {
     const damage = damagePerSecond * dt;
     // Apply to shield first, then hull
+    const stormShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
     if (g.player.shield > 0) {
       const shieldAbsorb = Math.min(g.player.shield, damage);
       g.player.shield -= shieldAbsorb;
@@ -197,6 +198,9 @@ const updatePlasmaStorm = (dt, h, g, completeMission) => {
       g.player.hp -= remaining;
     } else {
       g.player.hp -= damage;
+    }
+    if (stormShieldWasFull && g.player.shield <= 0) {
+      checkShieldBreak(g, g.player, g.player.x, g.player.y);
     }
     // Spawn ambient particles inside storm
     if (Math.random() < 0.3) {

@@ -390,6 +390,15 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
       c.fillStyle=`rgba(57,255,20,${Math.min(1,e.life*2)})`; c.font='bold 16px monospace'; c.textAlign='center';
       c.fillText(e.text, sp.x, sp.y);
+    } else if (e.type==='shield_down') {
+      const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
+      const alpha = Math.min(1, e.life * 1.5);
+      c.fillStyle = e.color || '#60a5fa';
+      c.globalAlpha = alpha;
+      c.font = 'bold 20px monospace';
+      c.textAlign = 'center';
+      c.fillText(e.text, sp.x, sp.y - 25);
+      c.globalAlpha = 1;
     } else if (e.type==='mission_complete') {
       c.fillStyle=`rgba(250,204,21,${Math.min(1,e.life)})`; c.font='bold 36px monospace'; c.textAlign='center';
       c.fillText(e.text, w/2, h/3+Math.sin(e.life*Math.PI)*10);

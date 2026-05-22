@@ -368,4 +368,21 @@ export const GAME_CONFIG = {
     // Chance that a chain-killed enemy also triggers a secondary pulse
     chainKillChance: 0.3,
   },
+
+  shieldBreak: {
+    // Number of shatter particles to emit
+    particleCount: 25,
+    // Particle color (electric blue — shield energy dissipating)
+    particleColor: 0x60a5fa,
+    // Screen shake preset name (from screenShake.presets)
+    screenShakePreset: 'explosion',
+    // Hit stop preset name (from hitStop.presets)
+    hitStopPreset: 'bigHit',
+    // Damage popup text shown on shield break
+    popupText: 'SHIELD DOWN',
+    // Popup lifetime in seconds
+    popupLife: 1.2,
+    // Popup text color (bright cyan for visibility)
+    popupColor: '#60a5fa',
+  },
 };

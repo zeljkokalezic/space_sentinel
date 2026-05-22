@@ -103,6 +103,7 @@ export const updateEffects = (dt, g) => {
   for (let e of g.effects) {
     e.life -= dt;
     if (e.type === 'dmg') e.y += 40 * dt;
+    if (e.type === 'shield_down') e.y += 30 * dt;
   }
 };
 

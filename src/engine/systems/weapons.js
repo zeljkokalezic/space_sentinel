@@ -1,7 +1,7 @@
 /**
  * systems/weapons.js — Player weapon firing logic (autocannon, plasma, missiles, pointDefense).
  */
-import { fireProjectile, killEnemy } from '../combat';
+import { fireProjectile, killEnemy, checkShieldBreak } from '../combat';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 import { getNearestHostileTarget } from '../targeting';
@@ -89,8 +89,12 @@ export const updateWeapons = (dt, g, completeMission) => {
         if (!e.active) continue;
         if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < range) {
           let ad = dmg;
+          const pdShieldWasFull = e.shield > 0 && e.maxShield > 0;
           if (e.shield > 0) { const ab = Math.min(e.shield, ad); e.shield -= ab; ad -= ab; }
           e.hp -= ad; hit = true;
+          if (pdShieldWasFull && e.shield <= 0) {
+            checkShieldBreak(g, e, e.x, e.y);
+          }
           g.effects.push({ type: 'laser', source: g.player, target: e, life: 0.1 });
           g.effects.push({ type: 'dmg', x: e.x, y: e.y, text: Math.ceil(dmg).toString(), life: 0.8 });
           hits++;

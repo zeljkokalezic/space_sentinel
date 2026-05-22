@@ -2,7 +2,7 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerScreenShake } from '../combat';
+import { createParticles, triggerScreenShake, checkShieldBreak } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -74,8 +74,12 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
+          const shieldWasFull = e.shield > 0 && e.maxShield > 0;
           if (e.shield > 0) { const absorb = Math.min(e.shield, actualDmg); e.shield -= absorb; actualDmg -= absorb; }
           e.hp -= actualDmg;
+          if (shieldWasFull && e.shield <= 0) {
+            checkShieldBreak(g, e, e.x, e.y);
+          }
           g.effects.push({ type: 'dmg', x: e.x + (Math.random() - 0.5) * 10, y: e.y + (Math.random() - 0.5) * 10, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerScreenShake(g, p.type === 'plasma' || p.type === 'missile' ? 'explosion' : 2);
@@ -92,8 +96,12 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (Math.hypot(p.x - g.miniboss.x, p.y - g.miniboss.y) < g.miniboss.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
+          const mbShieldWasFull = g.miniboss.shield > 0 && g.miniboss.maxShield > 0;
           if (g.miniboss.shield > 0) { const absorb = Math.min(g.miniboss.shield, actualDmg); g.miniboss.shield -= absorb; actualDmg -= absorb; }
           g.miniboss.hp -= actualDmg;
+          if (mbShieldWasFull && g.miniboss.shield <= 0) {
+            checkShieldBreak(g, g.miniboss, g.miniboss.x, g.miniboss.y);
+          }
           g.effects.push({ type: 'dmg', x: g.miniboss.x + (Math.random() - 0.5) * 15, y: g.miniboss.y + (Math.random() - 0.5) * 15, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('miniboss'); }
@@ -108,8 +116,12 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (Math.hypot(p.x - g.boss.x, p.y - g.boss.y) < g.boss.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
+          const bossShieldWasFull = g.boss.shield > 0 && g.boss.maxShield > 0;
           if (g.boss.shield > 0) { const absorb = Math.min(g.boss.shield, actualDmg); g.boss.shield -= absorb; actualDmg -= absorb; }
           g.boss.hp -= actualDmg;
+          if (bossShieldWasFull && g.boss.shield <= 0) {
+            checkShieldBreak(g, g.boss, g.boss.x, g.boss.y);
+          }
           g.effects.push({ type: 'dmg', x: g.boss.x + (Math.random() - 0.5) * 15, y: g.boss.y + (Math.random() - 0.5) * 15, text: Math.ceil(actualDmg).toString(), life: 0.8 });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('boss'); }
