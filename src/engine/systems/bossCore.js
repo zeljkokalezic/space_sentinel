@@ -9,6 +9,7 @@ import { GAME_CONFIG } from '../../constants/gameConfig';
 import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
 import { createParticles, checkShieldBreak } from '../combat';
 import { SoundManager } from '../audio';
+import { triggerFovBossDeath } from './dynamicFov';
 
 /**
  * @param {number} dt — Delta time
@@ -140,6 +141,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     createParticles(g, boss.x, boss.y, onDeath.deathColors[0], 40);
     createParticles(g, boss.x, boss.y, onDeath.deathColors[1], 30);
     SoundManager.play('explosion');
+    triggerFovBossDeath(g);
 
     // Guaranteed power-up drops
     if (onDeath.guaranteedDrops) {

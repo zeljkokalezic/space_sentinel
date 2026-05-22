@@ -4,6 +4,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber } from '../combat';
 import { SoundManager } from '../audio';
+import { triggerFovHit } from './dynamicFov';
 
 /**
 
@@ -135,6 +136,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           }
           spawnDamageNumber(g, g.boss.x, g.boss.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
+          triggerFovHit(g);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('boss'); }
           else               p.active = false;
         }

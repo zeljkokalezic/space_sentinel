@@ -119,6 +119,13 @@ export const draw3DFrame = (threeObj, g) => {
   camera.position.lerp(new THREE.Vector3(g.player.x - camFwdX * 220 + shake.x, g.player.y - camFwdY * 220 + shake.y, 120), 0.03);
   camera.up.set(0, 0, 1);
   camera.lookAt(new THREE.Vector3(g.player.x + camFwdX * 80 + shake.x, g.player.y + camFwdY * 80 + shake.y, 0));
+
+  // Dynamic FOV — apply camera field-of-view from game state
+  if (g.dynamicFov && g.dynamicFov.current !== undefined) {
+    camera.fov = g.dynamicFov.current;
+    camera.updateProjectionMatrix();
+  }
+
   camera.updateMatrixWorld(false);
   const freshWM = raycastToPlane(g.mouse.x || window.innerWidth / 2, g.mouse.y || window.innerHeight / 2, camera);
   if (freshWM) g.worldMouse = freshWM;

@@ -228,6 +228,7 @@ export const createGameState = () => ({
   hitStop: createDefaultHitStop(),
   playerIFrames: createDefaultPlayerIFrames(),
   attackWarnings: [],
+  dynamicFov: createDefaultDynamicFov(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -339,4 +340,15 @@ export const createDefaultPlayerIFrames = () => ({
   remaining: 0,
   isInvincible: false,
   blinkTimer: 0,
+});
+
+/**
+ * @returns {Object} Default dynamic FOV state
+ */
+export const createDefaultDynamicFov = () => ({
+  current: 75,       // Current FOV value (degrees)
+  target: 75,        // Target FOV to lerp toward
+  hitTimer: 0,       // Remaining time for hit FOV snap
+  bossDeathTimer: 0, // Remaining time for boss death FOV widen
+  bossActiveTime: 0, // Time boss has been active (prevents flicker)
 });

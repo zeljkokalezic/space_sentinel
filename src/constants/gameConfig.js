@@ -501,4 +501,25 @@ export const GAME_CONFIG = {
     // Lifetime in seconds
     lifetime: 0.9,
   },
+
+  dynamicFov: {
+    // Base FOV (degrees) — normal gameplay
+    baseFov: 75,
+    // FOV during boss fights (narrower = more tension/focus)
+    bossFov: 65,
+    // FOV during low HP (narrower = urgency)
+    lowHpFov: 68,
+    // FOV on big hit impact (brief snap for dramatic effect)
+    hitFov: 60,
+    // FOV on boss death (wider = release/celebration)
+    bossDeathFov: 80,
+    // How fast FOV lerps toward target (higher = snappier)
+    lerpSpeed: 3,
+    // Duration of hit FOV snap (seconds)
+    hitDuration: 0.2,
+    // Duration of boss death FOV widen (seconds)
+    bossDeathDuration: 2,
+    // Minimum time at boss FOV before it starts (prevents flicker)
+    bossSettleTime: 0.5,
+  },
 };

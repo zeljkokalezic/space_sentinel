@@ -32,6 +32,7 @@ import { updateDeathPulses } from './systems/deathPulses';
 import { updateAttackWarnings } from './systems/attackWarnings';
 import { cleanup } from './systems/cleanup';
 import { updateLowHpWarning } from './lowHpWarning';
+import { updateDynamicFov } from './systems/dynamicFov';
 
 export const updatePhysics = (dt, g, cbs) => {
   const { setGameState, setNotificationVersion } = cbs;
@@ -136,6 +137,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Low HP warning (visual + audio) ─────────────────
   updateLowHpWarning(dt, g);
+
+  // ─── Dynamic FOV (camera tension/release) ────────────
+  updateDynamicFov(dt, g);
 
   // ─── Death pulse shockwaves ──────────────────────────
   updateDeathPulses(dt, g, completeMission);
