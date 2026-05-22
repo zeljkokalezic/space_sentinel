@@ -19,7 +19,7 @@ import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
 import { updatePowerups } from './systems/powerups';
-import { updateParticles, updateEffects, updateScreenShake, updateHitStop } from './systems/particles';
+import { updateParticles, updateEffects, updateScreenShake, updateHitStop, updatePlayerIFrames } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
@@ -126,6 +126,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Screen shake decay ──────────────────────────────
   updateScreenShake(dt, g);
+
+  // ─── Player invincibility frames (i-frames) ──────────
+  updatePlayerIFrames(dt, g);
 
   // ─── Low HP warning (visual + audio) ─────────────────
   updateLowHpWarning(dt, g);

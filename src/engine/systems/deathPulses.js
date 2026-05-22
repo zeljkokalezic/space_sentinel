@@ -14,7 +14,7 @@
  * 5. Removed when life expires
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerDeathPulse, checkShieldBreak } from '../combat';
+import { createParticles, triggerDeathPulse, triggerPlayerIFrames, checkShieldBreak } from '../combat';
 
 /**
  * Update all active death pulses: expand rings, check collisions, apply damage.
@@ -99,27 +99,40 @@ export const updateDeathPulses = (dt, g) => {
       if (distToPlayer <= pulse.radius + (g.player.radius || 38)) {
         pulse.hasDamagedPlayer = true;
 
-        let dmg = pulse.damage;
-        const dpPlayerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
-        if (g.player.shield > 0) {
-          const absorb = Math.min(g.player.shield, dmg);
-          g.player.shield -= absorb;
-          dmg -= absorb;
-        }
-        g.player.hp -= dmg;
-        if (dpPlayerShieldWasFull && g.player.shield <= 0) {
-          checkShieldBreak(g, g.player, g.player.x, g.player.y);
-        }
+        // Check invincibility frames — block damage if invincible
+        if (g.playerIFrames && g.playerIFrames.isInvincible) {
+          createParticles(g, g.player.x, g.player.y, 0x60a5fa, 5);
+          // Still push player away
+          if (distToPlayer > 0) {
+            const pushForce = 120;
+            g.player.x += (g.player.x - pulse.x) / distToPlayer * pushForce * dt * 3;
+            g.player.y += (g.player.y - pulse.y) / distToPlayer * pushForce * dt * 3;
+          }
+        } else {
+          let dmg = pulse.damage;
+          const dpPlayerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
+          if (g.player.shield > 0) {
+            const absorb = Math.min(g.player.shield, dmg);
+            g.player.shield -= absorb;
+            dmg -= absorb;
+          }
+          g.player.hp -= dmg;
+          if (dpPlayerShieldWasFull && g.player.shield <= 0) {
+            checkShieldBreak(g, g.player, g.player.x, g.player.y);
+          }
 
-        // Push player away
-        if (distToPlayer > 0) {
-          const pushForce = 120;
-          g.player.x += (g.player.x - pulse.x) / distToPlayer * pushForce * dt * 3;
-          g.player.y += (g.player.y - pulse.y) / distToPlayer * pushForce * dt * 3;
-        }
+          // Push player away
+          if (distToPlayer > 0) {
+            const pushForce = 120;
+            g.player.x += (g.player.x - pulse.x) / distToPlayer * pushForce * dt * 3;
+            g.player.y += (g.player.y - pulse.y) / distToPlayer * pushForce * dt * 3;
+          }
 
-        // Impact particles at player position
-        createParticles(g, g.player.x, g.player.y, 0xf97316, 8);
+          // Impact particles at player position
+          createParticles(g, g.player.x, g.player.y, 0xf97316, 8);
+
+          triggerPlayerIFrames(g);
+        }
       }
     }
   }

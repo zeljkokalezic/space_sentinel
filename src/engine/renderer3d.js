@@ -183,6 +183,15 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
+  // Invincibility frames — blink player mesh when invincible
+  if (g.playerIFrames && g.playerIFrames.active) {
+    const blinkVisible = g.playerIFrames.isInvincible;
+    pm.visible = blinkVisible;
+  } else {
+    // Ensure player is visible when not in i-frames
+    if (!pm.visible) pm.visible = true;
+  }
+
   // Dynamic turrets
   const turretsGroup = pm.userData.turretsGroup;
   if (turretsGroup) {

@@ -216,6 +216,7 @@ export const createGameState = () => ({
   screenShake: createDefaultScreenShake(),
   lowHpWarning: createDefaultLowHpWarning(),
   hitStop: createDefaultHitStop(),
+  playerIFrames: createDefaultPlayerIFrames(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -317,4 +318,14 @@ export const createDefaultLowHpWarning = () => ({
 export const createDefaultHitStop = () => ({
   active: false,
   remaining: 0,
+});
+
+/**
+ * @returns {Object} Default player invincibility frames state
+ */
+export const createDefaultPlayerIFrames = () => ({
+  active: false,
+  remaining: 0,
+  isInvincible: false,
+  blinkTimer: 0,
 });

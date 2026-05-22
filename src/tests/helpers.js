@@ -131,6 +131,16 @@ export const createTestState = (overrides = {}) => {
       pulseTimer: 0,
       heartbeatTimer: 0,
     },
+    hitStop: {
+      active: false,
+      remaining: 0,
+    },
+    playerIFrames: {
+      active: false,
+      remaining: 0,
+      isInvincible: false,
+      blinkTimer: 0,
+    },
     deathPulses: [],
   };
 
@@ -169,8 +179,13 @@ export const createTestState = (overrides = {}) => {
     base.lowHpWarning = { ...base.lowHpWarning, ...overrides.lowHpWarning };
   }
 
-  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake', 'lowHpWarning' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, lowHpWarning: _lowHpWarningOverride, ...restOverrides } = overrides;
+  // Deep-merge playerIFrames overrides if provided
+  if (overrides.playerIFrames) {
+    base.playerIFrames = { ...base.playerIFrames, ...overrides.playerIFrames };
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake', 'lowHpWarning', 'playerIFrames' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, lowHpWarning: _lowHpWarningOverride, playerIFrames: _playerIFramesOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 

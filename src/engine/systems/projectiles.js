@@ -2,7 +2,7 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerScreenShake, checkShieldBreak } from '../combat';
+import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -55,6 +55,12 @@ export const updateProjectiles = (dt, g, setGameState) => {
 
       // ── Enemy projectile hits player ──
       if (Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.radius + p.radius) {
+        // Check invincibility frames — block damage if invincible
+        if (g.playerIFrames && g.playerIFrames.isInvincible) {
+          createParticles(g, p.x, p.y, 0x60a5fa, 3);
+          p.active = false;
+          continue;
+        }
         let dmg = p.damage;
         if (g.player.shield > 0) {
           const absorb = Math.min(g.player.shield, dmg);
@@ -65,6 +71,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
         p.active = false;
         g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
         triggerScreenShake(g, p.type === 'enemy_missile' ? 'bigExplosion' : 'playerHit');
+        triggerPlayerIFrames(g);
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
       }
     } else {

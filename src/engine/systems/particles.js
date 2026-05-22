@@ -183,3 +183,45 @@ export const updateHitStop = (dt, g) => {
   }
   return true;
 };
+
+/**
+ * Player invincibility frames (i-frames) update.
+ * Counts down the invulnerability timer and manages the blink cycle.
+ * During the grace period, the player is always invincible.
+ * After the grace period, invincibility toggles with the blink cycle.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export const updatePlayerIFrames = (dt, g) => {
+  if (!g || !g.playerIFrames) return;
+  const iframes = g.playerIFrames;
+  if (!iframes.active) return;
+
+  const C = GAME_CONFIG.playerIFrames;
+
+  // Count down remaining time
+  iframes.remaining -= dt;
+  if (iframes.remaining <= 0) {
+    iframes.remaining = 0;
+    iframes.active = false;
+    iframes.isInvincible = false;
+    iframes.blinkTimer = 0;
+    return;
+  }
+
+  // Time elapsed since i-frames started
+  const elapsed = C.duration - iframes.remaining;
+
+  if (elapsed < C.gracePeriod) {
+    // Grace period: always invincible, no blinking
+    iframes.isInvincible = true;
+  } else {
+    // Blink phase: toggle invincibility based on blink timer
+    iframes.blinkTimer += dt;
+    if (iframes.blinkTimer >= C.blinkPeriod) {
+      iframes.blinkTimer -= C.blinkPeriod;
+      iframes.isInvincible = !iframes.isInvincible;
+    }
+  }
+};

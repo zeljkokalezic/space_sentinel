@@ -6,7 +6,7 @@
  * use the legacy direct-charge behavior (backward compatible).
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, checkShieldBreak } from '../combat';
+import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, checkShieldBreak } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
@@ -295,6 +295,15 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
 
     // ── Enemy rams player ──
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
+      // Check invincibility frames — block ram damage if invincible
+      if (g.playerIFrames && g.playerIFrames.isInvincible) {
+        createParticles(g, e.x, e.y, 0x60a5fa, 5);
+        // Push enemy away
+        const pushAngle = Math.atan2(e.y - g.player.y, e.x - g.player.x);
+        e.x += Math.cos(pushAngle) * 40;
+        e.y += Math.sin(pushAngle) * 40;
+        continue;
+      }
       const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
       let dmg = baseDmg * currentDiffMult;
       let shieldAbsorbed = false;
@@ -312,6 +321,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       g.player.hp -= dmg;
       triggerScreenShake(g, 'playerHit');
       triggerHitStop(g, 'playerHit');
+      triggerPlayerIFrames(g);
       let eDamage = C.weapons.missiles.baseDamage;
       const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
       if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }

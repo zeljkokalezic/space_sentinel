@@ -407,4 +407,13 @@ export const GAME_CONFIG = {
     // Particle type for behavior (drag, fade)
     type: 'trail',
   },
+
+  playerIFrames: {
+    // Total invulnerability duration after taking damage (seconds)
+    duration: 0.5,
+    // Blink toggle period (seconds) — ship alternates visible/invisible
+    blinkPeriod: 0.08,
+    // Initial grace period where player is always invincible (seconds)
+    gracePeriod: 0.15,
+  },
 };

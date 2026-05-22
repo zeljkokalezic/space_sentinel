@@ -298,3 +298,20 @@ export const checkShieldBreak = (g, entity, x, y) => {
   // Audio feedback
   SoundManager.play('shield_break');
 };
+
+/**
+ * Trigger player invincibility frames (i-frames).
+ * Activates a brief invulnerability period after the player takes damage,
+ * with visual blinking to indicate the invulnerability window.
+ *
+ * @param {object} g — Live game state
+ */
+export const triggerPlayerIFrames = (g) => {
+  if (!g || !g.playerIFrames) return;
+  const C = GAME_CONFIG.playerIFrames;
+
+  g.playerIFrames.active = true;
+  g.playerIFrames.remaining = C.duration;
+  g.playerIFrames.isInvincible = true;
+  g.playerIFrames.blinkTimer = 0;
+};
