@@ -300,6 +300,81 @@ export const checkShieldBreak = (g, entity, x, y) => {
 };
 
 /**
+ * Trigger shield restoration celebration — visual and audio fanfare
+ * when the player's shield fully regenerates from depleted state.
+ *
+ * @param {object} g — Live game state
+ */
+export const triggerShieldRestoration = (g) => {
+  if (!g || !g.player) return;
+  const C = GAME_CONFIG.shieldRestoration;
+
+  // "SHIELD UP" popup effect (world-space, above player)
+  if (g.effects) {
+    g.effects.push({
+      type: 'shield_up',
+      x: g.player.x,
+      y: g.player.y - 40,
+      text: 'SHIELD UP',
+      life: C.popupLife,
+      maxLife: C.popupLife,
+      color: C.popupColor,
+    });
+  }
+
+  // Screen shake + hit stop
+  triggerScreenShake(g, C.screenShakePreset);
+  triggerHitStop(g, C.hitStopPreset);
+
+  // Screen flash effect
+  if (g.screenFlash === undefined) {
+    g.screenFlash = { active: false, remaining: 0, color: '#ffffff' };
+  }
+  g.screenFlash.active = true;
+  g.screenFlash.remaining = C.flashDuration;
+  g.screenFlash.alpha = C.flashAlpha;
+  g.screenFlash.color = C.flashColor;
+
+  // Particle burst around player (electric blue shield energy)
+  if (g.particles) {
+    for (let i = 0; i < C.particleCount; i++) {
+      const angle = (Math.PI * 2 / C.particleCount) * i + (Math.random() - 0.5) * 0.3;
+      const speed = C.particleSpeedMin + Math.random() * (C.particleSpeedMax - C.particleSpeedMin);
+      g.particles.push({
+        x: g.player.x,
+        y: g.player.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        vz: (Math.random() - 0.5) * 30,
+        life: C.particleLife,
+        maxLife: C.particleLife,
+        color: C.particleColor,
+        active: true,
+        type: 'spark',
+        size: 3,
+      });
+    }
+  }
+
+  // Expanding shield ring effect
+  if (g.effects) {
+    g.effects.push({
+      type: 'shield_ring',
+      x: g.player.x,
+      y: g.player.y,
+      radius: 0,
+      maxRadius: C.ringMaxRadius,
+      life: C.ringDuration,
+      maxLife: C.ringDuration,
+      color: C.ringColor,
+    });
+  }
+
+  // Audio feedback
+  SoundManager.play('shield_restore');
+};
+
+/**
  * Trigger player invincibility frames (i-frames).
  * Activates a brief invulnerability period after the player takes damage,
  * with visual blinking to indicate the invulnerability window.

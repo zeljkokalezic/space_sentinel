@@ -592,6 +592,41 @@ function playShieldBreak(ctx, gainNode, now) {
   return { duration: dur, nodes: [noiseSource, noiseFilter, osc, oscGain] };
 }
 
+/** shield_restore — Bright ascending chime: shield fully restored */
+function playShieldRestore(ctx, gainNode, now) {
+  // Layer 1: Ascending chime (C5 → E5 → G5 → C6)
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  const oscs = [];
+  const subGain = ctx.createGain();
+  subGain.connect(gainNode);
+  for (let i = 0; i < notes.length; i++) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(notes[i], now);
+    osc.connect(subGain);
+    osc.start(now + i * 0.06);
+    osc.stop(now + i * 0.06 + 0.2);
+    oscs.push(osc);
+  }
+
+  // Layer 2: Shield hum (rising then settling — like energy building up)
+  const hum = ctx.createOscillator();
+  hum.type = 'sine';
+  hum.frequency.setValueAtTime(200, now);
+  hum.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+  hum.frequency.exponentialRampToValueAtTime(400, now + 0.4);
+  const humGain = ctx.createGain();
+  humGain.gain.setValueAtTime(0.3, now);
+  humGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+  hum.connect(humGain);
+  humGain.connect(gainNode);
+  hum.start(now);
+  hum.stop(now + 0.55);
+
+  const dur = applyEnvelope(gainNode, 0.01, 0.15, 0.35, now);
+  return { duration: dur, nodes: [...oscs, subGain, hum, humGain] };
+}
+
 /** enemy_spawn — Quick sharp pop signaling new enemy appearance */
 function playEnemySpawn(ctx, gainNode, now) {
   const osc = ctx.createOscillator();
@@ -641,6 +676,7 @@ const SOUND_GENERATORS = {
   pickup: playPickup,
   shield_hit: playShieldHit,
   shield_break: playShieldBreak,
+  shield_restore: playShieldRestore,
   player_hit: playPlayerHit,
   mission_complete: playMissionComplete,
   game_over: playGameOver,

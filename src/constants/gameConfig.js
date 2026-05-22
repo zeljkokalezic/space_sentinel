@@ -523,6 +523,38 @@ export const GAME_CONFIG = {
     bossSettleTime: 0.5,
   },
 
+ shieldRestoration: {
+    // "SHIELD UP" popup lifetime in seconds
+    popupLife: 1.5,
+    // Popup text color (bright cyan)
+    popupColor: '#38bdf8',
+    // Screen shake preset name (from screenShake.presets)
+    screenShakePreset: 'playerHit',
+    // Hit stop preset name (from hitStop.presets)
+    hitStopPreset: 'hit',
+    // Screen flash duration (seconds)
+    flashDuration: 0.15,
+    // Screen flash max alpha
+    flashAlpha: 0.15,
+    // Screen flash color
+    flashColor: '#38bdf8',
+    // Particle burst count around player
+    particleCount: 16,
+    // Particle color (electric blue — shield energy)
+    particleColor: 0x38bdf8,
+    // Particle speed range
+    particleSpeedMin: 40,
+    particleSpeedMax: 120,
+    // Particle lifetime
+    particleLife: 0.8,
+    // Ring effect: expanding shield ring radius
+    ringMaxRadius: 80,
+    // Ring effect: duration (seconds)
+    ringDuration: 0.5,
+    // Ring color (hex integer)
+    ringColor: 0x60a5fa,
+  },
+
   enemySpawnFlash: {
     // Enable/disable spawn flash effects
     enabled: true,

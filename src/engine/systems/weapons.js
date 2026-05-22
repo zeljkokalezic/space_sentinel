@@ -1,7 +1,7 @@
 /**
  * systems/weapons.js — Player weapon firing logic (autocannon, plasma, missiles, pointDefense).
  */
-import { fireProjectile, killEnemy, checkShieldBreak, spawnDamageNumber } from '../combat';
+import { fireProjectile, killEnemy, checkShieldBreak, spawnDamageNumber, triggerShieldRestoration } from '../combat';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 import { getNearestHostileTarget } from '../targeting';
@@ -112,7 +112,19 @@ export const updateWeapons = (dt, g, completeMission) => {
 
   g.cooldowns.shieldRegen -= dt;
   if (g.cooldowns.shieldRegen <= 0 && g.player.shield < g.player.maxShield) {
+    const prevShield = g.player.shield;
     g.player.shield = Math.min(g.player.maxShield, g.player.shield + C.shield.regenAmount);
     g.cooldowns.shieldRegen = C.shield.regenCooldown;
+
+    // Track depleted state: mark when shield drops to 0
+    if (prevShield <= 0) {
+      g.player._shieldWasDepleted = true;
+    }
+
+    // Trigger celebration when shield fully restores from depleted state
+    if (g.player._shieldWasDepleted && g.player.shield >= g.player.maxShield) {
+      g.player._shieldWasDepleted = false;
+      triggerShieldRestoration(g);
+    }
   }
 };

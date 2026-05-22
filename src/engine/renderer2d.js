@@ -472,6 +472,46 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.textAlign = 'center';
       c.fillText(e.text, sp.x, sp.y - 25);
       c.globalAlpha = 1;
+    } else if (e.type==='shield_up') {
+      const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
+      const srC = GAME_CONFIG.shieldRestoration;
+      const lifeRatio = e.life / (e.maxLife || srC.popupLife);
+      const alpha = Math.min(1, lifeRatio * 1.5);
+      // Float upward slightly
+      const floatY = (1 - lifeRatio) * 20;
+      // Outer glow
+      c.save();
+      c.shadowColor = e.color || srC.popupColor;
+      c.shadowBlur = 15;
+      c.fillStyle = e.color || srC.popupColor;
+      c.globalAlpha = alpha;
+      c.font = 'bold 22px monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(e.text, sp.x, sp.y - floatY);
+      // Inner bright text
+      c.shadowBlur = 6;
+      c.shadowColor = '#ffffff';
+      c.fillStyle = '#ffffff';
+      c.globalAlpha = alpha * 0.85;
+      c.fillText(e.text, sp.x, sp.y - floatY);
+      c.restore();
+    } else if (e.type==='shield_ring') {
+      const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
+      const srC = GAME_CONFIG.shieldRestoration;
+      const lifeRatio = e.life / (e.maxLife || srC.ringDuration);
+      const progress = 1 - lifeRatio;
+      const radius = e.maxRadius * progress;
+      const alpha = lifeRatio * 0.7;
+      // Convert hex integer color to CSS color string
+      const hexColor = '#' + (e.color || srC.ringColor).toString(16).padStart(6, '0');
+      c.strokeStyle = hexColor;
+      c.globalAlpha = alpha;
+      c.lineWidth = 3 * lifeRatio + 1;
+      c.beginPath();
+      c.arc(sp.x, sp.y, radius, 0, Math.PI * 2);
+      c.stroke();
+      c.globalAlpha = 1;
     } else if (e.type==='mission_complete') {
       c.fillStyle=`rgba(250,204,21,${Math.min(1,e.life)})`; c.font='bold 36px monospace'; c.textAlign='center';
       c.fillText(e.text, w/2, h/3+Math.sin(e.life*Math.PI)*10);
@@ -965,7 +1005,10 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   if (g.screenFlash && g.screenFlash.active && g.screenFlash.remaining > 0) {
     const flash = g.screenFlash;
     const flashCfg = GAME_CONFIG.comboCelebration;
-    const alpha = (flash.remaining / flashCfg.flashDuration) * flashCfg.flashAlpha;
+    // Use custom alpha/duration from flash object, fall back to config defaults
+    const duration = flash.duration || flashCfg.flashDuration;
+    const maxAlpha = flash.alpha !== undefined ? flash.alpha : flashCfg.flashAlpha;
+    const alpha = (flash.remaining / duration) * maxAlpha;
     c.fillStyle = flash.color || '#ffffff';
     c.globalAlpha = alpha;
     c.fillRect(0, 0, w, h);
