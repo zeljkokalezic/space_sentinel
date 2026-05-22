@@ -261,3 +261,14 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Map overlay:** Hazard icon badges on affected nodes (Mountain, Wind, CloudLightning, Hexagon from lucide-react) with legend entries
 - **Dev picker:** Hazard selector (None/Asteroids/Gravity/Plasma/EMP) passed to `launchDevMission` in App.jsx
 - **Adding new hazard types:** Update `gameConfig.js`, add new update branch in `systems/environmentalHazards.js`, add spawn logic in `hazardSetup.js`, add 3D/2D rendering, update DevMissionPicker `HAZARD_OPTIONS`
+
+## Low HP Warning System
+- **Purpose:** Visual and audio feedback when player HP drops below safe thresholds, creating tension and urgency
+- **State:** `g.lowHpWarning { active, intensity (0-1), isCritical, pulseTimer, heartbeatTimer }`
+- **Config:** `GAME_CONFIG.lowHpWarning` — `warningThreshold: 0.3` (30% HP), `criticalThreshold: 0.15` (15% HP), `pulsePeriod: 1.5` (seconds), `heartbeatInterval: 1.0` (seconds)
+- **Module:** `lowHpWarning.js` — `getLowHpWarningLevel(hp, maxHp)` (pure), `updateLowHpWarning(dt, g)` (game loop)
+- **Visual:** Red radial gradient vignette from screen edges (transparent at center). Pulsing via sine wave on `pulseTimer`. Intensity maps to alpha (0-0.7). Thicker border at critical (4px vs 2px). "⚠ LOW HULL" text at critical.
+- **Audio:** Heartbeat sound (`SoundManager.play('heartbeat')`) — dual-layer sine oscillators (low thump + higher click). Interval halves when critical (1.0s → 0.5s).
+- **Physics wiring:** Called in `physics.js` after screen shake decay, before escort/beacon/sabotage/boss systems. Null-guarded for test mocks.
+- **Levels:** 0 = inactive (>30% HP), 1 = warning (15-30%), 2 = critical (≤15%)
+- **Intensity:** Linear interpolation from 0 at warningThreshold to 1 at 0 HP
