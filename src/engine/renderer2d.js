@@ -554,6 +554,32 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.globalAlpha = alpha * 0.9;
       c.fillText(celebCfg.label, w / 2, floatY);
       c.restore();
+    } else if (e.type==='phase_change') {
+      const alpha = Math.min(1, e.life);
+      const pulse = Math.sin(e.life * Math.PI * 3) * 0.2 + 0.8;
+      c.save();
+      c.shadowColor = '#fbbf24';
+      c.shadowBlur = 15;
+      c.fillStyle = `rgba(251,191,36,${alpha * pulse})`;
+      c.font = 'bold 28px monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(e.text, w / 2, h / 3 - 20);
+      c.restore();
+    } else if (e.type==='enraged') {
+      const alpha = Math.min(1, e.life);
+      const shake = Math.sin(e.life * Math.PI * 8) * 2;
+      const pulse = Math.sin(e.life * Math.PI * 5) * 0.3 + 0.7;
+      c.save();
+      c.shadowColor = e.color || '#ff3333';
+      c.shadowBlur = 20;
+      c.fillStyle = e.color || '#ff3333';
+      c.globalAlpha = alpha * pulse;
+      c.font = 'bold 32px monospace';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(e.text, w / 2 + shake, h / 3 - 50);
+      c.restore();
     }
   }
 
@@ -881,6 +907,53 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.strokeStyle = `rgba(249,115,22,${Math.max(0.1, lifeRatio * 0.7)})`;
       c.lineWidth = 1.5;
       c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.stroke();
+    }
+  }
+
+  // Boss on radar
+  if (g.boss && g.boss.active && g.boss.hp > 0) {
+    const bd = Math.hypot(g.boss.x - g.player.x, g.boss.y - g.player.y);
+    if (bd <= rRange) {
+      const {px, py} = toR(g.boss.x, g.boss.y);
+      const isRaged = g.boss.rage;
+      const bossColor = isRaged ? '#ff3333' : '#dc2626';
+      // Rage: pulsing ring around boss dot
+      if (isRaged) {
+        const pulse = (Math.sin(g.boss.rageAuraTimer * 4) + 1) / 2;
+        const ringR = 6 + pulse * 4;
+        c.strokeStyle = `rgba(255,51,51,${0.4 + pulse * 0.4})`;
+        c.lineWidth = 2;
+        c.beginPath(); c.arc(px, py, ringR, 0, Math.PI * 2); c.stroke();
+      }
+      // Boss dot (larger than enemies)
+      c.fillStyle = bossColor;
+      c.beginPath(); c.arc(px, py, isRaged ? 5 : 4, 0, Math.PI * 2); c.fill();
+      // White border for visibility
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1;
+      c.stroke();
+    }
+  }
+
+  // Mini-boss on radar
+  if (g.miniboss && g.miniboss.active && g.miniboss.hp > 0) {
+    const md = Math.hypot(g.miniboss.x - g.player.x, g.miniboss.y - g.player.y);
+    if (md <= rRange) {
+      const {px, py} = toR(g.miniboss.x, g.miniboss.y);
+      const isRaged = g.miniboss.rage;
+      const mbColor = isRaged ? '#ff3333' : '#f97316';
+      if (isRaged) {
+        const pulse = (Math.sin(g.miniboss.rageAuraTimer * 4) + 1) / 2;
+        const ringR = 5 + pulse * 3;
+        c.strokeStyle = `rgba(255,51,51,${0.3 + pulse * 0.3})`;
+        c.lineWidth = 1.5;
+        c.beginPath(); c.arc(px, py, ringR, 0, Math.PI * 2); c.stroke();
+      }
+      c.fillStyle = mbColor;
+      c.beginPath(); c.arc(px, py, isRaged ? 4 : 3.5, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1;
+      c.stroke();
     }
   }
 

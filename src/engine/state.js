@@ -304,6 +304,9 @@ export const createDefaultBoss = () => ({
   speed: 60,
   fireCooldown: 1.5,
   spiralAngle: 0,
+  rage: false,
+  rageAuraTimer: 0,
+  rageEmberTimer: 0,
 });
 
 /**
@@ -323,6 +326,9 @@ export const createDefaultMiniboss = () => ({
   speed: 50,
   fireCooldown: 1.5,
   spiralAngle: 0,
+  rage: false,
+  rageAuraTimer: 0,
+  rageEmberTimer: 0,
 });
 
 /**

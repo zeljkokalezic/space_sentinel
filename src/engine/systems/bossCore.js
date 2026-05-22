@@ -7,7 +7,7 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
-import { createParticles, checkShieldBreak } from '../combat';
+import { createParticles, checkShieldBreak, triggerScreenShake, triggerHitStop } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovBossDeath } from './dynamicFov';
 
@@ -79,6 +79,60 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
       text: `PHASE ${boss.phase}!`,
       life: 1.5,
     });
+
+    // ── Rage mode activation (phase 3) ──
+    if (newPhase === 3 && !boss.rage) {
+      boss.rage = true;
+      boss.rageAuraTimer = 0;
+      boss.rageEmberTimer = 0;
+
+      const rageCfg = C.boss.rage;
+
+      // Screen effects
+      triggerScreenShake(g, rageCfg.screenShakePreset);
+      triggerHitStop(g, rageCfg.hitStopPreset);
+
+      // Particle explosions (rage color + normal)
+      createParticles(g, boss.x, boss.y, rageCfg.rageColor, 30);
+      createParticles(g, boss.x, boss.y, boss.color || 0xdc2626, 20);
+
+      // "⚠ ENRAGED" popup effect
+      g.effects.push({
+        type: 'enraged',
+        text: '⚠ ENRAGED',
+        life: rageCfg.enragedPopupLife,
+        color: '#ff3333',
+      });
+
+      // Audio cue
+      SoundManager.play('boss_rage');
+    }
+  }
+
+  // ── Rage ember emission (continuous while enraged) ──
+  if (boss.rage) {
+    boss.rageAuraTimer += dt;
+    boss.rageEmberTimer -= dt;
+    if (boss.rageEmberTimer <= 0) {
+      boss.rageEmberTimer = C.boss.rage.emberSpawnRate;
+      const rageCfg = C.boss.rage;
+      for (let i = 0; i < rageCfg.emberCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = rageCfg.emberSpeedMin + Math.random() * (rageCfg.emberSpeedMax - rageCfg.emberSpeedMin);
+        g.particles.push({
+          x: boss.x + Math.cos(angle) * boss.radius,
+          y: boss.y + Math.sin(angle) * boss.radius,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: rageCfg.emberLife,
+          maxLife: rageCfg.emberLife,
+          color: rageCfg.emberColor,
+          size: 2 + Math.random() * 2,
+          active: true,
+          type: 'ember',
+        });
+      }
+    }
   }
 
   // ── Attacks ──

@@ -425,6 +425,60 @@ function playBossPhaseChange(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** boss_rage — Aggressive multi-layer alarm: deep growl + harsh buzz + rising shriek */
+function playBossRage(ctx, gainNode, now) {
+  const nodes = [];
+  // Layer 1: Deep growl (sawtooth, low)
+  const growl = ctx.createOscillator();
+  growl.type = 'sawtooth';
+  growl.frequency.setValueAtTime(60, now);
+  growl.frequency.linearRampToValueAtTime(120, now + 0.15);
+  growl.frequency.linearRampToValueAtTime(80, now + 0.5);
+  const growlGain = ctx.createGain();
+  growlGain.gain.setValueAtTime(0.3, now);
+  growlGain.gain.linearRampToValueAtTime(0.15, now + 0.5);
+  growl.connect(growlGain);
+  growlGain.connect(gainNode);
+  growl.start(now);
+  growl.stop(now + 0.6);
+  nodes.push(growl);
+
+  // Layer 2: Harsh buzz (square, mid)
+  const buzz = ctx.createOscillator();
+  buzz.type = 'square';
+  buzz.frequency.setValueAtTime(200, now);
+  buzz.frequency.linearRampToValueAtTime(350, now + 0.1);
+  buzz.frequency.linearRampToValueAtTime(250, now + 0.4);
+  const buzzGain = ctx.createGain();
+  buzzGain.gain.setValueAtTime(0.15, now);
+  buzzGain.gain.linearRampToValueAtTime(0.05, now + 0.4);
+  buzz.connect(buzzGain);
+  buzzGain.connect(gainNode);
+  buzz.start(now);
+  buzz.stop(now + 0.5);
+  nodes.push(buzz);
+
+  // Layer 3: Rising shriek (sine, high)
+  const shriek = ctx.createOscillator();
+  shriek.type = 'sine';
+  shriek.frequency.setValueAtTime(400, now + 0.1);
+  shriek.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+  shriek.frequency.exponentialRampToValueAtTime(600, now + 0.6);
+  const shriekGain = ctx.createGain();
+  shriekGain.gain.setValueAtTime(0, now);
+  shriekGain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+  shriekGain.gain.linearRampToValueAtTime(0.1, now + 0.3);
+  shriekGain.gain.linearRampToValueAtTime(0, now + 0.6);
+  shriek.connect(shriekGain);
+  shriekGain.connect(gainNode);
+  shriek.start(now + 0.1);
+  shriek.stop(now + 0.7);
+  nodes.push(shriek);
+
+  const dur = applyEnvelope(gainNode, 0.02, 0.25, 0.5, now);
+  return { duration: Math.max(dur, 0.7), nodes };
+}
+
 /** enemy_shoot — Harsh electronic blast */
 function playEnemyShoot(ctx, gainNode, now) {
   const osc = ctx.createOscillator();
@@ -686,6 +740,7 @@ const SOUND_GENERATORS = {
   bg_drone: playBgDrone,
   ui_click: playUiClick,
   boss_phase_change: playBossPhaseChange,
+  boss_rage: playBossRage,
  enemy_shoot: playEnemyShoot,
   wave_announce: playWaveAnnounce,
   countdown_beep: playCountdownBeep,

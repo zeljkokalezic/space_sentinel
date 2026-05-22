@@ -235,6 +235,29 @@ export const GAME_CONFIG = {
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     color: '#dc2626',
 
+    // Boss rage mode: activated when entering phase 3 (final phase)
+    rage: {
+      // Rage color — intense white-hot (overwrites normal boss color)
+      rageColor: 0xff3333,
+      // Aura ring: base/max radius and pulse range
+      auraBaseRadius: 80,
+      auraMaxRadius: 120,
+      auraPulsePeriod: 1.5,
+      auraLineWidth: 3,
+      // Ember particles: spawn rate and count
+      emberSpawnRate: 0.08,
+      emberCount: 3,
+      emberColor: 0xff6600,
+      emberSpeedMin: 60,
+      emberSpeedMax: 180,
+      emberLife: 0.6,
+      // Screen effects on rage activation
+      screenShakePreset: 'bigExplosion',
+      hitStopPreset: 'bossHit',
+      // "ENRAGED" effect popup lifetime
+      enragedPopupLife: 1.5,
+    },
+
     // delayed_burst attack pattern config
     delayedBurst: {
       count: 6,           // Number of projectiles in the ring

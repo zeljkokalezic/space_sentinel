@@ -569,6 +569,27 @@ export const draw3DFrame = (threeObj, g) => {
       bm.position.set(boss.x, boss.y, 0);
       bm.rotation.y += 0.01;
       bm.rotation.x += 0.005;
+
+      // Rage aura ring (pulsing ring around enraged boss)
+      if (boss.rage) {
+        const rageCfg = GAME_CONFIG.boss.rage;
+        const auraKey = 'boss_rage_aura';
+        if (!meshes.has(auraKey)) {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(1, 1.08, 32),
+            new THREE.MeshBasicMaterial({ color: rageCfg.rageColor, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          scene.add(ring);
+          meshes.set(auraKey, ring);
+        }
+        const auraMesh = meshes.get(auraKey);
+        auraMesh.position.set(boss.x, boss.y, 0.5);
+        const pulse = (Math.sin(boss.rageAuraTimer * (Math.PI * 2 / rageCfg.auraPulsePeriod)) + 1) / 2;
+        const auraRadius = rageCfg.auraBaseRadius + pulse * (rageCfg.auraMaxRadius - rageCfg.auraBaseRadius);
+        auraMesh.scale.set(auraRadius * 2, auraRadius * 2, 1);
+        auraMesh.material.opacity = 0.3 + pulse * 0.3;
+      }
     }
   }
 
@@ -607,6 +628,27 @@ export const draw3DFrame = (threeObj, g) => {
       mm.position.set(mb.x, mb.y, 0);
       mm.rotation.y += 0.01;
       mm.rotation.x += 0.005;
+
+      // Rage aura ring for mini-bosses too
+      if (mb.rage) {
+        const rageCfg = GAME_CONFIG.boss.rage;
+        const auraKey = 'miniboss_rage_aura';
+        if (!meshes.has(auraKey)) {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(1, 1.08, 32),
+            new THREE.MeshBasicMaterial({ color: rageCfg.rageColor, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          scene.add(ring);
+          meshes.set(auraKey, ring);
+        }
+        const auraMesh = meshes.get(auraKey);
+        auraMesh.position.set(mb.x, mb.y, 0.5);
+        const pulse = (Math.sin(mb.rageAuraTimer * (Math.PI * 2 / rageCfg.auraPulsePeriod)) + 1) / 2;
+        const auraRadius = rageCfg.auraBaseRadius * 0.7 + pulse * (rageCfg.auraMaxRadius - rageCfg.auraBaseRadius) * 0.7;
+        auraMesh.scale.set(auraRadius * 2, auraRadius * 2, 1);
+        auraMesh.material.opacity = 0.25 + pulse * 0.25;
+      }
     }
   }
 
