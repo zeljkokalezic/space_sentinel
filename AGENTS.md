@@ -272,3 +272,13 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Physics wiring:** Called in `physics.js` after screen shake decay, before escort/beacon/sabotage/boss systems. Null-guarded for test mocks.
 - **Levels:** 0 = inactive (>30% HP), 1 = warning (15-30%), 2 = critical (≤15%)
 - **Intensity:** Linear interpolation from 0 at warningThreshold to 1 at 0 HP
+
+## Scrap Collection Effects
+- **Purpose:** Visual and audio feedback when the player collects scrap, making the core resource loop more satisfying
+- **State:** `g.scrapFloats` array — each entry: `{ x, y, text, life, maxLife, color, active }`
+- **Config:** `GAME_CONFIG.scrapCollection` — `particleCount: 8`, `particleColor: 0xfbbf24`, `floatLife: 1.0`, `floatSpeed: 40`, `floatColor: '#fbbf24'`, `flashOpacity: 0.06`, `flashDuration: 0.1`, `flashMinValue: 3`, `maxFloats: 30`
+- **Module:** `systems/pickups.js` — `triggerScrapCollection(g, x, y, value)` called when scrap is collected
+- **Effects:** Golden burst particles at collection point, floating "+N" number that rises and fades, metallic "cha-ching" audio (`SoundManager.play('scrap_collect')`), screen flash for pickups >= flashMinValue
+- **Rendering:** 2D floating numbers in `renderer2d.js` (projected from world to screen), screen flash via `g.screenFlash` (shared with combo celebration system)
+- **Cleanup:** Inactive floats filtered in `systems/cleanup.js` every 2 seconds
+- **Audio:** Dual-oscillator metallic ping — high sine sweep (1800→2400→1200Hz) + secondary shimmer (2800→1600Hz)
