@@ -571,4 +571,25 @@ export const GAME_CONFIG = {
     // Maximum concurrent floating numbers
     maxFloats: 30,
   },
+
+  powerupAura: {
+    // Enable/disable power-up pickup aura ring effects
+    enabled: true,
+    // Ring expansion speed (world units per second)
+    expandSpeed: 300,
+    // Maximum ring radius (world units)
+    maxRadius: 150,
+    // Ring effect lifetime in seconds
+    ringDuration: 0.8,
+    // Ring line width in pixels
+    lineWidth: 3,
+    // Floating buff name lifetime in seconds
+    textDuration: 1.5,
+    // Float speed upward (world units per second)
+    textFloatSpeed: 60,
+    // Font size for buff name text
+    textFontSize: 18,
+    // Maximum concurrent aura effects
+    maxAuras: 10,
+  },
 };

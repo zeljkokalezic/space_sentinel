@@ -293,6 +293,30 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
+  // Power-up aura rings (3D expanding rings)
+  if (g.powerupAuras) {
+    for (const aura of g.powerupAuras) {
+      if (!aura.active || aura.ringLife <= 0) continue;
+      const dx = aura.x - g.player.x;
+      const dy = aura.y - g.player.y;
+      if (dx * dx + dy * dy > renderDistSq) continue;
+      const lifeRatio = aura.ringMaxLife > 0 ? aura.ringLife / aura.ringMaxLife : 0;
+      const m = getMesh(`aura_ring_${aura.type}_${aura.x}_${aura.y}`, meshes, scene, () => {
+        const hexColor = aura.color.startsWith('#') ? parseInt(aura.color.slice(1), 16) : aura.color;
+        const m = new THREE.Mesh(geoms.deathPulseRing, new THREE.MeshBasicMaterial({
+          color: hexColor,
+          transparent: true,
+          opacity: lifeRatio * 0.6,
+          side: THREE.DoubleSide,
+        }));
+        m.scale.set(aura.ringRadius, aura.ringRadius, aura.ringRadius);
+        return m;
+      });
+      m.position.set(aura.x, aura.y, 0);
+      m.material.opacity = lifeRatio * 0.5;
+    }
+  }
+
   // Projectiles (with distance culling)
   for (let p of g.projectiles) {
     if (!p.active) continue;

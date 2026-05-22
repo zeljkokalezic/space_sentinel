@@ -19,7 +19,7 @@ import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
 import { updatePowerups } from './systems/powerups';
-import { updateParticles, updateEffects, updateScreenShake, updateHitStop, updatePlayerIFrames } from './systems/particles';
+import { updateParticles, updateEffects, updateScreenShake, updateHitStop, updatePlayerIFrames, updatePowerupAuras } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
@@ -148,6 +148,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Enemy spawn flash effects ───────────────────────
   updateSpawnFlashes(dt, g);
+
+  // ─── Power-up aura ring effects ──────────────────────
+  updatePowerupAuras(dt, g);
 
   // ─── Escort mission logic ────────────────────────────
   if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;

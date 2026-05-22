@@ -143,6 +143,7 @@ export const createTestState = (overrides = {}) => {
     },
     deathPulses: [],
     attackWarnings: [],
+    powerupAuras: [],
   };
 
   // Deep-merge player overrides if provided

@@ -248,6 +248,7 @@ export const createGameState = () => ({
   dynamicFov: createDefaultDynamicFov(),
   spawnFlashes: [],
   scrapFloats: [],
+  powerupAuras: [],
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 

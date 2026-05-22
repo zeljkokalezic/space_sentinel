@@ -446,3 +446,51 @@ export const spawnDamageNumber = (g, x, y, damage, opts = {}) => {
     });
   }
 };
+
+/**
+ * Trigger power-up pickup aura effect — expanding energy ring + floating buff name.
+ * Creates a satisfying visual "pop" that confirms the power-up collection and
+ * shows which buff was activated.
+ *
+ * @param {object} g — Live game state
+ * @param {string} type — Power-up type (e.g. 'rapidFire', 'shieldBoost')
+ * @param {string} color — Hex color string for the aura ring
+ * @param {number} x — World X position (player position)
+ * @param {number} y — World Y position (player position)
+ */
+export const triggerPowerupAura = (g, type, color, x, y) => {
+  if (!g || !GAME_CONFIG.powerupAura) return;
+  const C = GAME_CONFIG.powerupAura;
+  if (!C.enabled) return;
+
+  // Enforce max concurrent auras
+  if (!g.powerupAuras) g.powerupAuras = [];
+  if (g.powerupAuras.length >= C.maxAuras) {
+    // Remove oldest
+    const removed = g.powerupAuras.shift();
+    if (removed) removed.active = false;
+  }
+
+  // Get buff config for display text
+  const buffCfg = GAME_CONFIG.powerups?.types?.[type];
+  const icon = buffCfg?.icon || '✦';
+  const name = type.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+
+  g.powerupAuras.push({
+    active: true,
+    x, y,
+    color,
+    type,
+    icon,
+    name,
+    // Ring state
+    ringRadius: 0,
+    ringMaxRadius: C.maxRadius,
+    ringLife: C.ringDuration,
+    ringMaxLife: C.ringDuration,
+    // Text state
+    textY: y,
+    textLife: C.textDuration,
+    textMaxLife: C.textDuration,
+  });
+};

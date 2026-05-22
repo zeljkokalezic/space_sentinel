@@ -597,6 +597,58 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.restore();
   }
 
+  // ── Power-up Aura Rings ──────────────────────────────────────────────────
+  if (g.powerupAuras) {
+    const auraCfg = GAME_CONFIG.powerupAura;
+    for (const aura of g.powerupAuras) {
+      if (!aura.active) continue;
+      const sp = projectFn(camera, aura.x, aura.y, 0);
+      if (!sp.visible) continue;
+
+      // Ring rendering
+      if (aura.ringLife > 0) {
+        const lifeRatio = aura.ringMaxLife > 0 ? aura.ringLife / aura.ringMaxLife : 0;
+        // Fade in quickly, then fade out
+        let alpha = lifeRatio;
+        if (lifeRatio > 0.5) alpha = 1 - (lifeRatio - 0.5) * 2; // 1 → 0
+        alpha = Math.max(0.1, alpha * 0.8);
+
+        c.save();
+        c.strokeStyle = aura.color || '#fbbf24';
+        c.globalAlpha = alpha;
+        c.lineWidth = auraCfg.lineWidth * (0.5 + lifeRatio * 0.5);
+        c.shadowColor = aura.color || '#fbbf24';
+        c.shadowBlur = 10 * lifeRatio;
+        c.beginPath();
+        c.arc(sp.x, sp.y, aura.ringRadius, 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+      }
+
+      // Floating buff name text
+      if (aura.textLife > 0) {
+        const textSp = projectFn(camera, aura.x, aura.textY, 0);
+        if (!textSp.visible) continue;
+
+        const textAlpha = Math.min(1, aura.textLife / (aura.textMaxLife * 0.3)); // Fade in
+        const fadeOut = aura.textLife < aura.textMaxLife * 0.3
+          ? aura.textLife / (aura.textMaxLife * 0.3) : 1; // Fade out
+        const alpha = Math.max(0, Math.min(1, textAlpha * fadeOut));
+
+        c.save();
+        c.globalAlpha = alpha;
+        c.fillStyle = aura.color || '#fbbf24';
+        c.font = `bold ${auraCfg.textFontSize}px monospace`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.shadowColor = 'rgba(0,0,0,0.8)';
+        c.shadowBlur = 4;
+        c.fillText(`${aura.icon} ${aura.name}`, textSp.x, textSp.y);
+        c.restore();
+      }
+    }
+  }
+
   // ── Attack Warning Indicators (telegraphing) ─────────────────────────────
   const pulseFreq = GAME_CONFIG.attackWarning.pulseFrequency;
   if (g.attackWarnings) {
@@ -804,6 +856,22 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.strokeStyle = `rgba(239,68,68,${Math.max(0.1, lifeRatio * 0.6)})`;
       c.lineWidth = 1.5;
       c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.stroke();
+    }
+  }
+
+  // Power-up aura rings on radar
+  if (g.powerupAuras) {
+    for (const aura of g.powerupAuras) {
+      if (!aura.active || aura.ringLife <= 0) continue;
+      const ad = Math.hypot(aura.x - g.player.x, aura.y - g.player.y);
+      if (ad > rRange) continue;
+      const {px, py} = toR(aura.x, aura.y);
+      const lifeRatio = aura.ringMaxLife > 0 ? aura.ringLife / aura.ringMaxLife : 0;
+      const radarRadius = (aura.ringRadius / rRange) * rR;
+      const hexColor = aura.color.startsWith('#') ? aura.color : '#' + aura.color.toString(16).padStart(6, '0');
+      c.strokeStyle = `${hexColor}${Math.round(Math.max(0.1, lifeRatio * 0.5) * 255).toString(16).padStart(2, '0')}`;
+      c.lineWidth = 1;
+      c.beginPath(); c.arc(px, py, Math.max(1.5, radarRadius), 0, Math.PI * 2); c.stroke();
     }
   }
 

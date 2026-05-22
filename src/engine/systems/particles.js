@@ -246,3 +246,40 @@ export const updatePlayerIFrames = (dt, g) => {
     }
   }
 };
+
+/**
+ * Power-up aura ring update — expanding ring + floating buff name text.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export const updatePowerupAuras = (dt, g) => {
+  if (!g || !g.powerupAuras) return;
+  const C = GAME_CONFIG.powerupAura;
+  for (const aura of g.powerupAuras) {
+    if (!aura.active) continue;
+
+    // Ring expansion
+    aura.ringLife -= dt;
+    if (aura.ringLife <= 0) {
+      aura.ringLife = 0;
+    } else {
+      aura.ringRadius += C.expandSpeed * dt;
+      if (aura.ringRadius > aura.ringMaxRadius) aura.ringRadius = aura.ringMaxRadius;
+    }
+
+    // Text float upward
+    aura.textLife -= dt;
+    if (aura.textLife > 0) {
+      aura.textY += C.textFloatSpeed * dt;
+    }
+
+    // Deactivate when both ring and text expire
+    if (aura.ringLife <= 0 && aura.textLife <= 0) {
+      aura.active = false;
+    }
+  }
+
+  // Periodic cleanup of dead auras
+  g.powerupAuras = g.powerupAuras.filter(a => a.active);
+};

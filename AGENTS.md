@@ -282,3 +282,13 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Rendering:** 2D floating numbers in `renderer2d.js` (projected from world to screen), screen flash via `g.screenFlash` (shared with combo celebration system)
 - **Cleanup:** Inactive floats filtered in `systems/cleanup.js` every 2 seconds
 - **Audio:** Dual-oscillator metallic ping — high sine sweep (1800→2400→1200Hz) + secondary shimmer (2800→1600Hz)
+
+## Power-up Pickup Aura Rings
+- **Purpose:** Expanding energy ring + floating buff name text when collecting power-ups, providing clear visual confirmation
+- **State:** `g.powerupAuras` array — each entry: `{ active, x, y, color, type, icon, name, ringRadius, ringMaxRadius, ringLife, ringMaxLife, textY, textLife, textMaxLife }`
+- **Config:** `GAME_CONFIG.powerupAura` — `expandSpeed: 300`, `maxRadius: 150`, `ringDuration: 0.8`, `lineWidth: 3`, `textDuration: 1.5`, `textFloatSpeed: 30`, `textFontSize: 14`, `maxAuras: 10`
+- **Module:** `combat.js` — `triggerPowerupAura(g, type, color, x, y)` creates aura effect; `systems/particles.js` — `updatePowerupAuras(dt, g)` handles ring expansion + text float + cleanup
+- **Trigger:** Called from `systems/powerups.js` when player enters power-up pickup radius
+- **Visual:** Expanding ring (3D via `geoms.deathPulseRing` + 2D canvas arc), floating buff name with icon (e.g. "⚡ Rapid Fire"), type-matched colors, radar markers
+- **Cleanup:** Dead auras filtered in `updatePowerupAuras` — ring stops at maxRadius, text floats until textLife expires, both must be expired to deactivate
+- **Icon mapping:** `GAME_CONFIG.powerups[type]?.icon` with '✦' fallback; name formatted from camelCase via `/([a-z])([A-Z])/g`

@@ -2,7 +2,7 @@
  * systems/powerups.js — Power-up pickup and buff management.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy } from '../combat';
+import { createParticles, killEnemy, triggerPowerupAura } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -40,6 +40,9 @@ export const updatePowerups = (dt, g, completeMission) => {
     if (dist < g.player.radius + pu.radius) {
       pu.active = false;
       SoundManager.play('powerup_pickup');
+
+      // Trigger aura ring effect
+      triggerPowerupAura(g, pu.type, pu.color, g.player.x, g.player.y);
 
       const cfg = C.powerups.types[pu.type];
 
