@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { updateEscort } from '../../engine/systems/escort';
+import { updateAttackWarnings } from '../../engine/systems/attackWarnings';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createTestState, createTestEnemy } from '../helpers';
 
@@ -1048,6 +1049,8 @@ describe('enemy targeting of escort drone', () => {
     // shooter range = player.radius * 16 = 38 * 16 = 608. dist to escort = 200 < 608
 
     updateEscort(0.1, g, 1, vi.fn(), vi.fn());
+    // Process attack warnings — they spawn first, then fire after duration expires
+    updateAttackWarnings(1.0, g, vi.fn());
 
     expect(g.projectiles.length).toBeGreaterThan(0);
     expect(g.projectiles[0].type).toBe('enemy_bullet');
@@ -1075,6 +1078,8 @@ describe('enemy targeting of escort drone', () => {
     // missile_boat range = player.radius * 21 = 38 * 21 = 798. dist to escort = 300 < 798
 
     updateEscort(0.1, g, 1, vi.fn(), vi.fn());
+    // Process attack warnings — they spawn first, then fire after duration expires
+    updateAttackWarnings(1.0, g, vi.fn());
 
     expect(g.projectiles.length).toBe(2);
     expect(g.projectiles[0].type).toBe('enemy_missile');

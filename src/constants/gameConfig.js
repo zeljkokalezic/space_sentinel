@@ -416,4 +416,28 @@ export const GAME_CONFIG = {
     // Initial grace period where player is always invincible (seconds)
     gracePeriod: 0.15,
   },
+
+  attackWarning: {
+    // Warning indicator duration before projectile fires (seconds)
+    duration: 0.5,
+    // Warning indicator radius (world units)
+    radius: 25,
+    // Pulse frequency for the warning ring (cycles per second)
+    pulseFrequency: 4,
+    // Color of the warning indicator
+    color: '#ef4444',
+    // Radar marker color
+    radarColor: '#ef4444',
+    // Per-enemy-type warning config (override duration/radius per type)
+    types: {
+      shooter: {
+        duration: 0.4,
+        radius: 20,
+      },
+      missile_boat: {
+        duration: 0.7,
+        radius: 30,
+      },
+    },
+  },
 };

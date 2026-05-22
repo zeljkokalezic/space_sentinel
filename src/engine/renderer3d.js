@@ -630,6 +630,58 @@ export const draw3DFrame = (threeObj, g) => {
     }
   }
 
+  // Attack warning indicators in 3D — red wireframe circles on the ground plane
+  if (g.attackWarnings) {
+    for (const aw of g.attackWarnings) {
+      if (!aw.active) continue;
+      const adx = aw.x - g.player.x;
+      const ady = aw.y - g.player.y;
+      if (adx * adx + ady * ady > renderDistSq) continue;
+      const lifeRatio = aw.maxLife > 0 ? aw.life / aw.maxLife : 0;
+      const urgency = 1 - lifeRatio;
+      const m = getMesh(`awarn_${aw.id}`, meshes, scene, () => {
+        const group = new THREE.Group();
+        // Outer ring
+        const outer = new THREE.Mesh(
+          new THREE.RingGeometry(aw.radius * 0.7, aw.radius, 24),
+          new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, side: THREE.DoubleSide, depthWrite: false })
+        );
+        outer.rotation.x = -Math.PI / 2;
+        group.add(outer);
+        // Inner fill
+        const inner = new THREE.Mesh(
+          new THREE.CircleGeometry(aw.radius * 0.5, 16),
+          new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, side: THREE.DoubleSide, depthWrite: false })
+        );
+        inner.rotation.x = -Math.PI / 2;
+        group.add(inner);
+        // Crosshair lines
+        const crossH = new THREE.Mesh(
+          new THREE.PlaneGeometry(aw.radius * 2, 0.3),
+          new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, side: THREE.DoubleSide, depthWrite: false })
+        );
+        crossH.rotation.x = -Math.PI / 2;
+        group.add(crossH);
+        const crossV = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.3, aw.radius * 2),
+          new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, side: THREE.DoubleSide, depthWrite: false })
+        );
+        crossV.rotation.x = -Math.PI / 2;
+        group.add(crossV);
+        return group;
+      });
+      m.position.set(aw.x, aw.y, 0.5);
+      // Pulse: scale oscillates based on urgency
+      const pulse = 1 + 0.15 * Math.sin(urgency * 20);
+      m.scale.set(pulse, pulse, 1);
+      // Fade: more opaque as urgency increases
+      const baseAlpha = 0.3 + 0.5 * urgency;
+      m.children.forEach(child => {
+        if (child.material) child.material.opacity = baseAlpha;
+      });
+    }
+  }
+
   // Laser effects
   for (let e of g.effects) {
     if (e.type !== 'laser') continue;

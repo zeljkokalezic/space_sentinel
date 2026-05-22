@@ -142,6 +142,7 @@ export const createTestState = (overrides = {}) => {
       blinkTimer: 0,
     },
     deathPulses: [],
+    attackWarnings: [],
   };
 
   // Deep-merge player overrides if provided

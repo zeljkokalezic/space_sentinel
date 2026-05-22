@@ -474,6 +474,55 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.restore();
   }
 
+  // ── Attack Warning Indicators (telegraphing) ─────────────────────────────
+  const pulseFreq = GAME_CONFIG.attackWarning.pulseFrequency;
+  if (g.attackWarnings) {
+    for (const aw of g.attackWarnings) {
+      if (!aw.active) continue;
+      const sp = projectFn(camera, aw.x, aw.y, 0);
+      if (!sp.visible) continue;
+
+      const lifeRatio = aw.maxLife > 0 ? aw.life / aw.maxLife : 0;
+      // Pulse: faster as time runs out (urgency)
+      const pulse = Math.sin(g.totalTime * pulseFreq * Math.PI * 2);
+      const urgency = 1 - lifeRatio; // 0 at start, 1 at fire
+      const alpha = 0.4 + 0.6 * (0.5 + 0.5 * pulse) * (0.5 + 0.5 * urgency);
+
+      // Outer ring (pulsing)
+      c.strokeStyle = `rgba(239,68,68,${alpha})`;
+      c.lineWidth = 2 + urgency * 2;
+      c.beginPath();
+      c.arc(sp.x, sp.y, aw.radius, 0, Math.PI * 2);
+      c.stroke();
+
+      // Inner fill (fades in as fire approaches)
+      c.fillStyle = `rgba(239,68,68,${alpha * 0.15 * urgency})`;
+      c.beginPath();
+      c.arc(sp.x, sp.y, aw.radius, 0, Math.PI * 2);
+      c.fill();
+
+      // Crosshair marks
+      const crossLen = 8;
+      c.strokeStyle = `rgba(239,68,68,${alpha * 0.7})`;
+      c.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        c.beginPath();
+        c.moveTo(sp.x + Math.cos(a) * (aw.radius - crossLen), sp.y + Math.sin(a) * (aw.radius - crossLen));
+        c.lineTo(sp.x + Math.cos(a) * (aw.radius + crossLen), sp.y + Math.sin(a) * (aw.radius + crossLen));
+        c.stroke();
+      }
+
+      // Center dot (blinks faster as fire approaches)
+      if (Math.sin(g.totalTime * pulseFreq * 3 * Math.PI * 2) > 0) {
+        c.fillStyle = `rgba(239,68,68,${alpha * 0.8})`;
+        c.beginPath();
+        c.arc(sp.x, sp.y, 3, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+  }
+
   // ── Tactical Radar ───────────────────────────────────────────────────────────
   const rR=90, rX=w-rR-20, rY=h-rR-20, rRange=1500;
   c.save();
@@ -617,6 +666,25 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
       c.strokeStyle = `rgba(249,115,22,${Math.max(0.1, lifeRatio * 0.7)})`;
       c.lineWidth = 1.5;
       c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.stroke();
+    }
+  }
+
+  // Attack warning indicators on radar
+  if (g.attackWarnings) {
+    for (const aw of g.attackWarnings) {
+      if (!aw.active) continue;
+      const awd = Math.hypot(aw.x - g.player.x, aw.y - g.player.y);
+      if (awd > rRange) continue;
+      const {px, py} = toR(aw.x, aw.y);
+      const lifeRatio = aw.maxLife > 0 ? aw.life / aw.maxLife : 0;
+      const urgency = 1 - lifeRatio;
+      const alpha = 0.5 + 0.5 * urgency;
+      c.strokeStyle = `rgba(239,68,68,${alpha})`;
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(px, py, 4 + urgency * 2, 0, Math.PI * 2); c.stroke();
+      // Center dot
+      c.fillStyle = `rgba(239,68,68,${alpha * 0.8})`;
+      c.beginPath(); c.arc(px, py, 2, 0, Math.PI * 2); c.fill();
     }
   }
 

@@ -29,6 +29,7 @@ import { updateAudio } from './systems/audio';
 import { updateWaveAnnounce } from './systems/waveAnnounce';
 import { updateEnvironmentalHazards } from './systems/environmentalHazards';
 import { updateDeathPulses } from './systems/deathPulses';
+import { updateAttackWarnings } from './systems/attackWarnings';
 import { cleanup } from './systems/cleanup';
 import { updateLowHpWarning } from './lowHpWarning';
 
@@ -104,10 +105,13 @@ export const updatePhysics = (dt, g, cbs) => {
   updateProjectiles(dt, g, setGameState);
   if (g.player.hp <= 0) return;
 
- // ─── Enemy AI & collision ─────────────────────────────────────────────
+// ─── Enemy AI & collision ─────────────────────────────────────────────
   const enemyDt = g.activeBuffs.timeSlow ? dt * 0.5 : dt;
   updateEnemies(enemyDt, g, currentDiffMult, completeMission, setGameState);
   if (g.player.hp <= 0) return;
+
+  // ─── Attack warning indicators (telegraphing) ────────────────────────────
+  updateAttackWarnings(dt, g);
 
   // ─── Environmental hazards ────────────────────────────────────────────────────
   if (updateEnvironmentalHazards(dt, g, completeMission, setGameState)) return;

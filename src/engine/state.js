@@ -141,6 +141,15 @@
  * @property {number} deathPulses[].color — Ring color (hex)
  * @property {boolean} deathPulses[].active — Whether pulse is active
  * @property {boolean} deathPulses[].hasDamagedPlayer — Whether player was already hit
+ * @property {Array} attackWarnings — Active attack warning indicators
+ * @property {number} attackWarnings[].x — World X position (predicted impact)
+ * @property {number} attackWarnings[].y — World Y position (predicted impact)
+ * @property {number} attackWarnings[].radius — Warning indicator radius
+ * @property {number} attackWarnings[].life — Remaining warning time
+ * @property {number} attackWarnings[].maxLife — Total warning duration
+ * @property {string} attackWarnings[].color — Warning color (hex string)
+ * @property {boolean} attackWarnings[].active — Whether warning is active
+ * @property {function} attackWarnings[].fireCallback — Function to call when warning expires (fires the projectile)
  * @property {number} shipSkin — Active skin index (0-4)
  * @property {boolean[]} unlockedSkins — Which skins are unlocked
  */
@@ -217,6 +226,7 @@ export const createGameState = () => ({
   lowHpWarning: createDefaultLowHpWarning(),
   hitStop: createDefaultHitStop(),
   playerIFrames: createDefaultPlayerIFrames(),
+  attackWarnings: [],
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 

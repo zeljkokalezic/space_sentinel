@@ -229,17 +229,24 @@ describe('spawnEnemy', () => {
 
   // ---------- 16. Enemy HP scaled by difficulty multiplier ----------
   it('enemy HP scaled by difficulty multiplier (higher level = higher HP)', () => {
-    // Level 1 state
+    // Use average HP across many spawns to eliminate type randomness
     const g1 = createTestState({ level: 1, totalTime: 0 });
-    spawnEnemy(g1);
-    const hp1 = g1.enemies[0].hp;
-
-    // Level 10 state
     const g10 = createTestState({ level: 10, totalTime: 0 });
-    spawnEnemy(g10);
-    const hp10 = g10.enemies[0].hp;
 
-    expect(hp10).toBeGreaterThan(hp1);
+    let totalHp1 = 0, totalHp10 = 0;
+    const count = 100;
+    for (let i = 0; i < count; i++) {
+      spawnEnemy(g1);
+      spawnEnemy(g10);
+      totalHp1 += g1.enemies[i].hp;
+      totalHp10 += g10.enemies[i].hp;
+    }
+
+    const avgHp1 = totalHp1 / count;
+    const avgHp10 = totalHp10 / count;
+
+    // Level 10 enemies should have higher average HP
+    expect(avgHp10).toBeGreaterThan(avgHp1);
   });
 
   // ---------- 16b. Difficulty multiplier formula ----------
