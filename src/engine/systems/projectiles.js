@@ -2,7 +2,7 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak } from '../combat';
+import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber } from '../combat';
 import { SoundManager } from '../audio';
 
 /**
@@ -62,14 +62,15 @@ export const updateProjectiles = (dt, g, setGameState) => {
           continue;
         }
         let dmg = p.damage;
+        let shieldAbsorbed = 0;
         if (g.player.shield > 0) {
-          const absorb = Math.min(g.player.shield, dmg);
-          g.player.shield -= absorb; dmg -= absorb;
+          shieldAbsorbed = Math.min(g.player.shield, dmg);
+          g.player.shield -= shieldAbsorbed; dmg -= shieldAbsorbed;
         }
         g.player.hp -= dmg;
         createParticles(g, p.x, p.y, 0xef4444, 5);
         p.active = false;
-        g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
+        spawnDamageNumber(g, g.player.x, g.player.y - 10, dmg, { hitType: 'playerHit', shieldDamage: shieldAbsorbed });
         triggerScreenShake(g, p.type === 'enemy_missile' ? 'bigExplosion' : 'playerHit');
         triggerPlayerIFrames(g);
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
@@ -81,13 +82,14 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
+          let shieldAbsorbed = 0;
           const shieldWasFull = e.shield > 0 && e.maxShield > 0;
-          if (e.shield > 0) { const absorb = Math.min(e.shield, actualDmg); e.shield -= absorb; actualDmg -= absorb; }
+          if (e.shield > 0) { shieldAbsorbed = Math.min(e.shield, actualDmg); e.shield -= shieldAbsorbed; actualDmg -= shieldAbsorbed; }
           e.hp -= actualDmg;
           if (shieldWasFull && e.shield <= 0) {
             checkShieldBreak(g, e, e.x, e.y);
           }
-          g.effects.push({ type: 'dmg', x: e.x + (Math.random() - 0.5) * 10, y: e.y + (Math.random() - 0.5) * 10, text: Math.ceil(actualDmg).toString(), life: 0.8 });
+          spawnDamageNumber(g, e.x, e.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerScreenShake(g, p.type === 'plasma' || p.type === 'missile' ? 'explosion' : 2);
           if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
@@ -103,13 +105,14 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (Math.hypot(p.x - g.miniboss.x, p.y - g.miniboss.y) < g.miniboss.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
+          let shieldAbsorbed = 0;
           const mbShieldWasFull = g.miniboss.shield > 0 && g.miniboss.maxShield > 0;
-          if (g.miniboss.shield > 0) { const absorb = Math.min(g.miniboss.shield, actualDmg); g.miniboss.shield -= absorb; actualDmg -= absorb; }
+          if (g.miniboss.shield > 0) { shieldAbsorbed = Math.min(g.miniboss.shield, actualDmg); g.miniboss.shield -= shieldAbsorbed; actualDmg -= shieldAbsorbed; }
           g.miniboss.hp -= actualDmg;
           if (mbShieldWasFull && g.miniboss.shield <= 0) {
             checkShieldBreak(g, g.miniboss, g.miniboss.x, g.miniboss.y);
           }
-          g.effects.push({ type: 'dmg', x: g.miniboss.x + (Math.random() - 0.5) * 15, y: g.miniboss.y + (Math.random() - 0.5) * 15, text: Math.ceil(actualDmg).toString(), life: 0.8 });
+          spawnDamageNumber(g, g.miniboss.x, g.miniboss.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('miniboss'); }
           else               p.active = false;
@@ -123,13 +126,14 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (Math.hypot(p.x - g.boss.x, p.y - g.boss.y) < g.boss.radius + p.radius) {
           SoundManager.play('hit');
           let actualDmg = p.damage;
+          let shieldAbsorbed = 0;
           const bossShieldWasFull = g.boss.shield > 0 && g.boss.maxShield > 0;
-          if (g.boss.shield > 0) { const absorb = Math.min(g.boss.shield, actualDmg); g.boss.shield -= absorb; actualDmg -= absorb; }
+          if (g.boss.shield > 0) { shieldAbsorbed = Math.min(g.boss.shield, actualDmg); g.boss.shield -= shieldAbsorbed; actualDmg -= shieldAbsorbed; }
           g.boss.hp -= actualDmg;
           if (bossShieldWasFull && g.boss.shield <= 0) {
             checkShieldBreak(g, g.boss, g.boss.x, g.boss.y);
           }
-          g.effects.push({ type: 'dmg', x: g.boss.x + (Math.random() - 0.5) * 15, y: g.boss.y + (Math.random() - 0.5) * 15, text: Math.ceil(actualDmg).toString(), life: 0.8 });
+          spawnDamageNumber(g, g.boss.x, g.boss.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('boss'); }
           else               p.active = false;

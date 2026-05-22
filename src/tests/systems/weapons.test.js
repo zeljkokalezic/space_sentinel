@@ -550,7 +550,8 @@ describe('point defense', () => {
     enemyMissile.isEnemy = true;
     const g = stateWithPointDefense({ projectiles: [enemyMissile] });
     updateWeapons(0.016, g);
-    const critEffect = g.effects.find(e => e.type === 'dmg' && e.text === 'CRIT');
+    // spawnDamageNumber creates a dmg effect with crit styling (gold color, bigger font)
+    const critEffect = g.effects.find(e => e.type === 'dmg' && e.color === '#fbbf24');
     expect(critEffect).toBeDefined();
   });
 

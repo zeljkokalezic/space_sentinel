@@ -388,8 +388,43 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   for (let e of g.effects) {
     if (e.type==='dmg') {
       const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
-      c.fillStyle=`rgba(57,255,20,${Math.min(1,e.life*2)})`; c.font='bold 16px monospace'; c.textAlign='center';
+
+      const dnC = GAME_CONFIG.damageNumbers;
+      const color = e.color || dnC.hullColor;
+      const fontSizeMult = e.fontSizeMult || 1;
+      const baseSize = dnC.baseFontSize;
+      const fontSize = Math.round(baseSize * fontSizeMult);
+
+      // Pop animation: start small, peak at popScale, settle to 1x
+      let displayScale = 1;
+      if (e.popTimer !== undefined && e.popTimer > 0) {
+        const popProgress = Math.min(e.popTimer / dnC.popDuration, 1);
+        if (popProgress < 0.5) {
+          // Ramp up: 0.5 → popScale
+          const t = popProgress / 0.5;
+          displayScale = 0.5 + (dnC.popScale - 0.5) * t;
+        } else {
+          // Ramp down: popScale → 1
+          const t = (popProgress - 0.5) / 0.5;
+          displayScale = dnC.popScale - (dnC.popScale - 1) * t;
+        }
+      }
+
+      // Fade alpha based on life
+      const alpha = Math.min(1, (e.life / (e.maxLife || dnC.lifetime)) * 2);
+
+      c.save();
+      c.globalAlpha = alpha;
+      c.fillStyle = color;
+      c.font = `bold ${Math.round(fontSize * displayScale)}px monospace`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+
+      // Text shadow for readability
+      c.shadowColor = 'rgba(0,0,0,0.7)';
+      c.shadowBlur = 3;
       c.fillText(e.text, sp.x, sp.y);
+      c.restore();
     } else if (e.type==='shield_down') {
       const sp=projectFn(camera,e.x,e.y,0); if(!sp.visible) continue;
       const alpha = Math.min(1, e.life * 1.5);

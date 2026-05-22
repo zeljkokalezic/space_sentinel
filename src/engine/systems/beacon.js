@@ -5,7 +5,7 @@
  */
 
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, spawnDamageNumber } from '../combat';
 
 export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameState) => {
   if (!g.beacon || !g.beacon.active || g.mission?.completed) return false;
@@ -22,7 +22,7 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
       p.active = false;
       beacon.hp -= 10 * currentDiffMult;
       createParticles(g, p.x, p.y, 0x22d3ee, 5);
-      g.effects.push({ type: 'dmg', x: beacon.x, y: beacon.y - 20, text: Math.ceil(10 * currentDiffMult).toString(), life: 1.0 });
+      spawnDamageNumber(g, beacon.x, beacon.y - 20, 10 * currentDiffMult, { hitType: 'hull', life: 1.0 });
     }
   }
 

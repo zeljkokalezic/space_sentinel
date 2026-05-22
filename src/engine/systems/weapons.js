@@ -1,7 +1,7 @@
 /**
  * systems/weapons.js — Player weapon firing logic (autocannon, plasma, missiles, pointDefense).
  */
-import { fireProjectile, killEnemy, checkShieldBreak } from '../combat';
+import { fireProjectile, killEnemy, checkShieldBreak, spawnDamageNumber } from '../combat';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 import { getNearestHostileTarget } from '../targeting';
@@ -78,7 +78,7 @@ export const updateWeapons = (dt, g, completeMission) => {
       if (Math.hypot(m.x - g.player.x, m.y - g.player.y) < range) {
         m.active = false; hit = true;
         g.effects.push({ type: 'laser', source: g.player, target: m, life: 0.1 });
-        g.effects.push({ type: 'dmg', x: m.x, y: m.y, text: 'CRIT', life: 0.5 });
+        spawnDamageNumber(g, m.x, m.y, dmg, { hitType: 'hull', isCrit: true, life: 0.5 });
         hits++;
         if (hits >= maxHits) break;
       }
@@ -89,14 +89,15 @@ export const updateWeapons = (dt, g, completeMission) => {
         if (!e.active) continue;
         if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < range) {
           let ad = dmg;
+          let shieldAbsorbed = 0;
           const pdShieldWasFull = e.shield > 0 && e.maxShield > 0;
-          if (e.shield > 0) { const ab = Math.min(e.shield, ad); e.shield -= ab; ad -= ab; }
+          if (e.shield > 0) { shieldAbsorbed = Math.min(e.shield, ad); e.shield -= shieldAbsorbed; ad -= shieldAbsorbed; }
           e.hp -= ad; hit = true;
           if (pdShieldWasFull && e.shield <= 0) {
             checkShieldBreak(g, e, e.x, e.y);
           }
           g.effects.push({ type: 'laser', source: g.player, target: e, life: 0.1 });
-          g.effects.push({ type: 'dmg', x: e.x, y: e.y, text: Math.ceil(dmg).toString(), life: 0.8 });
+          spawnDamageNumber(g, e.x, e.y, ad, { shieldDamage: shieldAbsorbed, isCrit: true });
           hits++;
           if (e.hp <= 0) {
             killEnemy(g, e, completeMission);

@@ -440,4 +440,31 @@ export const GAME_CONFIG = {
       },
     },
   },
+
+  damageNumbers: {
+    // Color for hull damage (green — damage actually dealt to HP)
+    hullColor: '#39ff14',
+    // Color for shield damage (blue — absorbed by shield)
+    shieldColor: '#60a5fa',
+    // Color for critical/big hits (gold — high damage)
+    critColor: '#fbbf24',
+    // Color for player taking damage (red)
+    playerHitColor: '#ef4444',
+    // Damage threshold above which numbers are considered "big" (crit styling)
+    critThreshold: 40,
+    // Base font size for damage numbers
+    baseFontSize: 16,
+    // Font size multiplier for big/crit hits
+    critFontSizeMult: 1.5,
+    // Font size multiplier for shield hits (slightly smaller)
+    shieldFontSizeMult: 0.85,
+    // Pop animation: scale factor at peak
+    popScale: 1.4,
+    // Pop animation: time to reach peak scale (seconds)
+    popDuration: 0.12,
+    // Float speed upward (world units per second)
+    floatSpeed: 50,
+    // Lifetime in seconds
+    lifetime: 0.9,
+  },
 };

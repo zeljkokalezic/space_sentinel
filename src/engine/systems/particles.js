@@ -100,9 +100,18 @@ export const updateParticles = (dt, g) => {
  * @param {object} g — Game state
  */
 export const updateEffects = (dt, g) => {
+  const C = GAME_CONFIG.damageNumbers;
   for (let e of g.effects) {
     e.life -= dt;
-    if (e.type === 'dmg') e.y += 40 * dt;
+    if (e.type === 'dmg') {
+      // Float upward
+      e.y += C.floatSpeed * dt;
+
+      // Pop animation: scale from 0.5x → popScale → 1x over popDuration
+      if (e.popTimer !== undefined) {
+        e.popTimer += dt;
+      }
+    }
     if (e.type === 'shield_down') e.y += 30 * dt;
   }
 };

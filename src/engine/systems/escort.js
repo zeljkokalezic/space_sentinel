@@ -2,7 +2,7 @@
  * systems/escort.js — Escort drone movement, evasion, collision, and mission checks.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, spawnDamageNumber } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 
 /**
@@ -120,7 +120,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
         esc.hp -= p.damage;
         p.active = false;
         createParticles(g, p.x, p.y, 0x22d3ee, 5);
-        g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+        spawnDamageNumber(g, esc.x, esc.y - 10, p.damage, { hitType: 'hull' });
         if (esc.hp <= 0 && handleEscortDeath()) return true;
       }
     }
@@ -133,7 +133,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
       if (Math.hypot(e.x - esc.x, e.y - esc.y) < e.radius + esc.radius) {
         esc.hp -= C.escort.ramDamage;
         createParticles(g, esc.x, esc.y, 0x22d3ee, 10);
-        g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: C.escort.ramDamage.toString(), life: 0.8 });
+        spawnDamageNumber(g, esc.x, esc.y - 10, C.escort.ramDamage, { hitType: 'hull' });
         if (esc.hp <= 0 && handleEscortDeath()) return true;
       }
     }

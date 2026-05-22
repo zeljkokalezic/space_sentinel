@@ -314,3 +314,78 @@ export const triggerPlayerIFrames = (g) => {
   g.playerIFrames.isInvincible = true;
   g.playerIFrames.blinkTimer = 0;
 };
+
+/**
+ * Spawn an enhanced damage number effect at a world position.
+ * Determines visual style (color, size, pop animation) based on
+ * damage amount, hit type, and whether shield absorbed the damage.
+ *
+ * @param {object} g — Live game state
+ * @param {number} x — World X position
+ * @param {number} y — World Y position
+ * @param {number} damage — Damage value displayed (will be ceiled)
+ * @param {object} [opts] — Options
+ * @param {string} [opts.hitType] — 'hull' | 'shield' | 'playerHit' (default: 'hull')
+ * @param {number} [opts.shieldDamage] — Amount absorbed by shield (triggers secondary shield number)
+ * @param {boolean} [opts.isCrit] — Force crit styling regardless of damage amount
+ * @param {number} [opts.life] — Override lifetime
+ */
+export const spawnDamageNumber = (g, x, y, damage, opts = {}) => {
+  if (!g || !g.effects) return;
+  const C = GAME_CONFIG.damageNumbers;
+  const { hitType = 'hull', shieldDamage, isCrit, life } = opts;
+
+  // Determine if this is a "big" hit (crit styling)
+  const bigHit = isCrit || damage >= C.critThreshold;
+
+  // Determine color
+  let color;
+  if (hitType === 'playerHit') {
+    color = C.playerHitColor;
+  } else if (hitType === 'shield') {
+    color = C.shieldColor;
+  } else if (bigHit) {
+    color = C.critColor;
+  } else {
+    color = C.hullColor;
+  }
+
+  // Determine font size multiplier
+  let fontSizeMult = 1;
+  if (bigHit) fontSizeMult = C.critFontSizeMult;
+  else if (hitType === 'shield') fontSizeMult = C.shieldFontSizeMult;
+
+  // Random horizontal offset for visual variety
+  const offsetX = (Math.random() - 0.5) * 12;
+  const offsetY = (Math.random() - 0.5) * 6;
+
+  g.effects.push({
+    type: 'dmg',
+    x: x + offsetX,
+    y: y + offsetY,
+    text: Math.ceil(damage).toString(),
+    life: life ?? C.lifetime,
+    maxLife: life ?? C.lifetime,
+    color,
+    fontSizeMult,
+    hitType,
+    // Pop animation: starts at 0.5x, peaks at popScale, settles to 1x
+    popTimer: 0,
+  });
+
+  // If shield absorbed some damage, spawn a secondary shield damage number
+  if (shieldDamage > 0) {
+    g.effects.push({
+      type: 'dmg',
+      x: x + (Math.random() - 0.5) * 16,
+      y: y + (Math.random() - 0.5) * 10 - 5,
+      text: Math.ceil(shieldDamage).toString(),
+      life: C.lifetime * 0.8,
+      maxLife: C.lifetime * 0.8,
+      color: C.shieldColor,
+      fontSizeMult: C.shieldFontSizeMult,
+      hitType: 'shield',
+      popTimer: 0,
+    });
+  }
+};
