@@ -3,8 +3,51 @@
  *
  * Handles keyboard (WASD/arrows + Q/E strafe) and touch joystick input.
  * Movement: W/S thrust forward/back, A/D rotate, Q/E strafe left/right.
+ * Spawns thrust trail particles behind the ship when thrusting forward.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
+
+/**
+ * Spawn thrust trail particles behind the player ship.
+ * @param {object} g  — Game state
+ * @param {number} yaw — Ship yaw angle
+ */
+function spawnThrustTrail(g, yaw) {
+  const C = GAME_CONFIG.thrustTrail;
+  if (!C.enabled) return;
+
+  const count = C.particlesPerFrame + Math.max(0, (g.levels.thrusters - 1) * C.particlesPerThrusterLevel);
+
+  // Backward direction (opposite to ship facing)
+  const backAngle = yaw + Math.PI;
+
+  for (let i = 0; i < count; i++) {
+    // Spread angle: random offset within ±spreadAngle
+    const spread = (Math.random() - 0.5) * C.spreadAngle * 2;
+    const particleAngle = backAngle + spread;
+
+    // Speed: random within configured range
+    const speed = Math.random() * (C.speedMax - C.speedMin) + C.speedMin;
+
+    // Spawn position: offset behind the ship
+    const spawnX = g.player.x + Math.cos(backAngle) * C.offset;
+    const spawnY = g.player.y + Math.sin(backAngle) * C.offset;
+
+    g.particles.push({
+      x: spawnX,
+      y: spawnY,
+      vx: Math.cos(particleAngle) * speed,
+      vy: Math.sin(particleAngle) * speed,
+      vz: (Math.random() - 0.5) * 20,
+      life: C.life,
+      maxLife: C.life,
+      color: C.color,
+      active: true,
+      type: C.type,
+      size: 2,
+    });
+  }
+}
 
 /**
  * @param {number} dt — Delta time in seconds
@@ -68,6 +111,11 @@ export const updatePlayer = (dt, g) => {
   // Combine forward thrust + lateral strafe velocity
   g.player.vx = fwdX * thrust * currentSpeed + rightX * strafe * currentStrafeSpeed;
   g.player.vy = fwdY * thrust * currentSpeed + rightY * strafe * currentStrafeSpeed;
+
+  // Spawn thrust trail particles when thrusting forward
+  if (thrust > 0) {
+    spawnThrustTrail(g, g.player.yaw);
+  }
 
   g.player.x += g.player.vx * dt;
   g.player.y += g.player.vy * dt;

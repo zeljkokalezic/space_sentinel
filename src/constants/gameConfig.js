@@ -385,4 +385,26 @@ export const GAME_CONFIG = {
     // Popup text color (bright cyan for visibility)
     popupColor: '#60a5fa',
   },
+
+  thrustTrail: {
+    // Enable/disable thrust trail particles
+    enabled: true,
+    // Base particles emitted per frame when thrusting
+    particlesPerFrame: 2,
+    // Extra particles per thruster level above 1
+    particlesPerThrusterLevel: 1,
+    // Distance behind ship to spawn particles (world units)
+    offset: 22,
+    // Lateral spread angle in radians (half-angle on each side)
+    spreadAngle: 0.3,
+    // Particle speed range (world units per second, backward from ship)
+    speedMin: 30,
+    speedMax: 80,
+    // Particle lifetime in seconds
+    life: 0.35,
+    // Particle color (cyan — engine glow)
+    color: 0x22d3ee,
+    // Particle type for behavior (drag, fade)
+    type: 'trail',
+  },
 };
