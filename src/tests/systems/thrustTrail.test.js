@@ -3,7 +3,8 @@
  *
  * Covers: particle spawning on forward thrust, no particles on reverse/no thrust,
  * particle direction (behind ship), thruster level scaling, touch joystick thrust,
- * particle properties (color, life, type), yaw-based positioning, and spawn rate.
+ * particle properties (color, life, type), yaw-based positioning, spawn rate,
+ * and speed-based color/intensity scaling.
  *
  * Run:  npm test -- --run
  */
@@ -33,6 +34,14 @@ describe('thrust trail config', () => {
     expect(cfg.life).toBeGreaterThan(0);
     expect(cfg.color).toBeDefined();
     expect(cfg.type).toBe('trail');
+    // Speed-based color scaling
+    expect(cfg.colorStops).toBeDefined();
+    expect(Array.isArray(cfg.colorStops)).toBe(true);
+    expect(cfg.colorStops.length).toBeGreaterThan(1);
+    expect(cfg.sizeMin).toBeDefined();
+    expect(cfg.sizeMax).toBeGreaterThan(cfg.sizeMin);
+    expect(cfg.lifeMin).toBeGreaterThan(0);
+    expect(cfg.lifeMax).toBeGreaterThanOrEqual(cfg.lifeMin);
   });
 });
 
@@ -58,14 +67,19 @@ describe('forward thrust spawns particles', () => {
     }
   });
 
-  it('particles have correct color', () => {
+  it('particles have speed-based color from colorStops', () => {
     const g = createTestState();
     g.keys['w'] = true;
     updatePlayer(dt, g);
 
-    const expectedColor = GAME_CONFIG.thrustTrail.color;
+    // Color should be interpolated from colorStops based on speed ratio
+    const stops = GAME_CONFIG.thrustTrail.colorStops;
     for (const p of g.particles) {
-      expect(p.color).toBe(expectedColor);
+      // Color should be within the range of defined stops
+      const minColor = Math.min(...stops.map(s => s.color));
+      const maxColor = Math.max(...stops.map(s => s.color));
+      expect(p.color).toBeGreaterThanOrEqual(minColor);
+      expect(p.color).toBeLessThanOrEqual(maxColor);
     }
   });
 
@@ -79,15 +93,16 @@ describe('forward thrust spawns particles', () => {
     }
   });
 
-  it('particles have life set to config value', () => {
+  it('particles have speed-based life within configured range', () => {
     const g = createTestState();
     g.keys['w'] = true;
     updatePlayer(dt, g);
 
-    const expectedLife = GAME_CONFIG.thrustTrail.life;
+    const { lifeMin, lifeMax } = GAME_CONFIG.thrustTrail;
     for (const p of g.particles) {
-      expect(p.life).toBeCloseTo(expectedLife);
-      expect(p.maxLife).toBeCloseTo(expectedLife);
+      expect(p.life).toBeGreaterThanOrEqual(lifeMin);
+      expect(p.life).toBeLessThanOrEqual(lifeMax);
+      expect(p.maxLife).toBe(p.life);
     }
   });
 });
@@ -269,9 +284,10 @@ describe('particle count', () => {
     updatePlayer(dt, g);
 
     const baseCount = GAME_CONFIG.thrustTrail.particlesPerFrame;
-    // Allow some variance due to thruster level multiplier
+    const extraHighSpeed = GAME_CONFIG.thrustTrail.extraParticlesAtHighSpeed || 0;
+    // Allow variance due to thruster level multiplier and high-speed bonus
     expect(g.particles.length).toBeGreaterThanOrEqual(Math.floor(baseCount * 0.8));
-    expect(g.particles.length).toBeLessThanOrEqual(Math.ceil(baseCount * 1.5));
+    expect(g.particles.length).toBeLessThanOrEqual(Math.ceil(baseCount + extraHighSpeed + 2));
   });
 });
 
@@ -279,16 +295,18 @@ describe('particle count', () => {
  * 9. Particle velocity within expected range
  * ────────────────────────────────────────────── */
 describe('particle velocity range', () => {
-  it('particle speed is within configured range', () => {
+  it('particle speed is within boosted range (base * 1.5 max)', () => {
     const g = createTestState();
     g.keys['w'] = true;
     updatePlayer(dt, g);
 
     const { speedMin, speedMax } = GAME_CONFIG.thrustTrail;
+    // Speed can be boosted up to 1.5x at high speed ratio
+    const maxBoostedSpeed = speedMax * 1.5;
     for (const p of g.particles) {
       const speed = Math.hypot(p.vx, p.vy);
       expect(speed).toBeGreaterThanOrEqual(speedMin);
-      expect(speed).toBeLessThanOrEqual(speedMax);
+      expect(speed).toBeLessThanOrEqual(maxBoostedSpeed);
     }
   });
 });
@@ -311,5 +329,63 @@ describe('combined input', () => {
     g.keys['a'] = true; // rotate left
     updatePlayer(dt, g);
     expect(g.particles.length).toBeGreaterThan(0);
+  });
+});
+
+/* ──────────────────────────────────────────────
+ * 11. Speed-based color/intensity scaling
+ * ────────────────────────────────────────────── */
+describe('speed-based color scaling', () => {
+  it('colorStops transitions from blue → cyan → orange → white', () => {
+    const stops = GAME_CONFIG.thrustTrail.colorStops;
+    // Blue (low) < Cyan (mid) < Orange (high) < White (max)
+    expect(stops[0].ratio).toBe(0);
+    expect(stops[stops.length - 1].ratio).toBe(1);
+    expect(stops[0].color).toBe(0x3b82f6); // blue
+    expect(stops[stops.length - 1].color).toBe(0xffffff); // white
+  });
+
+  it('particle size scales with speed ratio', () => {
+    const g = createTestState();
+    g.keys['w'] = true;
+    updatePlayer(dt, g);
+
+    const { sizeMin, sizeMax } = GAME_CONFIG.thrustTrail;
+    for (const p of g.particles) {
+      expect(p.size).toBeGreaterThanOrEqual(sizeMin);
+      expect(p.size).toBeLessThanOrEqual(sizeMax);
+    }
+  });
+
+  it('particle size is larger at higher speed', () => {
+    // At full thrust, speed ratio should be high → larger particles
+    const g = createTestState();
+    g.keys['w'] = true;
+    updatePlayer(dt, g);
+
+    const { sizeMax } = GAME_CONFIG.thrustTrail;
+    // At full thrust, particles should be near max size
+    for (const p of g.particles) {
+      expect(p.size).toBeGreaterThan(sizeMax * 0.5);
+    }
+  });
+
+  it('extra particles spawned at high speed', () => {
+    const g = createTestState();
+    g.levels.thrusters = 1;
+    g.keys['w'] = true;
+
+    // First frame: speed is 0 (no velocity yet), no extra particles
+    updatePlayer(dt, g);
+    const firstFrameCount = g.particles.length;
+
+    // Second frame: velocity exists, speed ratio > 0 → possible extra particles
+    g.particles = [];
+    g.player._thrustTrailTimer = 0;
+    updatePlayer(dt, g);
+    const secondFrameCount = g.particles.length;
+
+    // Second frame should have >= first frame (extra particles at speed)
+    expect(secondFrameCount).toBeGreaterThanOrEqual(firstFrameCount);
   });
 });

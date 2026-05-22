@@ -436,10 +436,26 @@ export const GAME_CONFIG = {
     speedMax: 80,
     // Particle lifetime in seconds
     life: 0.35,
-    // Particle color (cyan — engine glow)
+    // Particle color (cyan — engine glow) — fallback when color scale disabled
     color: 0x22d3ee,
     // Particle type for behavior (drag, fade)
     type: 'trail',
+    // Speed-based color scaling: [speedRatio (0-1), color (hex)]
+    // Transitions: blue (slow/idle) → cyan (cruise) → orange (fast) → white (max thrust)
+    colorStops: [
+      { ratio: 0.0, color: 0x3b82f6 },  // blue — idle/slow
+      { ratio: 0.3, color: 0x22d3ee },  // cyan — cruising
+      { ratio: 0.65, color: 0xf97316 }, // orange — fast
+      { ratio: 1.0, color: 0xffffff },  // white — max thrust
+    ],
+    // Particle size scaling: min/max size at speed ratio 0/1
+    sizeMin: 1.5,
+    sizeMax: 4,
+    // Particle lifetime scaling: min/max life at speed ratio 0/1
+    lifeMin: 0.25,
+    lifeMax: 0.6,
+    // Extra particles at high speed (added when speedRatio > 0.7)
+    extraParticlesAtHighSpeed: 2,
   },
 
   playerIFrames: {
