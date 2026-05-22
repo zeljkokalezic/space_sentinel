@@ -529,6 +529,38 @@ function playBossIntro(ctx, gainNode, now) {
   return { duration: dur, nodes: [...oscs, subGain] };
 }
 
+/** heartbeat — Low thump for low HP warning (dual-layer: thump + click) */
+function playHeartbeat(ctx, gainNode, now) {
+  // Layer 1: Low thump (first beat of the "lub-dub")
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(60, now);
+  osc1.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+  const gain1 = ctx.createGain();
+  gain1.gain.setValueAtTime(1, now);
+  gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+  osc1.connect(gain1);
+  gain1.connect(gainNode);
+  osc1.start(now);
+  osc1.stop(now + 0.12);
+
+  // Layer 2: Higher click (second beat — "dub")
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(80, now + 0.12);
+  osc2.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+  const gain2 = ctx.createGain();
+  gain2.gain.setValueAtTime(0, now);
+  gain2.gain.setValueAtTime(0.6, now + 0.12);
+  gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+  osc2.connect(gain2);
+  gain2.connect(gainNode);
+  osc2.start(now + 0.12);
+  osc2.stop(now + 0.25);
+
+  return { duration: 0.25, nodes: [osc1, osc2, gain1, gain2] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -559,6 +591,7 @@ const SOUND_GENERATORS = {
   soundtrack_triumphant: _playSoundtrackTriumphant,
   boss_spawn: playBossSpawn,
   boss_intro: playBossIntro,
+  heartbeat: playHeartbeat,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

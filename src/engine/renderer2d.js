@@ -623,6 +623,46 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.font='bold 9px monospace'; c.fillStyle='rgba(57,255,20,0.5)'; c.textAlign='center'; c.fillText('TACTICAL',rX,rY+rR+14);
   c.restore();
 
+  // ── Low HP Warning — Red Vignette ────────────────────────────────────────────
+  if (g.lowHpWarning && g.lowHpWarning.active && g.lowHpWarning.intensity > 0) {
+    const { lowHpWarning } = g;
+    const C = GAME_CONFIG.lowHpWarning;
+
+    // Pulsing: sine wave mapped to 0.5-1.0 range
+    const pulsePhase = lowHpWarning.pulseTimer / C.pulsePeriod;
+    const pulse = 0.5 + 0.5 * Math.sin(pulsePhase * Math.PI * 2);
+    const alpha = lowHpWarning.intensity * (0.6 + 0.4 * pulse);
+
+    // Radial gradient vignette (dark red from edges, transparent at center)
+    const cx = w / 2, cy = h / 2;
+    const maxDist = Math.hypot(cx, cy);
+    const grad = c.createRadialGradient(cx, cy, maxDist * 0.3, cx, cy, maxDist);
+    const baseAlpha = Math.min(0.7, alpha * 0.8);
+    const isCrit = lowHpWarning.isCritical;
+    const r = isCrit ? 180 : 120;
+    const gv = isCrit ? 20 : 30;
+    grad.addColorStop(0, `rgba(${r},${gv},0,0)`);
+    grad.addColorStop(0.5, `rgba(${r},${gv},0,${baseAlpha * 0.3})`);
+    grad.addColorStop(1, `rgba(${r},${gv},0,${baseAlpha})`);
+    c.fillStyle = grad;
+    c.fillRect(0, 0, w, h);
+
+    // Pulsing border — thin red line around screen edges
+    const borderAlpha = alpha * 0.5;
+    c.strokeStyle = `rgba(${r},${gv},0,${borderAlpha})`;
+    c.lineWidth = lowHpWarning.isCritical ? 4 : 2;
+    c.strokeRect(1, 1, w - 2, h - 2);
+
+    // "LOW HULL" warning text (only when critical)
+    if (lowHpWarning.isCritical) {
+      const textAlpha = alpha * 0.8;
+      c.fillStyle = `rgba(239,68,68,${textAlpha})`;
+      c.font = 'bold 16px monospace';
+      c.textAlign = 'center';
+      c.fillText('⚠ LOW HULL', w / 2, h / 2 + 40);
+    }
+  }
+
   // ── FPS display (overlay on top bar) ──────────────────────────────────────────
   const showFPS = g.settings?.showFPS ?? false;
   if (showFPS) {

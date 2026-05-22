@@ -327,4 +327,17 @@ export const GAME_CONFIG = {
       bigExplosion: 20,
     },
   },
+
+  lowHpWarning: {
+    // HP ratio thresholds (fraction of maxHp)
+    warningThreshold: 0.3,   // Warning activates below 30% HP
+    criticalThreshold: 0.15, // Critical below 15% HP
+
+    // Visual pulse period in seconds (full sine cycle)
+    pulsePeriod: 1.5,
+
+    // Heartbeat audio interval in seconds (normal HP warning)
+    heartbeatInterval: 1.0,
+    // Critical HP halves the interval (0.5s between beats)
+  },
 };

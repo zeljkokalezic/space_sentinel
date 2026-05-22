@@ -202,6 +202,7 @@ export const createGameState = () => ({
   shipSkin: 0,
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
   screenShake: createDefaultScreenShake(),
+  lowHpWarning: createDefaultLowHpWarning(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -284,4 +285,15 @@ export const createDefaultMiniboss = () => ({
 export const createDefaultScreenShake = () => ({
   active: false,
   intensity: 0,
+});
+
+/**
+ * @returns {Object} Default low HP warning state
+ */
+export const createDefaultLowHpWarning = () => ({
+  active: false,
+  intensity: 0,
+  isCritical: false,
+  pulseTimer: 0,
+  heartbeatTimer: 0,
 });

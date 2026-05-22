@@ -29,6 +29,7 @@ import { updateAudio } from './systems/audio';
 import { updateWaveAnnounce } from './systems/waveAnnounce';
 import { updateEnvironmentalHazards } from './systems/environmentalHazards';
 import { cleanup } from './systems/cleanup';
+import { updateLowHpWarning } from './lowHpWarning';
 
 export const updatePhysics = (dt, g, cbs) => {
   const { setGameState, setNotificationVersion } = cbs;
@@ -121,6 +122,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Screen shake decay ──────────────────────────────
   updateScreenShake(dt, g);
+
+  // ─── Low HP warning (visual + audio) ─────────────────
+  updateLowHpWarning(dt, g);
 
   // ─── Escort mission logic ────────────────────────────
   if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;

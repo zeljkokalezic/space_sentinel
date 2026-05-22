@@ -124,6 +124,13 @@ export const createTestState = (overrides = {}) => {
       active: false,
       intensity: 0,
     },
+    lowHpWarning: {
+      active: false,
+      intensity: 0,
+      isCritical: false,
+      pulseTimer: 0,
+      heartbeatTimer: 0,
+    },
   };
 
   // Deep-merge player overrides if provided
@@ -156,8 +163,13 @@ export const createTestState = (overrides = {}) => {
     base.screenShake = { ...base.screenShake, ...overrides.screenShake };
   }
 
-  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, ...restOverrides } = overrides;
+  // Deep-merge lowHpWarning overrides if provided
+  if (overrides.lowHpWarning) {
+    base.lowHpWarning = { ...base.lowHpWarning, ...overrides.lowHpWarning };
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake', 'lowHpWarning' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, lowHpWarning: _lowHpWarningOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 
