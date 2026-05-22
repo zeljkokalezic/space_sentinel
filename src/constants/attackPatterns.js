@@ -110,6 +110,22 @@ export const homing_burst = (g, boss, angle, damage, speed) => {
 };
 
 /**
+ * delayed_burst — 6 projectiles in a ring with staggered speeds.
+ * Creates a "pulsing outward" effect: inner ring arrives first,
+ * outer ring lags behind, giving the player a brief moment to react.
+ * The stagger is configurable via GAME_CONFIG.boss.delayedBurst.
+ */
+export const delayed_burst = (g, boss, angle, damage, speed) => {
+  const C = GAME_CONFIG.boss.delayedBurst;
+  const count = C.count;
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const speedMult = C.baseMult + C.stagger * (i % C.rings);
+    fireProjectile(g, boss.x, boss.y, a, speed * speedMult, damage * C.damageMult, 'enemy_bullet', 0);
+  }
+};
+
+/**
  * All attack patterns — exported as a map for lookup by key.
  */
 export const ATTACK_PATTERNS = {
@@ -122,4 +138,5 @@ export const ATTACK_PATTERNS = {
   zigzag_spread,
   orbiting_mines,
   homing_burst,
+  delayed_burst,
 };

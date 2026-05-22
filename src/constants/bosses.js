@@ -36,7 +36,7 @@ export const BOSS_ROSTER = [
     attackPatterns: {
       phase1: 'single_aimed',
       phase2: 'spread_shot',
-      phase3: 'spiral_barrage',
+      phase3: 'delayed_burst',
     },
     deathColors: [0xdc2626, 0xfbbf24],
     guaranteedDrops: ['shieldBoost', 'damageSurge'],

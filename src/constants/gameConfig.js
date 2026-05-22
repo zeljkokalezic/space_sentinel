@@ -209,6 +209,15 @@ export const GAME_CONFIG = {
     scrapReward: 500,
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     color: '#dc2626',
+
+    // delayed_burst attack pattern config
+    delayedBurst: {
+      count: 6,           // Number of projectiles in the ring
+      rings: 2,           // Number of staggered speed tiers (creates layered arrival)
+      baseMult: 0.5,      // Base speed multiplier for first tier
+      stagger: 0.15,      // Speed increment per tier
+      damageMult: 0.5,    // Damage multiplier per projectile
+    },
   },
 
   miniboss: {
