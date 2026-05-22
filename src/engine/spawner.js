@@ -320,7 +320,7 @@ export function createSpawnFlash(g, x, y) {
   if (!g) return;
 
   const C = GAME_CONFIG.enemySpawnFlash;
-  if (!C.enabled) return;
+  if (!C || !C.enabled) return;
 
   // Ensure spawnFlashes array exists
   if (!g.spawnFlashes) g.spawnFlashes = [];

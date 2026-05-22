@@ -110,7 +110,7 @@ describe('createSpawnFlash', () => {
 
     expect(g.spawnFlashes.length).toBe(max);
     // The first few should have been dropped
-    expect(g.spawnFlashes[0].x).toBe((max - max - 3 + 3) * 100); // oldest remaining
+    expect(g.spawnFlashes[0].x).toBe(3 * 100); // oldest remaining after 3 overflows
   });
 
   it('spawns particles at the flash location', () => {
