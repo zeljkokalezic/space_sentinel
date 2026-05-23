@@ -5,6 +5,8 @@ import { fireProjectile, killEnemy, checkShieldBreak, spawnDamageNumber, trigger
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 import { getNearestHostileTarget } from '../targeting';
+import { getActiveSynergies, applyPlasmaSynergy, applyAutocannonSynergy, applyPointDefenseSynergy } from '../weaponSynergies';
+import { areWeaponsDisabled } from './weather';
 
 /**
  * @param {number} dt — Delta time
@@ -12,6 +14,9 @@ import { getNearestHostileTarget } from '../targeting';
  * @param {function} completeMission — Mission completion callback
  */
 export const updateWeapons = (dt, g, completeMission) => {
+  // ── EMI disable check: skip all weapon firing if weapons are disabled ──
+  if (areWeaponsDisabled(g)) return;
+
   const C = GAME_CONFIG;
   const hasTarget = g.levels.autoAim > 0
     ? (getNearestHostileTarget(g.player.x, g.player.y, g) !== null)
@@ -20,6 +25,9 @@ export const updateWeapons = (dt, g, completeMission) => {
   // ── Active buff multipliers ──
   const fireMult = g.activeBuffs.rapidFire ? 0.5 : 1;
   const dmgMult  = g.activeBuffs.damageSurge ? 2 : 1;
+
+  // ── Compute active synergies ──
+  const activeSynergies = getActiveSynergies(g.levels);
 
   // ── Autocannon ──
   if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0 && hasTarget) {
@@ -33,7 +41,9 @@ export const updateWeapons = (dt, g, completeMission) => {
       const lateralOff = (i - (shots - 1) / 2) * 18;
       const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
-      fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', 0);
+      const pConfig = {};
+      applyAutocannonSynergy(pConfig, activeSynergies);
+      fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', 0, pConfig);
     }
     g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, (C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction) * fireMult);
   }
@@ -49,7 +59,9 @@ export const updateWeapons = (dt, g, completeMission) => {
       const lateralOff = (i - (shots - 1) / 2) * 22;
       const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
-      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2));
+      const pConfig = {};
+      applyPlasmaSynergy(pConfig, activeSynergies);
+      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2), pConfig);
     }
     g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, (C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction) * fireMult);
   }
@@ -69,7 +81,8 @@ export const updateWeapons = (dt, g, completeMission) => {
   if (g.levels.pointDefense > 0 && g.cooldowns.pointDefense <= 0) {
     const range = C.weapons.pointDefense.baseRange + g.levels.pointDefense * C.weapons.pointDefense.rangePerLevel;
     const dmg = (C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel) * dmgMult;
-    const maxHits = 1 + Math.floor(g.levels.pointDefense / C.weapons.pointDefense.maxHitsPer2Levels);
+    const baseMaxHits = 1 + Math.floor(g.levels.pointDefense / C.weapons.pointDefense.maxHitsPer2Levels);
+    const maxHits = applyPointDefenseSynergy(baseMaxHits, activeSynergies);
     let hits = 0;
     let hit = false;
 

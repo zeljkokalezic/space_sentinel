@@ -302,21 +302,21 @@ describe('spawnEnemy', () => {
     }
   });
 
-  // ---------- 18b. Non-shooting types have fireCooldown === 0 ----------
-  it('fighter, interceptor, heavy have fireCooldown === 0', () => {
+  // ---------- 18b. Shooting types have fireCooldown > 0 ----------
+  it('fighter, interceptor, heavy have fireCooldown > 0', () => {
     const seen = new Set();
     for (let i = 0; i < 500; i++) {
       spawnEnemy(g);
       seen.add(g.enemies[i].type);
     }
 
-    const nonShooters = g.enemies.filter(e =>
+    const shooters = g.enemies.filter(e =>
       e.type === 'fighter' || e.type === 'interceptor' || e.type === 'heavy'
     );
 
-    expect(nonShooters.length).toBeGreaterThan(0);
-    for (const e of nonShooters) {
-      expect(e.fireCooldown).toBe(0);
+    expect(shooters.length).toBeGreaterThan(0);
+    for (const e of shooters) {
+      expect(e.fireCooldown).toBeGreaterThan(0);
     }
   });
 
@@ -375,6 +375,13 @@ describe('spawnEnemy', () => {
       missile_boat: 0xd946ef,
     };
 
+    const eliteVariantColors = {
+      sniper: 0xfbbf24,
+      tank: 0xf97316,
+      swarmLeader: 0xeab308,
+      arsenal: 0xd946ef,
+    };
+
     const seen = new Set();
     for (let i = 0; i < 500; i++) {
       spawnEnemy(g);
@@ -385,7 +392,12 @@ describe('spawnEnemy', () => {
       const enemiesOfType = g.enemies.filter(e => e.type === type);
       if (enemiesOfType.length > 0) {
         for (const e of enemiesOfType) {
-          expect(e.color).toBe(expectedColors[type]);
+          // Elite variants override color — check against variant color instead
+          if (e.eliteVariant) {
+            expect(e.color).toBe(eliteVariantColors[e.eliteVariant]);
+          } else {
+            expect(e.color).toBe(expectedColors[type]);
+          }
         }
       }
     }

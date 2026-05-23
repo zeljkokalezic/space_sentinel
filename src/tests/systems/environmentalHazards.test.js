@@ -652,6 +652,7 @@ describe('empZone', () => {
 
   it('inactive enemies are skipped by EMP', () => {
     const enemy = createTestEnemy(0, 0);
+    const originalCooldown = enemy.fireCooldown;
     enemy.active = false;
     g.enemies = [enemy];
     g.hazards = [{
@@ -663,8 +664,8 @@ describe('empZone', () => {
 
     updateEnvironmentalHazards(0.1, g);
 
-    // Should not crash
-    expect(enemy.fireCooldown).toBe(0);
+    // Should not crash and fireCooldown should be unchanged
+    expect(enemy.fireCooldown).toBe(originalCooldown);
   });
 
   it('EMP does not fire while cooldown is active', () => {

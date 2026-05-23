@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { SHIP_SKINS } from '../constants/skins';
+import { GAME_CONFIG } from '../constants/gameConfig';
 import { getScreenShakeOffset } from './screenShake';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -323,8 +324,15 @@ export const draw3DFrame = (threeObj, g) => {
     const dy = p.y - g.player.y;
     if (dx * dx + dy * dy > renderDistSq) continue;
     const m = getMesh(`proj_${p.id ?? p}`, meshes, scene, () => {
-      const col = p.isEnemy ? 0xd946ef : 0xff0000;
-      const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: col, wireframe: true }));
+      let col, mat;
+      if (p.type === 'enemy_cannon') {
+        col = 0xf97316;
+        mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.6 });
+      } else {
+        col = p.isEnemy ? 0xd946ef : 0xff0000;
+        mat = new THREE.MeshBasicMaterial({ color: col, wireframe: true });
+      }
+      const m = new THREE.Mesh(geoms.sphere, mat);
       m.scale.set(p.radius, p.radius, p.radius); return m;
     });
     m.position.set(p.x, p.y, 0);
@@ -362,6 +370,79 @@ export const draw3DFrame = (threeObj, g) => {
       m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) + wobble;
     } else {
       m.rotation.z = Math.atan2(-(g.player.y-e.y), g.player.x-e.x) - Math.PI/2;
+    }
+
+    // ── Elite variant visual indicators ──
+    if (e.eliteVariant) {
+      // Gold trim ring around all elite enemies
+      const ringKey = `elite_ring_${e.id}`;
+      getMesh(ringKey, meshes, scene, () => {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(e.radius * 1.3, e.radius * 1.5, 16),
+          new THREE.MeshBasicMaterial({ color: 0xfbbf24, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        return ring;
+      }).position.set(e.x, e.y, 2);
+
+      // Tank: directional shield arc segments
+      if (e.eliteVariant === 'tank' && e.directionalShields) {
+        const sides = e.directionalShields.length;
+        for (let s = 0; s < sides; s++) {
+          const segKey = `tank_shield_${e.id}_${s}`;
+          const active = e.directionalShields[s] > 0;
+          if (active) {
+            getMesh(segKey, meshes, scene, () => {
+              const arcAngle = (Math.PI * 2 / sides) * 0.8; // 80% of segment
+              const arc = new THREE.Mesh(
+                new THREE.RingGeometry(e.radius * 1.4, e.radius * 1.7, 1, 1, 0, arcAngle),
+                new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+              );
+              arc.rotation.x = -Math.PI / 2;
+              arc.rotation.z = (s / sides) * Math.PI * 2;
+              return arc;
+            }).position.set(e.x, e.y, 1);
+          } else {
+            // Remove inactive shield segments
+            if (meshes.has(segKey)) {
+              const old = meshes.get(segKey);
+              scene.remove(old);
+              meshes.delete(segKey);
+            }
+          }
+        }
+      }
+
+      // Swarm Leader: crown particle pulse effect (emitter ring that pulses)
+      if (e.eliteVariant === 'swarmLeader') {
+        const crownKey = `swarm_crown_${e.id}`;
+        getMesh(crownKey, meshes, scene, () => {
+          const crown = new THREE.Mesh(
+            new THREE.RingGeometry(e.radius * 0.5, e.radius * 0.9, 6),
+            new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+          );
+          crown.rotation.x = -Math.PI / 2;
+          return crown;
+        }).position.set(e.x, e.y, 4 + Math.sin(g.totalTime * 4) * 2);
+      }
+
+      // Arsenal: pulsing glow ring
+      if (e.eliteVariant === 'arsenal') {
+        const glowKey = `arsenal_glow_${e.id}`;
+        getMesh(glowKey, meshes, scene, () => {
+          const glow = new THREE.Mesh(
+            new THREE.RingGeometry(e.radius * 1.1, e.radius * 2.0, 24),
+            new THREE.MeshBasicMaterial({ color: 0xd946ef, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
+          );
+          glow.rotation.x = -Math.PI / 2;
+          return glow;
+        }).position.set(e.x, e.y, 1);
+        // Update pulse opacity
+        const glowMesh = meshes.get(glowKey);
+        if (glowMesh && glowMesh.material) {
+          glowMesh.material.opacity = 0.15 + Math.sin(g.totalTime * 3) * 0.15;
+        }
+      }
     }
   }
 
@@ -589,6 +670,104 @@ export const draw3DFrame = (threeObj, g) => {
         auraMesh.scale.set(auraRadius * 2, auraRadius * 2, 1);
         auraMesh.material.opacity = 0.3 + pulse * 0.3;
       }
+
+      // ── Shield regen aura (green ring around boss when regenerating) ──
+      if (boss.regenActive) {
+        const regenKey = 'boss_shield_regen_aura';
+        if (!meshes.has(regenKey)) {
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(1, 1.12, 32),
+            new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5, side: THREE.DoubleSide })
+          );
+          ring.rotation.x = -Math.PI / 2;
+          scene.add(ring);
+          meshes.set(regenKey, ring);
+        }
+        const regenMesh = meshes.get(regenKey);
+        regenMesh.position.set(boss.x, boss.y, 1);
+        const regenPulse = (Math.sin(g.totalTime * 4) + 1) / 2;
+        const regenRadius = boss.radius * 1.6 + regenPulse * boss.radius * 0.3;
+        regenMesh.scale.set(regenRadius * 2, regenRadius * 2, 1);
+        regenMesh.material.opacity = 0.2 + regenPulse * 0.3;
+      }
+    }
+  }
+
+  // ── Void zones (dark purple circles with pulsing edges) ──
+  if (g.boss && g.boss.voidZones && g.boss.voidZones.length > 0) {
+    for (const zone of g.boss.voidZones) {
+      if (!zone.active) continue;
+      const zdx = zone.x - g.player.x;
+      const zdy = zone.y - g.player.y;
+      if (zdx * zdx + zdy * zdy > renderDistSq) continue;
+
+      const lifeRatio = zone.maxLife > 0 ? zone.life / zone.maxLife : 0;
+
+      // Dark purple fill disc
+      const fillKey = `void_zone_fill_${zone.x}_${zone.y}`;
+      const fillMesh = getMesh(fillKey, meshes, scene, () => {
+        const disc = new THREE.Mesh(
+          new THREE.CircleGeometry(1, 24),
+          new THREE.MeshBasicMaterial({ color: 0x2d1b69, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
+        );
+        disc.rotation.x = -Math.PI / 2;
+        return disc;
+      });
+      fillMesh.position.set(zone.x, zone.y, -0.5);
+      fillMesh.scale.set(zone.radius, zone.radius, 1);
+      fillMesh.material.opacity = 0.25 + lifeRatio * 0.25;
+
+      // Pulsing edge ring
+      const edgeKey = `void_zone_edge_${zone.x}_${zone.y}`;
+      const edgeMesh = getMesh(edgeKey, meshes, scene, () => {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.9, 1, 24),
+          new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        return ring;
+      });
+      const voidPulse = (Math.sin(g.totalTime * 3 + zone.x * 0.01) + 1) / 2;
+      const edgeRadius = zone.radius * (1 + voidPulse * 0.08);
+      edgeMesh.position.set(zone.x, zone.y, 0);
+      edgeMesh.scale.set(edgeRadius, edgeRadius, 1);
+      edgeMesh.material.opacity = 0.3 + voidPulse * 0.5;
+    }
+  }
+
+  // ── Phase shift decoy (semi-transparent boss mesh) ──
+  if (g.boss && g.boss.decoy && g.boss.decoy.active) {
+    const decoy = g.boss.decoy;
+    const ddx = decoy.x - g.player.x;
+    const ddy = decoy.y - g.player.y;
+    if (ddx * ddx + ddy * ddy <= renderDistSq) {
+      const lifeRatio = decoy.maxLife > 0 ? decoy.life / decoy.maxLife : 0;
+      const dm = getMesh('boss_decoy', meshes, scene, () => {
+        const group = new THREE.Group();
+        const geoType = g.boss.geometry || 'box';
+        const geoMap = {
+          box: () => new THREE.BoxGeometry(1, 1, 1),
+          octahedron: () => new THREE.OctahedronGeometry(1, 0),
+          dodecahedron: () => new THREE.DodecahedronGeometry(1, 0),
+          tetrahedron: () => new THREE.TetrahedronGeometry(1, 0),
+          icosahedron: () => new THREE.IcosahedronGeometry(1, 0),
+        };
+        const geoFn = geoMap[geoType] || geoMap.box;
+        const body = new THREE.Mesh(
+          geoFn(),
+          new THREE.MeshBasicMaterial({ color: 0x22d3ee, wireframe: true, transparent: true, opacity: 0.4 })
+        );
+        body.scale.set(decoy.radius * 2, decoy.radius * 2, decoy.radius * 2);
+        group.add(body);
+        return group;
+      });
+      dm.position.set(decoy.x, decoy.y, 0);
+      dm.rotation.y += 0.015;
+      dm.rotation.x += 0.008;
+      // Fade out as decoy expires
+      dm.children.forEach(child => {
+        if (child.material) child.material.opacity = 0.15 + lifeRatio * 0.35;
+      });
     }
   }
 
@@ -818,4 +997,132 @@ export const draw3DFrame = (threeObj, g) => {
   }
 
   renderer.render(scene, camera);
+
+  // ─── Weather Visual Effects ──────────────────────────────────────────────────
+  if (!g.weather || g.weather.active.length === 0) return;
+
+  const weather = g.weather;
+
+  // ── Solar flare: white flash overlay ──
+  if (weather.active.includes('solarFlare') && weather.solarFlare.active) {
+    const sfAlpha = GAME_CONFIG.weather.types.solarFlare.screenAlpha;
+    const pulse = (Math.sin(g.totalTime * 8) + 1) / 2; // 0-1 pulsing
+    const alpha = sfAlpha * (0.7 + pulse * 0.3);
+    // White flash overlay
+    const flashKey = 'weather_solar_flare';
+    if (!meshes.has(flashKey)) {
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(4000, 4000),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: alpha, side: THREE.DoubleSide })
+      );
+      plane.position.z = 1; // slightly behind other content
+      scene.add(plane);
+      meshes.set(flashKey, plane);
+    }
+    const flashMesh = meshes.get(flashKey);
+    // Always face camera
+    flashMesh.position.set(g.player.x, g.player.y, 1);
+    flashMesh.material.opacity = alpha;
+  } else {
+    // Remove solar flare mesh when not active
+    const flashKey = 'weather_solar_flare';
+    if (meshes.has(flashKey)) {
+      const m = meshes.get(flashKey);
+      scene.remove(m);
+      meshes.delete(flashKey);
+    }
+  }
+
+  // ── Debris field: gray rock meshes ──
+  if (weather.active.includes('debrisField')) {
+    for (const cluster of weather.debris) {
+      if (!cluster.active) continue;
+      const dx = cluster.x - g.player.x;
+      const dy = cluster.y - g.player.y;
+      if (dx * dx + dy * dy > renderDistSq) continue;
+
+      const debrisKey = `weather_debris_${cluster.x.toFixed(0)}_${cluster.y.toFixed(0)}`;
+      getMesh(debrisKey, meshes, scene, () => {
+        const group = new THREE.Group();
+        // Main rock body
+        const rock = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(1, 0),
+          new THREE.MeshBasicMaterial({ color: 0x6b7280, wireframe: true })
+        );
+        rock.scale.set(cluster.radius, cluster.radius * 0.7, cluster.radius * 0.7);
+        group.add(rock);
+        // Danger ring
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(cluster.radius * 0.8, cluster.radius, 12),
+          new THREE.MeshBasicMaterial({ color: 0x9ca3af, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.4 })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        group.add(ring);
+        return group;
+      }).position.set(cluster.x, cluster.y, 0);
+    }
+  }
+
+  // ── Gravity anomaly: purple circles ──
+  if (weather.active.includes('gravityAnomaly')) {
+    for (const zone of weather.gravityZones) {
+      if (!zone.active) continue;
+      const dx = zone.x - g.player.x;
+      const dy = zone.y - g.player.y;
+      if (dx * dx + dy * dy > renderDistSq) continue;
+
+      const gravKey = `weather_grav_${zone.x.toFixed(0)}_${zone.y.toFixed(0)}`;
+      getMesh(gravKey, meshes, scene, () => {
+        const group = new THREE.Group();
+        // Inner ring
+        const inner = new THREE.Mesh(
+          new THREE.RingGeometry(zone.radius * 0.3, zone.radius * 0.5, 24),
+          new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+        );
+        inner.rotation.x = -Math.PI / 2;
+        group.add(inner);
+        // Outer ring
+        const outer = new THREE.Mesh(
+          new THREE.RingGeometry(zone.radius * 0.6, zone.radius, 24),
+          new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true, side: THREE.DoubleSide, transparent: true, opacity: 0.3 })
+        );
+        outer.rotation.x = -Math.PI / 2;
+        group.add(outer);
+        // Center marker
+        const center = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 8, 8),
+          new THREE.MeshBasicMaterial({ color: 0x7c3aed, wireframe: true })
+        );
+        center.scale.set(5, 5, 5);
+        group.add(center);
+        return group;
+      }).position.set(zone.x, zone.y, 0);
+    }
+  }
+
+  // ── EMI: yellow static overlay ──
+  if (weather.active.includes('electromagneticInterference') && weather.emi.active) {
+    const emiPulse = (Math.sin(g.totalTime * 6) + 1) / 2;
+    const emiAlpha = 0.15 + emiPulse * 0.1;
+    const emiKey = 'weather_emi_overlay';
+    if (!meshes.has(emiKey)) {
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(4000, 4000),
+        new THREE.MeshBasicMaterial({ color: 0xeab308, transparent: true, opacity: emiAlpha, side: THREE.DoubleSide })
+      );
+      plane.position.z = 0.5;
+      scene.add(plane);
+      meshes.set(emiKey, plane);
+    }
+    const emiMesh = meshes.get(emiKey);
+    emiMesh.position.set(g.player.x, g.player.y, 0.5);
+    emiMesh.material.opacity = emiAlpha;
+  } else {
+    const emiKey = 'weather_emi_overlay';
+    if (meshes.has(emiKey)) {
+      const m = meshes.get(emiKey);
+      scene.remove(m);
+      meshes.delete(emiKey);
+    }
+  }
 };

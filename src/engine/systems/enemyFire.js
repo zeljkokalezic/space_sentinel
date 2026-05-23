@@ -29,9 +29,10 @@ import { GAME_CONFIG } from '../../constants/gameConfig';
  * @param {number} dt — Delta time (seconds)
  * @param {number} currentDiffMult — Difficulty multiplier
  * @param {object} g — Game state
+ * @param {number} [adaptiveAggression=1] — Adaptive aggression multiplier from dynamic difficulty
  * @returns {boolean} true if a weapon was fired (or warning started), false otherwise
  */
-export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMult, g) => {
+export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMult, g, adaptiveAggression = 1) => {
   const C = GAME_CONFIG;
   if (enemy.fireCooldown === undefined) return false;
 
@@ -46,6 +47,101 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
   // Clear the warning timer for next cycle
   enemy.warningTimer = undefined;
+
+  // Helper: apply adaptive aggression as fire cooldown multiplier
+  const applyAggression = (baseCooldown) => baseCooldown / adaptiveAggression;
+
+  // ── Elite variant: Sniper (based on shooter) ──
+  if (enemy.eliteVariant === 'sniper' && distToTarget < C.player.radius * C.eliteVariants.sniper.rangeMult) {
+    const ev = C.eliteVariants.sniper;
+    const travelTime = distToTarget / ev.projectileSpeed;
+    const predictedX = (g.escort?.active ? g.escort.x : g.player.x) + (g.escort?.active ? g.escort.vx || 0 : g.player.vx) * travelTime;
+    const predictedY = (g.escort?.active ? g.escort.y : g.player.y) + (g.escort?.active ? g.escort.vy || 0 : g.player.vy) * travelTime;
+
+    spawnAttackWarning(g, predictedX, predictedY, ev.warningDuration, 25, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle, ev.projectileSpeed, ev.damage * currentDiffMult, 'enemy_bullet');
+    });
+
+    enemy.warningTimer = ev.warningDuration;
+    enemy.fireCooldown = applyAggression(ev.cooldownMin);
+    return true;
+  }
+
+  // ── Elite variant: Arsenal (based on missile_boat) ──
+  if (enemy.eliteVariant === 'arsenal' && distToTarget < C.player.radius * C.enemyWeapons.missile_boat.rangeMult) {
+    const ev = C.eliteVariants.arsenal;
+    const wc = getWarningConfig('missile_boat');
+    const targetX = g.escort?.active ? g.escort.x : g.player.x;
+    const targetY = g.escort?.active ? g.escort.y : g.player.y;
+    const baseAngle = Math.atan2(targetY - enemy.y, targetX - enemy.x);
+    const spread = 0.3;
+
+    for (let i = 0; i < ev.missileCount; i++) {
+      const angleOffset = (i - (ev.missileCount - 1) / 2) * spread;
+      const missileAngle = baseAngle + angleOffset;
+      const impactX = targetX + Math.cos(missileAngle) * 20;
+      const impactY = targetY + Math.sin(missileAngle) * 20;
+
+      spawnAttackWarning(g, impactX, impactY, wc.duration, wc.radius, () => {
+        if (!enemy.active || enemy.hp <= 0) return;
+        fireProjectile(g, enemy.x, enemy.y, missileAngle, C.enemyWeapons.missile_boat.missileSpeed, ev.missileDamage * currentDiffMult, 'enemy_missile');
+      });
+    }
+
+    enemy.warningTimer = wc.duration;
+    enemy.fireCooldown = applyAggression(ev.cooldownMin);
+    return true;
+  }
+
+  // ── Elite variant: Tank (based on heavy) ──
+  if (enemy.eliteVariant === 'tank' && distToTarget < C.player.radius * C.enemyWeapons.heavy.rangeMult) {
+    const wc = getWarningConfig('heavy');
+    const targetX = g.escort?.active ? g.escort.x : g.player.x;
+    const targetY = g.escort?.active ? g.escort.y : g.player.y;
+
+    spawnAttackWarning(g, targetX, targetY, wc.duration, wc.radius, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle, C.enemyWeapons.heavy.projectileSpeed, C.enemyWeapons.heavy.damage * currentDiffMult, C.enemyWeapons.heavy.projectileType, 0);
+    });
+
+    enemy.warningTimer = wc.duration;
+    enemy.fireCooldown = applyAggression(C.eliteVariants.tank.cooldownMin);
+    return true;
+  }
+
+  // ── Elite variant: Swarm Leader (based on interceptor) ──
+  if (enemy.eliteVariant === 'swarmLeader' && distToTarget < C.player.radius * C.enemyWeapons.interceptor.rangeMult) {
+    const wc = getWarningConfig('interceptor');
+    const targetX = g.escort?.active ? g.escort.x : g.player.x;
+    const targetY = g.escort?.active ? g.escort.y : g.player.y;
+    const baseAngle = Math.atan2(targetY - enemy.y, targetX - enemy.x);
+    const spread = C.enemyWeapons.interceptor.burstSpread;
+    const count = C.enemyWeapons.interceptor.burstCount;
+
+    for (let i = 0; i < count; i++) {
+      const angleOffset = (i - (count - 1) / 2) * spread;
+      const burstAngle = baseAngle + angleOffset;
+      const travelTime = distToTarget / C.enemyWeapons.interceptor.projectileSpeed;
+      const impactX = targetX + Math.cos(burstAngle) * travelTime * (g.escort?.active ? g.escort.vx || 0 : g.player.vx) * 0.1;
+      const impactY = targetY + Math.sin(burstAngle) * travelTime * (g.escort?.active ? g.escort.vy || 0 : g.player.vy) * 0.1;
+
+      spawnAttackWarning(g, impactX, impactY, wc.duration, wc.radius, () => {
+        if (!enemy.active || enemy.hp <= 0) return;
+        fireProjectile(g, enemy.x, enemy.y, burstAngle, C.enemyWeapons.interceptor.projectileSpeed, C.enemyWeapons.interceptor.damage * currentDiffMult, C.enemyWeapons.interceptor.projectileType, 0);
+      });
+    }
+
+    enemy.warningTimer = wc.duration;
+    enemy.fireCooldown = applyAggression(C.enemyWeapons.interceptor.cooldownMin + Math.random() * C.enemyWeapons.interceptor.cooldownVariance);
+    return true;
+  }
 
   if (enemy.type === 'shooter' && distToTarget < C.player.radius * C.enemyWeapons.shooter.rangeMult) {
     const wc = getWarningConfig('shooter');
@@ -65,7 +161,7 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
     // Set warning timer on enemy to prevent re-firing during warning phase
     enemy.warningTimer = wc.duration;
-    enemy.fireCooldown = C.enemyWeapons.shooter.cooldownMin + Math.random() * C.enemyWeapons.shooter.cooldownVariance;
+    enemy.fireCooldown = applyAggression(C.enemyWeapons.shooter.cooldownMin + Math.random() * C.enemyWeapons.shooter.cooldownVariance);
     return true;
   }
 
@@ -92,7 +188,74 @@ export const tryFireEnemyWeapon = (enemy, angle, distToTarget, dt, currentDiffMu
 
     // Set warning timer on enemy to prevent re-firing during warning phase
     enemy.warningTimer = wc.duration;
-    enemy.fireCooldown = C.enemyWeapons.missile_boat.cooldown;
+    enemy.fireCooldown = applyAggression(C.enemyWeapons.missile_boat.cooldown);
+    return true;
+  }
+
+  // Heavy: slow but powerful cannon shot
+  if (enemy.type === 'heavy' && distToTarget < C.player.radius * C.enemyWeapons.heavy.rangeMult) {
+    const wc = getWarningConfig('heavy');
+    const targetX = g.escort?.active ? g.escort.x : g.player.x;
+    const targetY = g.escort?.active ? g.escort.y : g.player.y;
+
+    spawnAttackWarning(g, targetX, targetY, wc.duration, wc.radius, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle, C.enemyWeapons.heavy.projectileSpeed, C.enemyWeapons.heavy.damage * currentDiffMult, C.enemyWeapons.heavy.projectileType, 0);
+    });
+
+    enemy.warningTimer = wc.duration;
+    enemy.fireCooldown = applyAggression(C.enemyWeapons.heavy.cooldownMin + Math.random() * C.enemyWeapons.heavy.cooldownVariance);
+    return true;
+  }
+
+  // Interceptor: 3-shot burst with spread
+  if (enemy.type === 'interceptor' && distToTarget < C.player.radius * C.enemyWeapons.interceptor.rangeMult) {
+    const wc = getWarningConfig('interceptor');
+    const targetX = g.escort?.active ? g.escort.x : g.player.x;
+    const targetY = g.escort?.active ? g.escort.y : g.player.y;
+    const baseAngle = Math.atan2(targetY - enemy.y, targetX - enemy.x);
+    const spread = C.enemyWeapons.interceptor.burstSpread;
+    const count = C.enemyWeapons.interceptor.burstCount;
+
+    // Spawn a warning for each shot in the burst
+    for (let i = 0; i < count; i++) {
+      const angleOffset = (i - (count - 1) / 2) * spread;
+      const burstAngle = baseAngle + angleOffset;
+      // Predict impact point for this shot
+      const travelTime = distToTarget / C.enemyWeapons.interceptor.projectileSpeed;
+      const impactX = targetX + Math.cos(burstAngle) * travelTime * (g.escort?.active ? g.escort.vx || 0 : g.player.vx) * 0.1;
+      const impactY = targetY + Math.sin(burstAngle) * travelTime * (g.escort?.active ? g.escort.vy || 0 : g.player.vy) * 0.1;
+
+      spawnAttackWarning(g, impactX, impactY, wc.duration, wc.radius, () => {
+        if (!enemy.active || enemy.hp <= 0) return;
+        fireProjectile(g, enemy.x, enemy.y, burstAngle, C.enemyWeapons.interceptor.projectileSpeed, C.enemyWeapons.interceptor.damage * currentDiffMult, C.enemyWeapons.interceptor.projectileType, 0);
+      });
+    }
+
+    enemy.warningTimer = wc.duration;
+    enemy.fireCooldown = applyAggression(C.enemyWeapons.interceptor.cooldownMin + Math.random() * C.enemyWeapons.interceptor.cooldownVariance);
+    return true;
+  }
+
+  // Fighter: single aimed bullet
+  if (enemy.type === 'fighter' && distToTarget < C.player.radius * C.enemyWeapons.fighter.rangeMult) {
+    const wc = getWarningConfig('fighter');
+    const targetX = g.escort?.active ? g.escort.x : g.player.x;
+    const targetY = g.escort?.active ? g.escort.y : g.player.y;
+
+    spawnAttackWarning(g, targetX, targetY, wc.duration, wc.radius, () => {
+      if (!enemy.active || enemy.hp <= 0) return;
+      const tx = g.escort?.active ? g.escort.x : g.player.x;
+      const ty = g.escort?.active ? g.escort.y : g.player.y;
+      const currentAngle = Math.atan2(ty - enemy.y, tx - enemy.x);
+      fireProjectile(g, enemy.x, enemy.y, currentAngle, C.enemyWeapons.fighter.projectileSpeed, C.enemyWeapons.fighter.damage * currentDiffMult, C.enemyWeapons.fighter.projectileType, 0);
+    });
+
+    enemy.warningTimer = wc.duration;
+    enemy.fireCooldown = applyAggression(C.enemyWeapons.fighter.cooldownMin + Math.random() * C.enemyWeapons.fighter.cooldownVariance);
     return true;
   }
 

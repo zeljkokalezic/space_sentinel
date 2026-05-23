@@ -169,6 +169,15 @@
  * @property {boolean} scrapFloats[].active — Whether float is active
  * @property {number} shipSkin — Active skin index (0-4)
  * @property {boolean[]} unlockedSkins — Which skins are unlocked
+ * @property {Object} adaptiveDifficulty — Adaptive difficulty tracking
+ * @property {number} adaptiveDifficulty.pressureScore — Current pressure score (0–1)
+ * @property {number[]} adaptiveDifficulty.pressureHistory — Rolling history of pressure samples
+ * @property {number} adaptiveDifficulty.lowPressureTimer — Seconds spent in low pressure (<0.3)
+ * @property {number} adaptiveDifficulty.highPressureTimer — Seconds spent in high pressure (>0.7)
+ * @property {boolean} adaptiveDifficulty.rampageMode — Whether rampage mode is active
+ * @property {number} adaptiveDifficulty.missionsHighHp — Consecutive missions completed with HP > 80%
+ * @property {number} adaptiveDifficulty.spawnRateMult — Spawn rate multiplier (≤1 reduces spawns)
+ * @property {number} adaptiveDifficulty.enemyAggressionMult — Enemy aggression multiplier (≥1 increases speed/firerate)
  */
 
 import { generateMap } from './mapGenerator';
@@ -222,6 +231,8 @@ export const createGameState = () => ({
   escort: createDefaultEscort(),
   beacon: createDefaultBeacon(),
   sabotage: createDefaultSabotage(),
+  gauntlet: createDefaultGauntlet(),
+  waveSurge: createDefaultWaveSurge(),
   keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
   touchId: null, touchBase: null, touchCurrent: null,
   devMode: false,
@@ -243,6 +254,9 @@ export const createGameState = () => ({
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
   screenShake: createDefaultScreenShake(),
   lowHpWarning: createDefaultLowHpWarning(),
+  emergencyBeacon: {
+    purchased: false, activated: false, nodeId: null,
+  },
   hitStop: createDefaultHitStop(),
   playerIFrames: createDefaultPlayerIFrames(),
   attackWarnings: [],
@@ -250,6 +264,30 @@ export const createGameState = () => ({
   spawnFlashes: [],
   scrapFloats: [],
   powerupAuras: [],
+  adaptiveDifficulty: {
+    pressureScore: 0,
+    pressureHistory: [],
+    lowPressureTimer: 0,
+    highPressureTimer: 0,
+    rampageMode: false,
+    missionsHighHp: 0,
+    spawnRateMult: 1,
+    enemyAggressionMult: 1,
+  },
+  sector: {
+    number: 1,
+    rank: null,
+    rankScore: 0,
+    consecutiveARank: 0,
+    veteranMode: false,
+    activeBuff: null,
+    missionsCleared: 0,
+    missionsCompleted: 0,
+    totalHpPercent: 0,
+    missionStartTime: [],
+    missionEndTime: [],
+  },
+  weather: createDefaultWeather(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -308,6 +346,11 @@ export const createDefaultBoss = () => ({
   rage: false,
   rageAuraTimer: 0,
   rageEmberTimer: 0,
+  voidZones: [],
+  regenTimer: 0,
+  regenActive: false,
+  phaseShiftTimer: 0,
+  decoy: null,
 });
 
 /**
@@ -378,4 +421,50 @@ export const createDefaultDynamicFov = () => ({
   hitTimer: 0,       // Remaining time for hit FOV snap
   bossDeathTimer: 0, // Remaining time for boss death FOV widen
   bossActiveTime: 0, // Time boss has been active (prevents flicker)
+});
+
+/**
+ * @returns {Object} Default gauntlet mission state
+ */
+export const createDefaultGauntlet = () => ({
+  active: false,
+  currentWave: 0,
+  totalWaves: 3,
+  enemiesPerWave: 0,
+  enemiesSpawnedInWave: 0,
+  waveDelay: 0,
+  betweenWaves: false,
+});
+
+/**
+ * @returns {Object} Default wave surge mission state
+ */
+export const createDefaultWaveSurge = () => ({
+  active: false,
+  remaining: 0,
+  spawnRateMult: 3,
+});
+
+/**
+ * @returns {Object} Default weather system state
+ */
+export const createDefaultWeather = () => ({
+  // Active weather types for this sector (e.g. ['solarFlare', 'debrisField'])
+  active: [],
+  // Solar flare sub-state
+  solarFlare: {
+    timer: 0,
+    active: false,
+    remaining: 0,
+  },
+  // Debris field clusters: [{ x, y, radius, vx, vy, active }]
+  debris: [],
+  // Gravity anomaly zones: [{ x, y, radius, respawnTimer, active }]
+  gravityZones: [],
+  // EMI sub-state
+  emi: {
+    timer: 0,
+    active: false,
+    remaining: 0,
+  },
 });

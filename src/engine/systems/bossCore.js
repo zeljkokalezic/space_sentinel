@@ -10,6 +10,7 @@ import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
 import { createParticles, checkShieldBreak, triggerScreenShake, triggerHitStop } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovBossDeath } from './dynamicFov';
+import { updateBossSignatureMechanics } from './bossSignatureMechanics';
 
 /**
  * @param {number} dt — Delta time
@@ -229,6 +230,9 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     completeMission();
     return true;
   }
+
+  // ── Signature mechanics (void zones, shield regen, phase shift) ──
+  updateBossSignatureMechanics(dt, boss, g);
 
   return false;
 };

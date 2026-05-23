@@ -173,8 +173,8 @@ describe('UPGRADE_DATA', () => {
   /*  9. Exactly 9 upgrade types                                    */
   /* -------------------------------------------------------------- */
 
-  it('has exactly 9 upgrade types', () => {
-    expect(keys).toHaveLength(9);
+  it('has exactly 10 upgrade types', () => {
+    expect(keys).toHaveLength(10);
   });
 
   /* -------------------------------------------------------------- */
@@ -185,6 +185,7 @@ describe('UPGRADE_DATA', () => {
     const expected = [
       'autoAim', 'autocannon', 'plasma', 'missiles',
       'hull', 'shield', 'thrusters', 'magnet', 'pointDefense',
+      'emergencyBeacon',
     ];
     for (const type of expected) {
       expect(keys).toContain(type);

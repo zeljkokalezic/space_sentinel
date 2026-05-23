@@ -92,6 +92,60 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.fillStyle='#facc15'; c.font='bold 24px monospace'; c.textAlign='right';
   c.fillText(`SCRAP: ${g.scrap}`, w-20, 35);
 
+  // ── Sector number (top-left corner) ─────────────────────────────────────
+  if (g.sector) {
+    c.fillStyle = 'rgba(148,163,184,0.8)';
+    c.font = 'bold 11px monospace';
+    c.textAlign = 'left';
+    c.fillText(`SECTOR ${g.sector.number}`, 20, 52);
+  }
+
+  // ── Veteran mode indicator (top-left, below sector) ─────────────────────
+  if (g.sector?.veteranMode) {
+    const vetPulse = (Math.sin(g.totalTime * 3) + 1) / 2;
+    const vetAlpha = 0.7 + vetPulse * 0.3;
+    c.fillStyle = `rgba(239,68,68,${vetAlpha})`;
+    c.font = 'bold 10px monospace';
+    c.textAlign = 'left';
+    c.fillText('⚡ VETERAN', 20, 64);
+  }
+
+  // ── Active buff indicator (top-left, below veteran) ─────────────────────
+  const buffNames = {
+    max_shield_start: '🛡 FULL SHIELD',
+    free_weapon: '🔫 FREE WEAPON',
+    scrap_bonus: '💰 +100 SCRAP',
+    speed_boost: '⚡ SPEED +10%',
+  };
+  if (g.sector?.activeBuff && buffNames[g.sector.activeBuff]) {
+    c.fillStyle = 'rgba(168,85,247,0.9)';
+    c.font = 'bold 10px monospace';
+    c.textAlign = 'left';
+    c.fillText(buffNames[g.sector.activeBuff], 20, g.sector.veteranMode ? 76 : 64);
+  }
+
+  // ── Rampage mode indicator ──────────────────────────────────────────────────
+  if (g.adaptiveDifficulty?.rampageMode) {
+    const rampagePulse = (Math.sin(g.totalTime * 4) + 1) / 2; // 0-1 pulsing
+    const rampageAlpha = 0.6 + rampagePulse * 0.4;
+
+    // "RAMPAGE" text — red pulsing, centered below time
+    c.save();
+    c.shadowColor = '#ef4444';
+    c.shadowBlur = 10 + rampagePulse * 10;
+    c.fillStyle = `rgba(239,68,68,${rampageAlpha})`;
+    c.font = 'bold 18px monospace';
+    c.textAlign = 'center';
+    c.fillText('RAMPAGE', w / 2, 82);
+    c.restore();
+
+    // "3x SCRAP" indicator below rampage text
+    c.fillStyle = `rgba(250,204,21,${rampageAlpha})`;
+    c.font = 'bold 12px monospace';
+    c.textAlign = 'center';
+    c.fillText('3x SCRAP', w / 2, 98);
+  }
+
   // Combo counter
   if (g.combo && g.combo.count > 0) {
     const comboColors = { 1: '#ffffff', 1.5: '#fbbf24', 2: '#f97316', 3: '#ef4444' }
@@ -165,7 +219,53 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     }
   }
 
-  // Hazard warning indicators
+ // ── Weather effect indicators ──────────────────────────────────────────────
+  if (g.weather && g.weather.active.length > 0) {
+    const weather = g.weather;
+    let wY = warnY;
+
+    // Solar flare active
+    if (weather.active.includes('solarFlare') && weather.solarFlare.active) {
+      c.fillStyle = '#ffffff';
+      c.font = 'bold 11px monospace';
+      c.textAlign = 'left';
+      c.fillText(`☀ SOLAR FLARE ${Math.ceil(weather.solarFlare.remaining)}s`, 20, wY);
+      wY += 16;
+    }
+
+    // Debris field active
+    if (weather.active.includes('debrisField')) {
+      const activeClusters = weather.debris.filter(d => d.active).length;
+      c.fillStyle = '#9ca3af';
+      c.font = 'bold 11px monospace';
+      c.textAlign = 'left';
+      c.fillText(`🪨 DEBRIS FIELD [${activeClusters}]`, 20, wY);
+      wY += 16;
+    }
+
+    // Gravity anomaly active
+    if (weather.active.includes('gravityAnomaly')) {
+      const activeZones = weather.gravityZones.filter(z => z.active).length;
+      c.fillStyle = '#7c3aed';
+      c.font = 'bold 11px monospace';
+      c.textAlign = 'left';
+      c.fillText(`🌀 GRAVITY ANOMALY [${activeZones}]`, 20, wY);
+      wY += 16;
+    }
+
+    // EMI active — weapons disabled
+    if (weather.active.includes('electromagneticInterference') && weather.emi.active) {
+      const emiPulse = (Math.sin(g.totalTime * 4) + 1) / 2;
+      const emiAlpha = 0.7 + emiPulse * 0.3;
+      c.fillStyle = `rgba(234,179,8,${emiAlpha})`;
+      c.font = 'bold 12px monospace';
+      c.textAlign = 'left';
+      c.fillText(`⚡ WEAPONS DISABLED ${Math.ceil(weather.emi.remaining)}s`, 20, wY);
+      wY += 16;
+    }
+
+    warnY = wY;
+  }
   if (g.hazards && g.hazards.length > 0) {
     for (const h of g.hazards) {
       if (!h || !h.active) continue;
@@ -395,6 +495,15 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.font = 'bold 12px monospace';
     c.textAlign = 'center';
     c.fillText(`${boss.name || 'BOSS'} [${Math.ceil(boss.hp)}HP] PHASE ${boss.phase}`, w / 2, barY + barH + 14);
+
+    // Shield regen indicator
+    if (boss.regenActive) {
+      const regenPulse = (Math.sin(g.totalTime * 4) + 1) / 2;
+      c.fillStyle = `rgba(34,197,94,${0.5 + regenPulse * 0.5})`;
+      c.font = 'bold 10px monospace';
+      c.textAlign = 'center';
+      c.fillText('⚡ REGENERATING', w / 2, barY + barH + 28);
+    }
   }
 
   // Mini-boss HP bar (below boss bar, orange theme)
@@ -791,11 +900,13 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   const pYaw=g.player.yaw||0, rRot=Math.PI/2-pYaw;
   const toR = (wx, wy) => toRTransform(wx, wy, g.player.x, g.player.y, rX, rY, rRange, rR, rRot);
 
+  const radarCfg = C.radar;
   for (let e of g.enemies) {
     if (!e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)>rRange) continue;
     const{px,py}=toR(e.x,e.y);
-    let bc='#ef4444'; if(e.type==='shielded')bc='#3b82f6'; else if(e.type==='shooter')bc='#a855f7'; else if(e.type==='missile_boat')bc='#d946ef'; else if(e.type==='heavy')bc='#f97316'; else if(e.type==='interceptor')bc='#eab308';
-    c.beginPath(); c.arc(px,py,e.type==='heavy'?3.5:2.5,0,Math.PI*2); c.fillStyle=bc; c.fill();
+    const eColor = radarCfg.enemyColors[e.type] || '#ef4444';
+    const eRadius = e.type === 'heavy' ? 3 : 2;
+    c.beginPath(); c.arc(px,py,eRadius,0,Math.PI*2); c.fillStyle=eColor; c.fill();
   }
   for (let p of g.pickups) {
     if (!p.active||Math.hypot(p.x-g.player.x,p.y-g.player.y)>rRange) continue;
@@ -807,8 +918,12 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     for (const pu of g.powerups) {
       if (!pu.active || Math.hypot(pu.x - g.player.x, pu.y - g.player.y) > rRange) continue;
       const {px, py} = toR(pu.x, pu.y);
-      c.fillStyle = pu.color || '#fbbf24';
-      c.beginPath(); c.arc(px, py, 3, 0, Math.PI * 2); c.fill();
+      const pulse = (Math.sin(g.totalTime * 4) + 1) / 2;
+      const puRadius = 2.5 + pulse * 1.5;
+      c.fillStyle = radarCfg.powerupColor;
+      c.globalAlpha = 0.6 + pulse * 0.4;
+      c.beginPath(); c.arc(px, py, puRadius, 0, Math.PI * 2); c.fill();
+      c.globalAlpha = 1;
     }
   }
 
@@ -818,8 +933,8 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     const ed = Math.hypot(esc.x-g.player.x, esc.y-g.player.y);
     if (ed <= rRange) {
       const {px,py} = toR(esc.x, esc.y);
-      c.fillStyle='#22d3ee'; c.beginPath(); c.arc(px,py,4,0,Math.PI*2); c.fill();
-      c.strokeStyle='#22d3ee'; c.lineWidth=1; c.stroke();
+      c.fillStyle=radarCfg.escortColor; c.beginPath(); c.arc(px,py,4,0,Math.PI*2); c.fill();
+      c.strokeStyle=radarCfg.escortColor; c.lineWidth=1; c.stroke();
     }
   }
 
@@ -838,7 +953,7 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     const bd = Math.hypot(bc.x-g.player.x, bc.y-g.player.y);
     if (bd <= rRange) {
       const {px,py} = toR(bc.x, bc.y);
-      c.fillStyle='#22d3ee'; c.beginPath();
+      c.fillStyle=radarCfg.beaconColor; c.beginPath();
       c.moveTo(px,py-5); c.lineTo(px+4,py); c.lineTo(px,py+5); c.lineTo(px-4,py);
       c.closePath(); c.fill();
     }
@@ -916,22 +1031,70 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     if (bd <= rRange) {
       const {px, py} = toR(g.boss.x, g.boss.y);
       const isRaged = g.boss.rage;
-      const bossColor = isRaged ? '#ff3333' : '#dc2626';
-      // Rage: pulsing ring around boss dot
-      if (isRaged) {
-        const pulse = (Math.sin(g.boss.rageAuraTimer * 4) + 1) / 2;
-        const ringR = 6 + pulse * 4;
-        c.strokeStyle = `rgba(255,51,51,${0.4 + pulse * 0.4})`;
-        c.lineWidth = 2;
-        c.beginPath(); c.arc(px, py, ringR, 0, Math.PI * 2); c.stroke();
-      }
+      const bossColor = isRaged ? '#ff3333' : radarCfg.bossColor;
+      // Pulsing ring around boss dot
+      const pulse = (Math.sin(g.totalTime * 3) + 1) / 2;
+      const ringR = 5 + pulse * 2;
+      c.strokeStyle = `rgba(239,68,68,${0.3 + pulse * 0.5})`;
+      c.lineWidth = 2;
+      c.beginPath(); c.arc(px, py, ringR, 0, Math.PI * 2); c.stroke();
       // Boss dot (larger than enemies)
       c.fillStyle = bossColor;
-      c.beginPath(); c.arc(px, py, isRaged ? 5 : 4, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(px, py, 4, 0, Math.PI * 2); c.fill();
       // White border for visibility
       c.strokeStyle = '#ffffff';
       c.lineWidth = 1;
       c.stroke();
+
+      // ── Shield regen indicator near boss on radar ──
+      if (g.boss.regenActive) {
+        const regenPulse = (Math.sin(g.totalTime * 4) + 1) / 2;
+        c.strokeStyle = `rgba(34,197,94,${0.4 + regenPulse * 0.4})`;
+        c.lineWidth = 1.5;
+        c.beginPath(); c.arc(px, py, 7, 0, Math.PI * 2); c.stroke();
+      }
+    }
+  }
+
+  // ── Void zones on radar (dark circles) ──
+  if (g.boss && g.boss.voidZones && g.boss.voidZones.length > 0) {
+    for (const zone of g.boss.voidZones) {
+      if (!zone.active) continue;
+      const zd = Math.hypot(zone.x - g.player.x, zone.y - g.player.y);
+      if (zd > rRange) continue;
+      const {px, py} = toR(zone.x, zone.y);
+      const lifeRatio = zone.maxLife > 0 ? zone.life / zone.maxLife : 0;
+      const radarRadius = (zone.radius / rRange) * rR;
+      // Dark purple fill
+      c.fillStyle = `rgba(45,27,105,${0.3 + lifeRatio * 0.3})`;
+      c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.fill();
+      // Pulsing edge
+      const voidPulse = (Math.sin(g.totalTime * 3 + zone.x * 0.01) + 1) / 2;
+      c.strokeStyle = `rgba(124,58,237,${0.3 + voidPulse * 0.4})`;
+      c.lineWidth = 1;
+      c.beginPath(); c.arc(px, py, Math.max(2, radarRadius), 0, Math.PI * 2); c.stroke();
+    }
+  }
+
+  // ── Phase shift decoy on radar (cyan diamond) ──
+  if (g.boss && g.boss.decoy && g.boss.decoy.active) {
+    const decoy = g.boss.decoy;
+    const dd = Math.hypot(decoy.x - g.player.x, decoy.y - g.player.y);
+    if (dd <= rRange) {
+      const {px, py} = toR(decoy.x, decoy.y);
+      const lifeRatio = decoy.maxLife > 0 ? decoy.life / decoy.maxLife : 0;
+      c.fillStyle = `rgba(34,211,238,${0.3 + lifeRatio * 0.5})`;
+      c.strokeStyle = `rgba(34,211,238,${0.4 + lifeRatio * 0.4})`;
+      c.lineWidth = 1;
+      // Diamond shape
+      const ds = 4;
+      c.beginPath();
+      c.moveTo(px, py - ds);
+      c.lineTo(px + ds, py);
+      c.lineTo(px, py + ds);
+      c.lineTo(px - ds, py);
+      c.closePath();
+      c.fill(); c.stroke();
     }
   }
 
@@ -941,16 +1104,16 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     if (md <= rRange) {
       const {px, py} = toR(g.miniboss.x, g.miniboss.y);
       const isRaged = g.miniboss.rage;
-      const mbColor = isRaged ? '#ff3333' : '#f97316';
-      if (isRaged) {
-        const pulse = (Math.sin(g.miniboss.rageAuraTimer * 4) + 1) / 2;
-        const ringR = 5 + pulse * 3;
-        c.strokeStyle = `rgba(255,51,51,${0.3 + pulse * 0.3})`;
-        c.lineWidth = 1.5;
-        c.beginPath(); c.arc(px, py, ringR, 0, Math.PI * 2); c.stroke();
-      }
+      const mbColor = isRaged ? '#ff3333' : radarCfg.minibossColor;
+      // Pulsing ring around miniboss dot
+      const pulse = (Math.sin(g.totalTime * 3 + 1) + 1) / 2;
+      const ringR = 4 + pulse * 2;
+      c.strokeStyle = `rgba(249,115,22,${0.25 + pulse * 0.4})`;
+      c.lineWidth = 1.5;
+      c.beginPath(); c.arc(px, py, ringR, 0, Math.PI * 2); c.stroke();
+      // Mini-boss dot
       c.fillStyle = mbColor;
-      c.beginPath(); c.arc(px, py, isRaged ? 4 : 3.5, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(px, py, 3.5, 0, Math.PI * 2); c.fill();
       c.strokeStyle = '#ffffff';
       c.lineWidth = 1;
       c.stroke();
@@ -1032,6 +1195,46 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.font='bold 9px monospace'; c.fillStyle='rgba(57,255,20,0.7)'; c.textAlign='center'; c.fillText('FWD',rX,rY-rR+11);
   const nA=-(Math.PI/2-pYaw)-Math.PI/2; c.fillStyle='#ef4444'; c.font='bold 9px monospace'; c.textAlign='center'; c.fillText('N',rX+Math.cos(nA)*(rR-6),rY+Math.sin(nA)*(rR-6)+4);
   c.font='bold 9px monospace'; c.fillStyle='rgba(57,255,20,0.5)'; c.textAlign='center'; c.fillText('TACTICAL',rX,rY+rR+14);
+
+  // ── Radar Legend (toggleable) ────────────────────────────────────────────────
+  const showLegend = g.settings?.showRadarLegend ?? true;
+  if (showLegend) {
+    const legendItems = [
+      { color: radarCfg.enemyColors.fighter, label: 'FIGHTER' },
+      { color: radarCfg.enemyColors.heavy, label: 'HEAVY' },
+      { color: radarCfg.enemyColors.shooter, label: 'SHOOTER' },
+      { color: radarCfg.enemyColors.missile_boat, label: 'MISSILE' },
+      { color: radarCfg.enemyColors.shielded, label: 'SHIELDED' },
+      { color: radarCfg.powerupColor, label: 'PWR-UP' },
+    ];
+    const legendX = rX + rR + 10;
+    const legendY = rY - 50;
+    const dotR = 3;
+    const lineH = 14;
+
+    // Legend background
+    const bgW = 70;
+    const bgH = legendItems.length * lineH + 10;
+    c.fillStyle = 'rgba(0,0,0,0.55)';
+    c.fillRect(legendX - 4, legendY - 6, bgW, bgH);
+    c.strokeStyle = 'rgba(57,255,20,0.2)';
+    c.lineWidth = 1;
+    c.strokeRect(legendX - 4, legendY - 6, bgW, bgH);
+
+    c.font = 'bold 9px monospace';
+    for (let i = 0; i < legendItems.length; i++) {
+      const item = legendItems[i];
+      const iy = legendY + i * lineH;
+      // Color dot
+      c.fillStyle = item.color;
+      c.beginPath(); c.arc(legendX + 4, iy, dotR, 0, Math.PI * 2); c.fill();
+      // Label
+      c.fillStyle = 'rgba(255,255,255,0.8)';
+      c.textAlign = 'left';
+      c.fillText(item.label, legendX + 12, iy + 3);
+    }
+  }
+
   c.restore();
 
   // ── Low HP Warning — Red Vignette ────────────────────────────────────────────
@@ -1088,6 +1291,21 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.globalAlpha = 1;
   }
 
+  // ── EMI "WEAPONS DISABLED" center-screen warning ────────────────────────────
+  if (g.weather && g.weather.active.includes('electromagneticInterference') && g.weather.emi.active) {
+    const emiPulse = (Math.sin(g.totalTime * 3) + 1) / 2; // 0-1
+    const emiAlpha = 0.5 + emiPulse * 0.5;
+    c.save();
+    c.shadowColor = '#eab308';
+    c.shadowBlur = 15 + emiPulse * 10;
+    c.fillStyle = `rgba(234,179,8,${emiAlpha})`;
+    c.font = 'bold 32px monospace';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('⚡ WEAPONS DISABLED ⚡', w / 2, h / 2 + 60);
+    c.restore();
+  }
+
   // ── FPS display (overlay on top bar) ──────────────────────────────────────────
   const showFPS = g.settings?.showFPS ?? false;
   if (showFPS) {
@@ -1097,5 +1315,61 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
     c.font = 'bold 14px monospace';
     c.textAlign = 'left';
     c.fillText(`${fpsValue} FPS`, 8, 16);
+
+    // ── Pressure score bar (debug mode) ───────────────────────────────────────
+    const pressure = g.adaptiveDifficulty?.pressureScore ?? 0;
+    const barX = 8;
+    const barY = 28;
+    const barW = 64;
+    const barH = 6;
+    // Background
+    c.fillStyle = 'rgba(255,255,255,0.15)';
+    c.fillRect(barX, barY, barW, barH);
+    // Pressure fill — green (low) → yellow → red (high)
+    const pColor = pressure < 0.3 ? '#22c55e' : pressure < 0.7 ? '#facc15' : '#ef4444';
+    c.fillStyle = pColor;
+    c.fillRect(barX, barY, barW * pressure, barH);
+    // Label
+    c.fillStyle = 'rgba(255,255,255,0.5)';
+    c.font = 'bold 8px monospace';
+    c.textAlign = 'left';
+    c.fillText(`PRESSURE ${Math.round(pressure * 100)}%`, barX, barY + barH + 10);
+  }
+
+  // ── Emergency Beacon HUD indicator (bottom-left) ─────────────────────────────
+  if (g.emergencyBeacon) {
+    const eb = g.emergencyBeacon;
+    const beaconX = 20;
+    const beaconY = h - 40;
+    const beaconW = 160;
+    const beaconH = 28;
+
+    // Background
+    c.fillStyle = 'rgba(0,0,0,0.55)';
+    c.fillRect(beaconX - 4, beaconY - 4, beaconW + 8, beaconH + 8);
+
+    // Status color
+    let statusColor, statusText;
+    if (eb.activated) {
+      statusColor = '#22c55e'; // green = active
+      statusText = 'BEACON ACTIVE';
+    } else if (eb.purchased) {
+      statusColor = '#3b82f6'; // blue = ready
+      statusText = 'BEACON READY [B]';
+    } else {
+      statusColor = '#4b5563'; // gray = not purchased
+      statusText = 'BEACON ---';
+    }
+
+    // Status bar
+    c.fillStyle = statusColor;
+    c.fillRect(beaconX, beaconY, beaconW, beaconH);
+
+    // Text
+    c.fillStyle = '#ffffff';
+    c.font = 'bold 11px monospace';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(statusText, beaconX + beaconW / 2, beaconY + beaconH / 2);
   }
 };

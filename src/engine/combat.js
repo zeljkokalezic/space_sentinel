@@ -6,6 +6,33 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 import { SoundManager } from './audio';
 import { getHostileTargets } from './targeting';
 import { createParticlesWithType } from './systems/particles';
+import { spawnMiniInterceptors } from './spawner';
+import { applyMissileKillSynergy, getActiveSynergies } from './weaponSynergies';
+
+/**
+ * Check if a directional shield on the enemy absorbs the hit.
+ * Calculates which side the projectile hits based on the angle from
+ * enemy center to projectile position, and depletes that shield side.
+ *
+ * @param {object} e — Enemy entity (must have directionalShields array)
+ * @param {number} px — Projectile X position
+ * @param {number} py — Projectile Y position
+ * @returns {boolean} true if the hit was absorbed by a directional shield
+ */
+export const checkDirectionalShield = (e, px, py) => {
+  if (!e || !e.directionalShields) return false;
+  const angle = Math.atan2(py - e.y, px - e.x);
+  const sides = e.directionalShields.length;
+  // Normalize angle to [0, 2PI) and compute side index
+  const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const sideIndex = Math.floor(normalizedAngle / (Math.PI * 2 / sides)) % sides;
+  const shieldVal = e.directionalShields[sideIndex];
+  if (shieldVal > 0) {
+    e.directionalShields[sideIndex] = 0; // Shield absorbs one hit
+    return true;
+  }
+  return false;
+};
 
 /**
  * Returns the nearest active enemy to (x, y), or null if none exist.
@@ -31,8 +58,9 @@ export const getNearestEnemy = (x, y, enemies) => {
  * @param {number} damage   - Damage on hit
  * @param {string} type     - 'autocannon' | 'plasma' | 'missile' | 'enemy_bullet' | 'enemy_missile'
  * @param {number} pierceCount - How many enemies the projectile can pierce through
+ * @param {object} [synergyFlags] - Optional synergy flags: { armorPierce, guided, steerAngle, shieldBypassHits, color }
  */
-export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount = 0) => {
+export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount = 0, synergyFlags) => {
   const C = GAME_CONFIG;
   let target = null;
   if (type === 'missile') {
@@ -44,18 +72,31 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
     target = g.player;
   }
 
-  g.projectiles.push({
+  const proj = {
     x, y,
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
-    radius: type === 'plasma' ? 12 : (type === 'missile' || type === 'enemy_missile' ? 8 : 5),
+    radius: type === 'plasma' ? 12 : (type === 'missile' || type === 'enemy_missile' ? 8 : (type === 'enemy_cannon' ? 10 : 5)),
     damage, type, active: true,
     pierce: pierceCount,
     hitList: [],
     life: 0,
     target,
     isEnemy: type.startsWith('enemy'),
-  });
+  };
+
+  // Apply synergy flags
+  if (synergyFlags && synergyFlags.armorPierce) {
+    proj.armorPierce = true;
+    proj.shieldBypassHits = synergyFlags.shieldBypassHits ?? 3;
+    if (synergyFlags.color) proj.color = synergyFlags.color;
+  }
+  if (synergyFlags && synergyFlags.guided) {
+    proj.guided = true;
+    proj.steerAngle = synergyFlags.steerAngle ?? (Math.PI / 6);
+  }
+
+  g.projectiles.push(proj);
 };
 
 /**
@@ -100,11 +141,19 @@ export const killEnemy = (g, e, completeMission) => {
       if (!g.mission.completed && completeMission && g.mission.current >= g.mission.target) {
         completeMission();
       }
-    } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy')) {
+    } else if (g.mission.type === 'kill_elite' && (e.type === 'missile_boat' || e.type === 'shielded' || e.type === 'heavy' || e.eliteVariant)) {
       g.mission.current++;
       if (!g.mission.completed && completeMission && g.mission.current >= g.mission.target) {
         completeMission();
       }
+    }
+  }
+
+  // Swarm Leader: spawn mini-interceptors on death
+  if (e.eliteVariant === 'swarmLeader') {
+    const ev = C.eliteVariants?.swarmLeader;
+    if (ev && ev.spawnOnDeath) {
+      spawnMiniInterceptors(g, e.x, e.y, ev.spawnOnDeath);
     }
   }
 
@@ -145,13 +194,30 @@ export const killEnemy = (g, e, completeMission) => {
     }
   }
 
-  // Scrap pickup
+  // Scrap pickup (3x in rampage mode)
   const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
-  g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val, active: true, radius: 6 });
+  const rampageMult = (g.adaptiveDifficulty?.rampageMode) ? 3 : 1;
+  g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val * rampageMult, active: true, radius: 6 });
 
   // Death pulse for eligible enemy types
   if (C.deathPulse && C.deathPulse.eligibleTypes && C.deathPulse.eligibleTypes.includes(e.type)) {
     triggerDeathPulse(g, e.x, e.y, e.type);
+  }
+
+  // Chain Reaction synergy: missile kills trigger point defense at nearby enemies
+  const activeSynergies = getActiveSynergies(g.levels);
+  const chainTargets = applyMissileKillSynergy(e, g, activeSynergies);
+  if (chainTargets.length > 0) {
+    const pdDmg = (C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel);
+    for (const t of chainTargets) {
+      if (!t.active) continue;
+      const angle = Math.atan2(t.y - e.y, t.x - e.x);
+      fireProjectile(g, e.x, e.y, angle, 600, pdDmg, 'autocannon', 0);
+      // Visual laser effect
+      if (g.effects) {
+        g.effects.push({ type: 'laser', source: { x: e.x, y: e.y }, target: t, life: 0.15 });
+      }
+    }
   }
 };
 

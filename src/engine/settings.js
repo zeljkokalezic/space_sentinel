@@ -16,6 +16,7 @@ export function getDefaultSettings() {
     colorblindMode: 'none',
     reducedMotion: false,
     highContrast: false,
+    showRadarLegend: true,
   };
 }
 

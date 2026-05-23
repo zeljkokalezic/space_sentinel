@@ -54,7 +54,7 @@ describe('test helpers', () => {
     expect(enemy.maxHp).toBe(30);
     expect(enemy.shield).toBe(0);
     expect(enemy.maxShield).toBe(0);
-    expect(enemy.fireCooldown).toBe(0);
+    expect(enemy.fireCooldown).toBe(6.0);
   });
 
   it('createTestEnemy applies type-specific configs', () => {

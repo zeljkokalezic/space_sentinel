@@ -22,6 +22,7 @@ describe('getDefaultSettings', () => {
       colorblindMode: 'none',
       reducedMotion: false,
       highContrast: false,
+      showRadarLegend: true,
     });
   });
 
@@ -119,6 +120,7 @@ describe('loadSettings', () => {
       colorblindMode: 'protanopia',
       reducedMotion: true,
       highContrast: true,
+      showRadarLegend: true,
     };
     saveSettings(custom);
     const loaded = loadSettings();

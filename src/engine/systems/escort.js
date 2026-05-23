@@ -11,9 +11,10 @@ import { tryFireEnemyWeapon } from './enemyFire';
  * @param {number} currentDiffMult — Difficulty multiplier
  * @param {function} completeMission — Mission completion callback
  * @param {function} setGameState — React state setter callback
+ * @param {number} [adaptiveAggression=1] — Adaptive aggression multiplier from dynamic difficulty
  * @returns {boolean} true if game should stop (gameover triggered)
  */
-export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameState) => {
+export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression = 1) => {
   const C = GAME_CONFIG;
   if (!g.escort.active || g.mission?.completed) return false;
   const esc = g.escort;
@@ -146,7 +147,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     const distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
     if (distToEscort < distToPlayer && distToEscort < C.enemies.spawnRadiusMin) {
       const angle = Math.atan2(esc.y - e.y, esc.x - e.x);
-      tryFireEnemyWeapon(e, angle, distToEscort, dt, currentDiffMult, g);
+      tryFireEnemyWeapon(e, angle, distToEscort, dt, currentDiffMult, g, adaptiveAggression);
     }
   }
 

@@ -41,6 +41,15 @@ export const BOSS_ROSTER = [
     deathColors: [0xdc2626, 0xfbbf24],
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     scrapReward: 500,
+    signatureMechanic: {
+      type: 'void_zones',
+      zoneDamagePerSecond: 10,
+      zoneSlowFactor: 0.7,
+      zoneLifetime: 8,
+      spawnInterval: 12,
+      maxZones: 3,
+      phase2SpawnInterval: 8,
+    },
   },
 
   {
@@ -64,6 +73,12 @@ export const BOSS_ROSTER = [
     deathColors: [0x9333ea, 0xe9d5ff],
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     scrapReward: 600,
+    signatureMechanic: {
+      type: 'shield_regen',
+      regenPercentPerSecond: 0.05,
+      noDamageThreshold: 3,
+      visualBuildupTime: 3,
+    },
   },
 
   {
@@ -87,6 +102,13 @@ export const BOSS_ROSTER = [
     deathColors: [0x22d3ee, 0xff4444],
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     scrapReward: 550,
+    signatureMechanic: {
+      type: 'phase_shift',
+      teleportInterval: 15,
+      decoyLifetime: 3,
+      decoyFireRate: 1.0,
+      decoyProjectileDamage: 15,
+    },
   },
 ];
 

@@ -306,6 +306,18 @@ export default function SettingsOverlay({ gameRef, onClose }) {
               Screen Shake
             </label>
           </div>
+
+          <div>
+            <label style={{ color: '#fff', fontSize: '13px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={settings.showRadarLegend}
+                onChange={() => handleToggle('showRadarLegend')}
+                style={{ marginRight: '8px' }}
+              />
+              Show Radar Legend
+            </label>
+          </div>
         </div>
 
         {/* Accessibility Section */}

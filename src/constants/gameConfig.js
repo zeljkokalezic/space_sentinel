@@ -95,6 +95,36 @@ export const GAME_CONFIG = {
       cooldown: 4.0,
       rangeMult: 21,
     },
+    heavy: {
+      damage: 40,
+      cooldownMin: 4.0,
+      cooldownVariance: 0.5,
+      rangeMult: 14,
+      projectileSpeed: 80,
+      projectileRadius: 10,
+      projectileType: 'enemy_cannon',
+    },
+    interceptor: {
+      damage: 8,
+      cooldownMin: 5.0,
+      cooldownVariance: 1.0,
+      rangeMult: 12,
+      projectileSpeed: 120,
+      projectileRadius: 3,
+      projectileType: 'enemy_bullet',
+      burstCount: 3,
+      burstSpread: 0.4,
+      burstInterval: 0.15,
+    },
+    fighter: {
+      damage: 12,
+      cooldownMin: 6.0,
+      cooldownVariance: 1.5,
+      rangeMult: 10,
+      projectileSpeed: 200,
+      projectileRadius: 4,
+      projectileType: 'enemy_bullet',
+    },
   },
 
   world: {
@@ -662,5 +692,169 @@ export const GAME_CONFIG = {
     textFontSize: 18,
     // Maximum concurrent aura effects
     maxAuras: 10,
+  },
+
+  eliteVariants: {
+    sniper: {
+      name: 'Sniper',
+      baseType: 'shooter',
+      hpMult: 1.5,
+      rangeMult: 20,
+      damage: 25,
+      cooldownMin: 3.0,
+      warningDuration: 1.5,
+      projectileSpeed: 300,
+      color: 0xfbbf24,
+    },
+    tank: {
+      name: 'Tank',
+      baseType: 'heavy',
+      hpMult: 2.0,
+      directionalShieldSides: 8,
+      shieldHpPerSide: 30,
+      damage: 20,
+      cooldownMin: 5.0,
+      color: 0xf97316,
+    },
+    swarmLeader: {
+      name: 'Swarm Leader',
+      baseType: 'interceptor',
+      hpMult: 1.8,
+      spawnOnDeath: 2,
+      miniInterceptorHp: 20,
+      miniInterceptorSpeed: 200,
+      color: 0xeab308,
+    },
+    arsenal: {
+      name: 'Arsenal',
+      baseType: 'missile_boat',
+      hpMult: 1.5,
+      missileCount: 2,
+      missileDamage: 30,
+      cooldownMin: 5.0,
+      color: 0xd946ef,
+    },
+  },
+
+  radar: {
+    // Enemy type colors on radar display
+    enemyColors: {
+      fighter: '#ef4444',
+      interceptor: '#eab308',
+      heavy: '#f97316',
+      shooter: '#a855f7',
+      shielded: '#3b82f6',
+      missile_boat: '#d946ef',
+      mini_interceptor: '#fbbf24',
+      sniper: '#fbbf24',
+      tank: '#f97316',
+      swarmLeader: '#eab308',
+      arsenal: '#d946ef',
+    },
+    // Boss and miniboss marker colors
+    bossColor: '#ef4444',
+    minibossColor: '#f97316',
+    // Power-up indicator color on radar
+    powerupColor: '#ffffff',
+    // Warning indicator color
+    warningColor: '#ef4444',
+    // Scrap pickup color
+    pickupColor: '#fbbf24',
+    // Escort drone color
+    escortColor: '#22d3ee',
+    // Defend beacon color
+    beaconColor: '#22d3ee',
+  },
+
+  weaponSynergies: {
+    penetration: {
+      name: 'Penetration',
+      description: 'Plasma armor-pierces (next 3 hits ignore shields)',
+      requirements: { autocannon: 5, plasma: 5 },
+      plasmaPierceColor: 0x9333ea,
+      shieldBypassHits: 3,
+    },
+    chainReaction: {
+      name: 'Chain Reaction',
+      description: 'Missile kills trigger point defense at nearby enemies',
+      requirements: { missiles: 3, pointDefense: 3 },
+      chainRadius: 200,
+    },
+    guidedRounds: {
+      name: 'Guided Rounds',
+      description: '10% chance autocannon gains homing',
+      requirements: { autocannon: 5, missiles: 5 },
+      chance: 0.1,
+      steerAngle: Math.PI / 6,
+    },
+    piercingDefense: {
+      name: 'Piercing Defense',
+      description: 'Point defense pierces through enemies',
+      requirements: { plasma: 5, pointDefense: 5 },
+      extraHits: 2,
+    },
+  },
+
+  waveSurge: {
+    duration: 15,
+    spawnRateMult: 3,
+  },
+
+  gauntlet: {
+    totalWaves: 3,
+    waveDelay: 2,
+  },
+
+  weather: {
+    // Maximum concurrent weather effects per sector
+    maxPerSector: 2,
+    types: {
+      solarFlare: {
+        name: 'Solar Flare',
+        // Spawn interval range (seconds)
+        intervalMin: 20,
+        intervalMax: 30,
+        // Duration of each flare event (seconds)
+        duration: 2,
+        // Reduced sensor range during flare (world units)
+        reducedRange: 600,
+        // Screen flash alpha overlay
+        screenAlpha: 0.8,
+      },
+      debrisField: {
+        name: 'Debris Field',
+        // Number of debris clusters
+        clusterCount: 5,
+        // Radius of each cluster (world units)
+        clusterRadius: 40,
+        // Movement speed of debris (world units per second)
+        moveSpeed: 20,
+        // Visual color (hex)
+        color: 0x6b7280,
+      },
+      gravityAnomaly: {
+        name: 'Gravity Anomaly',
+        // Number of active zones
+        zoneCount: 3,
+        // Radius of each zone (world units)
+        zoneRadius: 150,
+        // Speed reduction multiplier inside zones (0.5 = half speed)
+        speedReduction: 0.5,
+        // Respawn interval for zones (seconds)
+        respawnInterval: 20,
+        // Visual color (hex)
+        color: 0x7c3aed,
+      },
+      electromagneticInterference: {
+        name: 'EMI',
+        // Duration of each disable pulse (seconds)
+        disableDuration: 1,
+        // Spawn interval range (seconds)
+        intervalMin: 12,
+        intervalMax: 18,
+        // Screen static alpha overlay
+        screenAlpha: 0.15,
+      },
+    },
   },
 };

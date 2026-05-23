@@ -10,6 +10,15 @@ import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, trigger
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
+/**
+ * Check if damage should bypass shield due to armor-pierce mark.
+ * @param {object} e — Enemy entity
+ * @returns {boolean} true if shield should be bypassed this hit
+ */
+function isShieldBypassedByArmorPierce(e) {
+  return !!(e._armorPierced && e._armorPierced.hitsLeft > 0);
+}
+
 // ─── Formation handlers ──────────────────────────────────────────────────────
 
 /**
@@ -238,6 +247,14 @@ function updateScreen(dt, e, g, tx, ty) {
  * Preserves existing behavior for backward compatibility.
  */
 function updateLegacy(dt, e, g, tx, ty, distToPlayer) {
+  // Mini-interceptors: kamikaze behavior — always charge at target, no firing
+  if (e.type === 'mini_interceptor') {
+    const angle = Math.atan2(ty - e.y, tx - e.x);
+    e.x += Math.cos(angle) * e.speed * dt;
+    e.y += Math.sin(angle) * e.speed * dt;
+    return;
+  }
+
   let moveAngle = Math.atan2(ty - e.y, tx - e.x);
   if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
 
@@ -271,8 +288,9 @@ const FORMATION_HANDLERS = {
  * @param {number} currentDiffMult — Difficulty multiplier
  * @param {function} completeMission — Mission completion callback
  * @param {function} setGameState — React state setter callback
+ * @param {number} [adaptiveAggression=1] — Adaptive aggression multiplier from dynamic difficulty
  */
-export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameState) => {
+export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression = 1) => {
   const C = GAME_CONFIG;
   for (let e of g.enemies) {
     if (!e.active) continue;
@@ -289,9 +307,11 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       updateLegacy(dt, e, g, tx, ty, distToPlayer);
     }
 
-    // ── Enemy firing ──
+    // ── Enemy firing (skip mini-interceptors — they're kamikaze) ──
     const angle = Math.atan2(ty - e.y, tx - e.x);
-    tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g);
+    if (e.type !== 'mini_interceptor') {
+      tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g, adaptiveAggression);
+    }
 
     // ── Enemy rams player ──
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
@@ -324,7 +344,16 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
         triggerPlayerIFrames(g);
         let eDamage = C.weapons.missiles.baseDamage;
         const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
-        if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
+
+        // Armor-pierce: skip shield absorption for armor-pierced enemies
+        if (isShieldBypassedByArmorPierce(e)) {
+          e._armorPierced.hitsLeft--;
+          if (e._armorPierced.hitsLeft <= 0) delete e._armorPierced;
+        } else if (e.shield > 0) {
+          const absorb = Math.min(e.shield, eDamage);
+          e.shield -= absorb;
+          eDamage -= absorb;
+        }
         e.hp -= eDamage;
         if (enemyShieldWasFull && e.shield <= 0) {
           checkShieldBreak(g, e, e.x, e.y);

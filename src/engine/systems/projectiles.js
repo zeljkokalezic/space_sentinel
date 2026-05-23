@@ -2,9 +2,80 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber } from '../combat';
+import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, checkDirectionalShield } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovHit } from './dynamicFov';
+import { onBossDamaged } from './bossSignatureMechanics';
+import { isProjectileBlockedByDebris, getProjectileSpeedMult } from './weather';
+
+/**
+ * Apply armor-pierce mark to enemy — subsequent hits skip shield absorption.
+ * @param {object} e — Enemy entity
+ * @param {number} hitsLeft — Number of hits that bypass shield
+ */
+function applyArmorPierceMark(e, hitsLeft) {
+  if (!e._armorPierced) {
+    e._armorPierced = { hitsLeft: hitsLeft };
+  } else {
+    e._armorPierced.hitsLeft = Math.max(e._armorPierced.hitsLeft, hitsLeft);
+  }
+}
+
+/**
+ * Steer a guided projectile toward the nearest active enemy.
+ * @param {object} p — Projectile with vx, vy, steerAngle
+ * @param {object} g — Game state
+ * @param {number} dt — Delta time
+ */
+function guidedHomingSteer(p, g, dt) {
+  let nearest = null;
+  let minDist = Infinity;
+  for (const e of g.enemies) {
+    if (!e.active) continue;
+    const dist = Math.hypot(e.x - p.x, e.y - p.y);
+    if (dist < minDist) { minDist = dist; nearest = e; }
+  }
+  // Also check boss/miniboss
+  if (g.boss && g.boss.active) {
+    const dist = Math.hypot(g.boss.x - p.x, g.boss.y - p.y);
+    if (dist < minDist) { minDist = dist; nearest = g.boss; }
+  }
+  if (g.miniboss && g.miniboss.active) {
+    const dist = Math.hypot(g.miniboss.x - p.x, g.miniboss.y - p.y);
+    if (dist < minDist) { nearest = g.miniboss; }
+  }
+  if (!nearest) return;
+
+  const targetAngle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
+  const currentAngle = Math.atan2(p.vy, p.vx);
+  let diff = targetAngle - currentAngle;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+
+  const maxCorrection = (p.steerAngle || GAME_CONFIG.weaponSynergies.guidedRounds.steerAngle) * dt;
+  const correction = Math.max(-maxCorrection, Math.min(maxCorrection, diff));
+  const newAngle = currentAngle + correction;
+  const speed = Math.hypot(p.vx, p.vy);
+  p.vx = Math.cos(newAngle) * speed;
+  p.vy = Math.sin(newAngle) * speed;
+}
+
+/**
+ * Check if damage should bypass shield due to armor-pierce mark.
+ * Decrements the counter if active.
+ * @param {object} e — Enemy entity
+ * @returns {boolean} true if shield should be bypassed this hit
+ */
+function isShieldBypassedByArmorPierce(e) {
+  if (e._armorPierced && e._armorPierced.hitsLeft > 0) {
+    e._armorPierced.hitsLeft--;
+    if (e._armorPierced.hitsLeft <= 0) {
+      delete e._armorPierced;
+    }
+    return true;
+  }
+  return false;
+}
 
 /**
 
@@ -36,8 +107,24 @@ export const updateProjectiles = (dt, g, setGameState) => {
       if (Math.random() < 0.3) createParticles(g, p.x, p.y, 0xf97316, 1);
     }
 
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
+    // ── Guided autocannon homing (synergy) ──
+    if (p.guided) {
+      guidedHomingSteer(p, g, dt);
+      if (Math.random() < 0.2) createParticles(g, p.x, p.y, 0x60a5fa, 1);
+    }
+
+    // ── Gravity anomaly: apply speed multiplier ──
+    const speedMult = getProjectileSpeedMult(p.x, p.y, g);
+
+    p.x += p.vx * dt * speedMult;
+    p.y += p.vy * dt * speedMult;
+
+    // ── Debris field: deactivate projectile if blocked ──
+    if (isProjectileBlockedByDebris(p.x, p.y, g)) {
+      createParticles(g, p.x, p.y, 0x6b7280, 4);
+      p.active = false;
+      continue;
+    }
 
     if (p.isEnemy) {
       // ── Enemy missile homing ──
@@ -81,11 +168,29 @@ export const updateProjectiles = (dt, g, setGameState) => {
       for (let e of g.enemies) {
         if (!e.active || p.hitList.includes(e.id)) continue;
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
+          // Check directional shields first (tank elite variant)
+          if (checkDirectionalShield(e, p.x, p.y)) {
+            createParticles(g, p.x, p.y, 0x60a5fa, 5);
+            SoundManager.play('shield_hit');
+            p.active = false;
+            break;
+          }
           SoundManager.play('hit');
           let actualDmg = p.damage;
           let shieldAbsorbed = 0;
           const shieldWasFull = e.shield > 0 && e.maxShield > 0;
-          if (e.shield > 0) { shieldAbsorbed = Math.min(e.shield, actualDmg); e.shield -= shieldAbsorbed; actualDmg -= shieldAbsorbed; }
+
+          // Armor-pierce: mark enemy and skip shield absorption
+          if (p.armorPierce) {
+            applyArmorPierceMark(e, p.shieldBypassHits ?? 3);
+          }
+
+          // Check if shield should be bypassed (armor-pierced enemy)
+          if (!isShieldBypassedByArmorPierce(e) && e.shield > 0) {
+            shieldAbsorbed = Math.min(e.shield, actualDmg);
+            e.shield -= shieldAbsorbed;
+            actualDmg -= shieldAbsorbed;
+          }
           e.hp -= actualDmg;
           if (shieldWasFull && e.shield <= 0) {
             checkShieldBreak(g, e, e.x, e.y);
@@ -108,7 +213,17 @@ export const updateProjectiles = (dt, g, setGameState) => {
           let actualDmg = p.damage;
           let shieldAbsorbed = 0;
           const mbShieldWasFull = g.miniboss.shield > 0 && g.miniboss.maxShield > 0;
-          if (g.miniboss.shield > 0) { shieldAbsorbed = Math.min(g.miniboss.shield, actualDmg); g.miniboss.shield -= shieldAbsorbed; actualDmg -= shieldAbsorbed; }
+
+          // Armor-pierce: mark miniboss and skip shield absorption
+          if (p.armorPierce) {
+            applyArmorPierceMark(g.miniboss, p.shieldBypassHits ?? 3);
+          }
+
+          if (!isShieldBypassedByArmorPierce(g.miniboss) && g.miniboss.shield > 0) {
+            shieldAbsorbed = Math.min(g.miniboss.shield, actualDmg);
+            g.miniboss.shield -= shieldAbsorbed;
+            actualDmg -= shieldAbsorbed;
+          }
           g.miniboss.hp -= actualDmg;
           if (mbShieldWasFull && g.miniboss.shield <= 0) {
             checkShieldBreak(g, g.miniboss, g.miniboss.x, g.miniboss.y);
@@ -129,8 +244,19 @@ export const updateProjectiles = (dt, g, setGameState) => {
           let actualDmg = p.damage;
           let shieldAbsorbed = 0;
           const bossShieldWasFull = g.boss.shield > 0 && g.boss.maxShield > 0;
-          if (g.boss.shield > 0) { shieldAbsorbed = Math.min(g.boss.shield, actualDmg); g.boss.shield -= shieldAbsorbed; actualDmg -= shieldAbsorbed; }
+
+          // Armor-pierce: mark boss and skip shield absorption
+          if (p.armorPierce) {
+            applyArmorPierceMark(g.boss, p.shieldBypassHits ?? 3);
+          }
+
+          if (!isShieldBypassedByArmorPierce(g.boss) && g.boss.shield > 0) {
+            shieldAbsorbed = Math.min(g.boss.shield, actualDmg);
+            g.boss.shield -= shieldAbsorbed;
+            actualDmg -= shieldAbsorbed;
+          }
           g.boss.hp -= actualDmg;
+          onBossDamaged(g.boss);
           if (bossShieldWasFull && g.boss.shield <= 0) {
             checkShieldBreak(g, g.boss, g.boss.x, g.boss.y);
           }

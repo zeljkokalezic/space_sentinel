@@ -168,14 +168,37 @@ function spawnWavePattern(g, pattern, level) {
     } else if (typeRoll > 0.70) {
       type = 'shooter';      hp = 40 * diffMult; speed = 70 + Math.random() * 30;  radius = 16; color = 0xa855f7; fireCooldown = 1.5; shield = 0; maxShield = 0;
     } else if (typeRoll > 0.60) {
-      type = 'heavy';        hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xf97316; fireCooldown = 0; shield = 0; maxShield = 0;
+      type = 'heavy';        hp = 100 * diffMult; speed = 40 + Math.random() * 30; radius = 25; color = 0xf97316; fireCooldown = 4.0; shield = 0; maxShield = 0;
     } else if (typeRoll > 0.40) {
-      type = 'interceptor';  hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xeab308; fireCooldown = 0; shield = 0; maxShield = 0;
+      type = 'interceptor';  hp = 15 * diffMult; speed = 180 + Math.random() * 50; radius = 12; color = 0xeab308; fireCooldown = 5.0; shield = 0; maxShield = 0;
     } else {
-      type = 'fighter';      hp = 30 * diffMult; speed = 100 + Math.random() * 50; radius = 15; color = 0xef4444; fireCooldown = 0; shield = 0; maxShield = 0;
+      type = 'fighter';      hp = 30 * diffMult; speed = 100 + Math.random() * 50; radius = 15; color = 0xef4444; fireCooldown = 6.0; shield = 0; maxShield = 0;
     }
 
-    g.enemies.push({
+    // ── Elite variant upgrade ──
+    // Eligible base types (the ones that have elite variant counterparts)
+    const eligibleTypes = ['shooter', 'heavy', 'interceptor', 'missile_boat'];
+    const variantMap = {
+      shooter: 'sniper',
+      heavy: 'tank',
+      interceptor: 'swarmLeader',
+      missile_boat: 'arsenal',
+    };
+    let eliteVariant = null;
+    if (eligibleTypes.includes(type)) {
+      // Chance increases with level and time (capped at 20%)
+      const variantChance = Math.min(0.2, 0.03 + g.level * 0.005 + g.totalTime * 0.0001);
+      if (Math.random() < variantChance) {
+        eliteVariant = variantMap[type];
+        const ev = C.eliteVariants?.[eliteVariant];
+        if (ev) {
+          hp = hp * ev.hpMult;
+          color = ev.color;
+        }
+      }
+    }
+
+    const enemyObj = {
       id: ++_enemyIdCounter,
       x, y, hp, maxHp: hp, shield, maxShield, speed, radius, color, type,
       active: true,
@@ -186,7 +209,34 @@ function spawnWavePattern(g, pattern, level) {
       formationTimer: C.formations[formation]?.convergeDelay ?? 0,
       orbitAngle: Math.random() * Math.PI * 2,
       formationIndex: i,
-    });
+    };
+
+    // Apply elite variant properties
+    if (eliteVariant) {
+      enemyObj.eliteVariant = eliteVariant;
+      const ev = C.eliteVariants?.[eliteVariant];
+      if (ev) {
+        // Tank: directional shields
+        if (eliteVariant === 'tank') {
+          enemyObj.directionalShields = Array(ev.directionalShieldSides).fill(ev.shieldHpPerSide);
+          enemyObj.fireCooldown = ev.cooldownMin;
+        }
+        // Sniper: extended range and cooldown
+        if (eliteVariant === 'sniper') {
+          enemyObj.fireCooldown = ev.cooldownMin;
+        }
+        // Arsenal: longer cooldown
+        if (eliteVariant === 'arsenal') {
+          enemyObj.fireCooldown = ev.cooldownMin;
+        }
+        // Swarm Leader: uses interceptor cooldown
+        if (eliteVariant === 'swarmLeader') {
+          enemyObj.fireCooldown = C.enemyWeapons.interceptor.cooldownMin;
+        }
+      }
+    }
+
+    g.enemies.push(enemyObj);
 
     // Create spawn flash effect at enemy spawn location
     createSpawnFlash(g, x, y);
@@ -226,6 +276,23 @@ export const generateMission = (level, nodeType) => {
     target = 3 + Math.floor(level / 3);
     title = `Destroy ${target} Elite Enemies`;
     reward = 100 + level * 30;
+    return { type: t, target, current: 0, title, reward };
+  }
+
+  if (nodeType === 'gauntlet') {
+    t = 'gauntlet';
+    const waves = GAME_CONFIG.gauntlet?.totalWaves ?? 3;
+    target = waves;
+    title = `Survive ${waves} Waves`;
+    reward = 150 + level * 40;
+    return { type: t, target, current: 0, title, reward };
+  }
+
+  if (nodeType === 'wave_surge') {
+    t = 'wave_surge';
+    target = GAME_CONFIG.waveSurge?.duration ?? 15;
+    title = `Wave Surge — Survive ${target}s`;
+    reward = 120 + level * 35;
     return { type: t, target, current: 0, title, reward };
   }
 
@@ -309,6 +376,47 @@ export function spawnEnemy(g) {
     }
   }
 };
+
+/**
+ * Spawn mini-interceptors at a given position.
+ * Mini-interceptors are kamikaze enemies spawned by swarm leaders on death.
+ *
+ * @param {object} g — Game state
+ * @param {number} x — World X position
+ * @param {number} y — World Y position
+ * @param {number} count — Number of mini-interceptors to spawn
+ */
+export function spawnMiniInterceptors(g, x, y, count) {
+  const C = GAME_CONFIG;
+  const ev = C.eliteVariants?.swarmLeader;
+  if (!ev) return;
+
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    const spread = 30 + Math.random() * 20;
+    g.enemies.push({
+      id: ++_enemyIdCounter,
+      x: x + Math.cos(angle) * spread,
+      y: y + Math.sin(angle) * spread,
+      hp: ev.miniInterceptorHp,
+      maxHp: ev.miniInterceptorHp,
+      shield: 0,
+      maxShield: 0,
+      speed: ev.miniInterceptorSpeed,
+      radius: 8,
+      color: ev.color,
+      type: 'mini_interceptor',
+      active: true,
+      fireCooldown: 0,
+      formation: 'kamikaze',
+      formationPhase: 'engage',
+      formationTimer: 0,
+      orbitAngle: Math.random() * Math.PI * 2,
+      formationIndex: i,
+    });
+    createSpawnFlash(g, x + Math.cos(angle) * spread, y + Math.sin(angle) * spread);
+  }
+}
 
 /**
  * Create an enemy spawn flash effect at the given position.
