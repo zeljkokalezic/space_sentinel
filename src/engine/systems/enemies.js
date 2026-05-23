@@ -6,18 +6,9 @@
  * use the legacy direct-charge behavior (backward compatible).
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber } from '../combat';
+import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, isShieldBypassedByArmorPierce } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
-
-/**
- * Check if damage should bypass shield due to armor-pierce mark.
- * @param {object} e — Enemy entity
- * @returns {boolean} true if shield should be bypassed this hit
- */
-function isShieldBypassedByArmorPierce(e) {
-  return !!(e._armorPierced && e._armorPierced.hitsLeft > 0);
-}
 
 // ─── Formation handlers ──────────────────────────────────────────────────────
 
@@ -347,8 +338,7 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
 
         // Armor-pierce: skip shield absorption for armor-pierced enemies
         if (isShieldBypassedByArmorPierce(e)) {
-          e._armorPierced.hitsLeft--;
-          if (e._armorPierced.hitsLeft <= 0) delete e._armorPierced;
+          // shield bypass handled by the function
         } else if (e.shield > 0) {
           const absorb = Math.min(e.shield, eDamage);
           e.shield -= absorb;

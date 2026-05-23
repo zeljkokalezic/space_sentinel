@@ -704,7 +704,7 @@ export const draw3DFrame = (threeObj, g) => {
       const lifeRatio = zone.maxLife > 0 ? zone.life / zone.maxLife : 0;
 
       // Dark purple fill disc
-      const fillKey = `void_zone_fill_${zone.x}_${zone.y}`;
+      const fillKey = `void_zone_fill_${g.boss.voidZones.indexOf(zone)}`;
       const fillMesh = getMesh(fillKey, meshes, scene, () => {
         const disc = new THREE.Mesh(
           new THREE.CircleGeometry(1, 24),
@@ -718,7 +718,7 @@ export const draw3DFrame = (threeObj, g) => {
       fillMesh.material.opacity = 0.25 + lifeRatio * 0.25;
 
       // Pulsing edge ring
-      const edgeKey = `void_zone_edge_${zone.x}_${zone.y}`;
+      const edgeKey = `void_zone_edge_${g.boss.voidZones.indexOf(zone)}`;
       const edgeMesh = getMesh(edgeKey, meshes, scene, () => {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(0.9, 1, 24),

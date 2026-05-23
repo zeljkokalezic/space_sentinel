@@ -601,7 +601,7 @@ describe('chain reaction in killEnemy', () => {
     // Chain reaction should have fired a projectile
     expect(g.projectiles.length).toBeGreaterThan(0);
     const chainProj = g.projectiles[0];
-    expect(chainProj.type).toBe('autocannon');
+    expect(chainProj.type).toBe('chain_reaction');
   });
 
   it('chain reaction only targets enemies within radius', () => {

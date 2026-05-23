@@ -348,10 +348,10 @@ describe('recordMissionCompletion', () => {
     expect(g.sector.totalHpPercent).toBe(50);
   });
 
-  it('records mission start and end times', () => {
+  it('records mission end time (start time recorded in setupCombatMission)', () => {
     g.totalTime = 100;
     recordMissionCompletion(g);
-    expect(g.sector.missionStartTime).toEqual([100]);
+    // Start times are now recorded in setupCombatMission, not here
     expect(g.sector.missionEndTime).toEqual([100]);
   });
 
@@ -367,7 +367,7 @@ describe('recordMissionCompletion', () => {
     expect(g.sector.missionsCleared).toBe(2);
     expect(g.sector.missionsCompleted).toBe(2);
     expect(g.sector.totalHpPercent).toBeCloseTo(166.67, 1); // 100 + 66.67
-    expect(g.sector.missionStartTime.length).toBe(2);
+    // Start times recorded in setupCombatMission, end times here
     expect(g.sector.missionEndTime.length).toBe(2);
   });
 });
@@ -509,16 +509,20 @@ describe('Integration: sector progression flow', () => {
     g.player.hp = 270;
     g.player.maxHp = 300;
     g.totalTime = 15;
+    // Simulate setupCombatMission recording start time
+    g.sector.missionStartTime.push(0);
     recordMissionCompletion(g);
 
     // Mission 2: 80% HP, 20 seconds
     g.player.hp = 240;
     g.totalTime = 35;
+    g.sector.missionStartTime.push(15);
     recordMissionCompletion(g);
 
     // Mission 3: 85% HP, 10 seconds
     g.player.hp = 255;
     g.totalTime = 45;
+    g.sector.missionStartTime.push(35);
     recordMissionCompletion(g);
 
     // Calculate rank

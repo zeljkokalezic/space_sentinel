@@ -904,7 +904,9 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   for (let e of g.enemies) {
     if (!e.active||Math.hypot(e.x-g.player.x,e.y-g.player.y)>rRange) continue;
     const{px,py}=toR(e.x,e.y);
-    const eColor = radarCfg.enemyColors[e.type] || '#ef4444';
+    const eColor = e.eliteVariant
+      ? (radarCfg.enemyColors[e.eliteVariant] || radarCfg.enemyColors[e.type] || '#ef4444')
+      : (radarCfg.enemyColors[e.type] || '#ef4444');
     const eRadius = e.type === 'heavy' ? 3 : 2;
     c.beginPath(); c.arc(px,py,eRadius,0,Math.PI*2); c.fillStyle=eColor; c.fill();
   }

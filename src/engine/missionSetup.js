@@ -12,6 +12,7 @@ import { setupBoss, resetBoss } from './bossSetup';
 import { setupMiniboss, resetMiniboss } from './minibossSetup';
 import { setupHazards, resetHazards } from './hazardSetup';
 import { setupGauntlet, resetGauntlet, setupWaveSurge, resetWaveSurge } from './gauntletSetup';
+import { initWeather, resetWeather } from './systems/weather';
 
 /**
  * Set up a combat mission on the game state.
@@ -24,6 +25,10 @@ export const setupCombatMission = (g, mission, level) => {
   g.mission = mission;
   g.spawnCooldown = 2.0;
   g.totalTime = 0;
+  // Record mission start time for sector rank calculation
+  if (g.sector) {
+    g.sector.missionStartTime.push(g.totalTime);
+  }
   g.player.x = 0; g.player.y = 0;
   g.player.yaw = Math.PI / 2;
   g.player.vx = 0; g.player.vy = 0;
@@ -104,6 +109,13 @@ export const setupCombatMission = (g, mission, level) => {
     setupHazards(g, level, mission.hazardTypes);
   } else {
     resetHazards(g);
+  }
+
+  // ─── Weather effects ────────────────────────────────────────────────────────
+  if (mission.weatherTypes && mission.weatherTypes.length > 0) {
+    initWeather(g, mission.weatherTypes);
+  } else {
+    resetWeather(g);
   }
 };
 

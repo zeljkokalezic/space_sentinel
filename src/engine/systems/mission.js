@@ -36,6 +36,13 @@ export const updateTransition = (dt, g, cbs) => {
     if (g.boss) g.boss.active = false;
     if (g.miniboss) g.miniboss.active = false;
     if (g.hazards) g.hazards = [];
+    if (g.gauntlet) g.gauntlet.active = false;
+    if (g.waveSurge) g.waveSurge.active = false;
+    if (g.boss) {
+      g.boss.voidZones = [];
+      g.boss.decoy = null;
+      g.boss.regenActive = false;
+    }
   }
   return true;
 };
@@ -49,6 +56,17 @@ export const updateTransition = (dt, g, cbs) => {
 export const checkMissionProgress = (dt, g, completeMission) => {
   if (!g.mission || g.mission.completed) return;
   if (g.mission.type === 'survive' || g.mission.type === 'defend') {
+    g.mission.current += dt;
+    if (g.mission.current >= g.mission.target) completeMission();
+  }
+  // Gauntlet: complete when all waves cleared (mission.current tracks currentWave, target is totalWaves)
+  if (g.mission.type === 'gauntlet' && g.gauntlet?.active) {
+    if (g.mission.current >= g.mission.target && !g.gauntlet.betweenWaves) {
+      completeMission();
+    }
+  }
+  // Wave surge: complete when timer expires
+  if (g.mission.type === 'wave_surge' && g.waveSurge?.active) {
     g.mission.current += dt;
     if (g.mission.current >= g.mission.target) completeMission();
   }

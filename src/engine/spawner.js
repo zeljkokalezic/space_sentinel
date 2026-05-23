@@ -375,6 +375,12 @@ export function spawnEnemy(g) {
       }
     }
   }
+
+  // Track gauntlet wave progress
+  if (g.gauntlet?.active && !g.gauntlet.betweenWaves) {
+    const waveConfig = WAVE_PATTERNS[pattern] || WAVE_PATTERNS.random;
+    g.gauntlet.enemiesSpawnedInWave += waveConfig.count;
+  }
 };
 
 /**

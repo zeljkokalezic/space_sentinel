@@ -19,7 +19,7 @@ import { applyMissileKillSynergy, getActiveSynergies } from './weaponSynergies';
  * @param {number} py — Projectile Y position
  * @returns {boolean} true if the hit was absorbed by a directional shield
  */
-export const checkDirectionalShield = (e, px, py) => {
+export const checkDirectionalShield = (e, px, py, damage = 0) => {
   if (!e || !e.directionalShields) return false;
   const angle = Math.atan2(py - e.y, px - e.x);
   const sides = e.directionalShields.length;
@@ -28,7 +28,24 @@ export const checkDirectionalShield = (e, px, py) => {
   const sideIndex = Math.floor(normalizedAngle / (Math.PI * 2 / sides)) % sides;
   const shieldVal = e.directionalShields[sideIndex];
   if (shieldVal > 0) {
-    e.directionalShields[sideIndex] = 0; // Shield absorbs one hit
+    e.directionalShields[sideIndex] = Math.max(0, shieldVal - damage);
+    return e.directionalShields[sideIndex] === 0; // Only block if fully consumed
+  }
+  return false;
+};
+
+/**
+ * Check if damage should bypass shield due to armor-pierce mark.
+ * Decrements the counter if active.
+ * @param {object} e — Enemy entity
+ * @returns {boolean} true if shield should be bypassed this hit
+ */
+export const isShieldBypassedByArmorPierce = (e) => {
+  if (e._armorPierced && e._armorPierced.hitsLeft > 0) {
+    e._armorPierced.hitsLeft--;
+    if (e._armorPierced.hitsLeft <= 0) {
+      delete e._armorPierced;
+    }
     return true;
   }
   return false;
@@ -212,7 +229,7 @@ export const killEnemy = (g, e, completeMission) => {
     for (const t of chainTargets) {
       if (!t.active) continue;
       const angle = Math.atan2(t.y - e.y, t.x - e.x);
-      fireProjectile(g, e.x, e.y, angle, 600, pdDmg, 'autocannon', 0);
+      fireProjectile(g, e.x, e.y, angle, 600, pdDmg, 'chain_reaction', 0);
       // Visual laser effect
       if (g.effects) {
         g.effects.push({ type: 'laser', source: { x: e.x, y: e.y }, target: t, life: 0.15 });

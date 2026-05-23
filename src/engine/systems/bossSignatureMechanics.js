@@ -187,8 +187,8 @@ function updateVoidZones(dt, boss, g) {
   const config = boss.signatureMechanic;
   if (!config) return;
 
-  // Store original speed on first call
-  if (boss._originalSpeed === undefined && g.player) {
+  // Update original speed every frame to track current player speed (including buffs)
+  if (g.player) {
     boss._originalSpeed = g.player.speed;
   }
 

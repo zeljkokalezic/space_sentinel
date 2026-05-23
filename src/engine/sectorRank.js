@@ -210,7 +210,6 @@ export function recordMissionCompletion(g) {
   s.missionsCleared++;
   s.missionsCompleted++;
   s.totalHpPercent += hpPercent;
-  s.missionStartTime.push(g.totalTime);
   s.missionEndTime.push(g.totalTime);
 }
 

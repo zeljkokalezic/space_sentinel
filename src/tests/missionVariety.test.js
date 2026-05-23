@@ -369,6 +369,9 @@ describe('wave surge countdown in physics loop', () => {
   it('wave surge deactivates when remaining reaches zero', () => {
     expect(g.waveSurge.active).toBe(true);
 
+    // Mock window for createCompleteMission (called on wave surge completion)
+    global.window = { innerWidth: 800, innerHeight: 600 };
+
     updatePhysics(16, g, cbs);
 
     expect(g.waveSurge.active).toBe(false);
@@ -376,6 +379,9 @@ describe('wave surge countdown in physics loop', () => {
   });
 
   it('wave surge does not go negative', () => {
+    // Mock window for createCompleteMission (called on wave surge completion)
+    global.window = { innerWidth: 800, innerHeight: 600 };
+
     updatePhysics(20, g, cbs);
 
     expect(g.waveSurge.remaining).toBe(0);

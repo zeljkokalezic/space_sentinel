@@ -2,7 +2,7 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, checkDirectionalShield } from '../combat';
+import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, checkDirectionalShield, isShieldBypassedByArmorPierce } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovHit } from './dynamicFov';
 import { onBossDamaged } from './bossSignatureMechanics';
@@ -58,23 +58,6 @@ function guidedHomingSteer(p, g, dt) {
   const speed = Math.hypot(p.vx, p.vy);
   p.vx = Math.cos(newAngle) * speed;
   p.vy = Math.sin(newAngle) * speed;
-}
-
-/**
- * Check if damage should bypass shield due to armor-pierce mark.
- * Decrements the counter if active.
- * @param {object} e — Enemy entity
- * @returns {boolean} true if shield should be bypassed this hit
- */
-function isShieldBypassedByArmorPierce(e) {
-  if (e._armorPierced && e._armorPierced.hitsLeft > 0) {
-    e._armorPierced.hitsLeft--;
-    if (e._armorPierced.hitsLeft <= 0) {
-      delete e._armorPierced;
-    }
-    return true;
-  }
-  return false;
 }
 
 /**
@@ -169,7 +152,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
         if (!e.active || p.hitList.includes(e.id)) continue;
         if (Math.hypot(p.x - e.x, p.y - e.y) < e.radius + p.radius) {
           // Check directional shields first (tank elite variant)
-          if (checkDirectionalShield(e, p.x, p.y)) {
+          if (checkDirectionalShield(e, p.x, p.y, p.damage)) {
             createParticles(g, p.x, p.y, 0x60a5fa, 5);
             SoundManager.play('shield_hit');
             p.active = false;

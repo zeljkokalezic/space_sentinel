@@ -44,23 +44,23 @@ describe('Elite Variants', () => {
       enemy.eliteVariant = 'tank';
       enemy.directionalShields = Array(8).fill(30);
 
-      // Projectile coming from angle 0 (right side = side 0)
-      const absorbed = checkDirectionalShield(enemy, 50, 0);
-      expect(absorbed).toBe(true);
+      // Projectile coming from angle 0 (right side = side 0) with damage=50
+      const absorbed = checkDirectionalShield(enemy, 50, 0, 50);
+      expect(absorbed).toBe(true); // fully consumed (30-50=0)
       expect(enemy.directionalShields[0]).toBe(0);
       // Other shields still intact
       expect(enemy.directionalShields[1]).toBe(30);
     });
 
-    it('does not absorb from depleted shield side', () => {
+   it('does not absorb from depleted shield side', () => {
       const enemy = createTestEnemy(0, 0, 'heavy');
       enemy.eliteVariant = 'tank';
       enemy.directionalShields = Array(8).fill(30);
 
-      // First hit absorbs
-      checkDirectionalShield(enemy, 50, 0);
-      // Second hit from same side should NOT absorb
-      const absorbed = checkDirectionalShield(enemy, 50, 0);
+      // First hit with damage=50 fully consumes shield side (30-50=0)
+      checkDirectionalShield(enemy, 50, 0, 50);
+      // Second hit from same side should NOT absorb (shield already depleted)
+      const absorbed = checkDirectionalShield(enemy, 50, 0, 50);
       expect(absorbed).toBe(false);
     });
 
@@ -70,11 +70,11 @@ describe('Elite Variants', () => {
       enemy.directionalShields = Array(8).fill(30);
 
       // Hit from top (angle PI/2) should be side 2
-      checkDirectionalShield(enemy, 0, 50);
+      checkDirectionalShield(enemy, 0, 50, 50);
       expect(enemy.directionalShields[2]).toBe(0);
 
       // Hit from left (angle PI) should be side 4
-      checkDirectionalShield(enemy, -50, 0);
+      checkDirectionalShield(enemy, -50, 0, 50);
       expect(enemy.directionalShields[4]).toBe(0);
     });
 

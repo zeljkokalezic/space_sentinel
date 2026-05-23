@@ -61,14 +61,14 @@ export default function App() {
     resetGame();
     const g = game.current;
     // Transfer persistent sector data from previous sector
-    if (oldSector) {
+    if (oldSector && g.sector) {
       g.sector.number = oldSector.number;
       g.sector.veteranMode = oldSector.veteranMode;
       g.sector.consecutiveARank = oldSector.consecutiveARank;
       g.sector.activeBuff = oldSector.activeBuff;
     }
     resetSector(g);
-    if (g.sector.activeBuff) {
+    if (g.sector?.activeBuff) {
       applyBuff(g, g.sector.activeBuff);
     }
     setGameState(devMode ? 'dev' : 'map');
@@ -138,7 +138,7 @@ export default function App() {
     if (!upgrade || g.levels[key] >= upgrade.maxLevel) return;
 
     // Handle free_weapon buff: first weapon purchase is free
-    const weaponKeys = ['autocannon', 'plasma', 'missiles'];
+    const weaponKeys = ['autocannon', 'plasma', 'missiles', 'pointDefense', 'autoAim'];
     if (g.sector?.activeBuff === 'free_weapon' && weaponKeys.includes(key)) {
       g.sector.activeBuff = null; // Clear buff after use
     } else if (g.scrap < cost) {
@@ -197,6 +197,9 @@ export default function App() {
       g.player.shield = g.player.maxShield;
       g.emergencyBeacon.activated = false;
       g.emergencyBeacon.nodeId = null;
+      // Clear entity arrays to prevent stale enemies/projectiles from persisting
+      g.enemies = []; g.projectiles = []; g.particles = [];
+      g.pickups = []; g.effects = [];
       setUiEmergencyBeacon({ purchased: true, activated: false, nodeId: null });
       // Sync player stats to UI
       setUiLevels({ ...g.levels });
