@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { createGameState }      from './engine/state';
+import { generateMap }          from './engine/mapGenerator';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
 import { setupHazards }            from './engine/hazardSetup';
@@ -10,7 +11,6 @@ import { SHIP_SKINS }              from './constants/skins';
 import { UPGRADE_DATA }            from './constants/upgrades';
 import {
   resetSector,
-  applyBuff,
 } from './engine/sectorRank';
 
 import { useGameLoop } from './hooks/useGameLoop';
@@ -57,20 +57,26 @@ export default function App() {
   const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };
 
   const nextSector = () => {
-    const oldSector = game.current?.sector;
-    resetGame();
     const g = game.current;
-    // Transfer persistent sector data from previous sector
-    if (oldSector && g.sector) {
-      g.sector.number = oldSector.number;
-      g.sector.veteranMode = oldSector.veteranMode;
-      g.sector.consecutiveARank = oldSector.consecutiveARank;
-      g.sector.activeBuff = oldSector.activeBuff;
-    }
+    if (!g) return;
     resetSector(g);
-    if (g.sector?.activeBuff) {
-      applyBuff(g, g.sector.activeBuff);
-    }
+    g.map = generateMap();
+    g.mission = null;
+    g.isVictory = false;
+    g.transitionTimer = undefined;
+    g.spawnCooldown = 2;
+    g.wave = 1;
+    g.totalTime = 0;
+    g.player.x = 0; g.player.y = 0;
+    g.player.vx = 0; g.player.vy = 0;
+    g.player.yaw = Math.PI / 2;
+    g.enemies = []; g.projectiles = []; g.particles = [];
+    g.pickups = []; g.effects = []; g.powerups = [];
+    g.hazards = [];
+    g.paused = false;
+    setPaused(false);
+    syncUiFromGame();
+    setUiEmergencyBeacon({ ...g.emergencyBeacon });
     setGameState(devMode ? 'dev' : 'map');
   };
 
@@ -195,12 +201,13 @@ export default function App() {
       const g = game.current;
       g.player.hp = g.player.maxHp;
       g.player.shield = g.player.maxShield;
+      g.emergencyBeacon.purchased = false;
       g.emergencyBeacon.activated = false;
       g.emergencyBeacon.nodeId = null;
       // Clear entity arrays to prevent stale enemies/projectiles from persisting
       g.enemies = []; g.projectiles = []; g.particles = [];
       g.pickups = []; g.effects = [];
-      setUiEmergencyBeacon({ purchased: true, activated: false, nodeId: null });
+      setUiEmergencyBeacon({ purchased: false, activated: false, nodeId: null });
       // Sync player stats to UI
       setUiLevels({ ...g.levels });
       setUiScrap(g.scrap);

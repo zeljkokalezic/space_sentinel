@@ -132,5 +132,10 @@ export const enterNodeMission = (g, level, nodeType, node) => {
   if (node && node.hazardTypes) {
     mission.hazardTypes = node.hazardTypes;
   }
+  if (node && node.weatherTypes) {
+    mission.weatherTypes = node.weatherTypes;
+  } else if (g.map?.weatherTypes) {
+    mission.weatherTypes = g.map.weatherTypes;
+  }
   setupCombatMission(g, mission, level);
 };

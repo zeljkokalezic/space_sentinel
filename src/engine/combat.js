@@ -29,7 +29,7 @@ export const checkDirectionalShield = (e, px, py, damage = 0) => {
   const shieldVal = e.directionalShields[sideIndex];
   if (shieldVal > 0) {
     e.directionalShields[sideIndex] = Math.max(0, shieldVal - damage);
-    return e.directionalShields[sideIndex] === 0; // Only block if fully consumed
+    return true;
   }
   return false;
 };

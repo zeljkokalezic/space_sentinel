@@ -52,6 +52,17 @@ describe('Elite Variants', () => {
       expect(enemy.directionalShields[1]).toBe(30);
     });
 
+    it('absorbs partial hits while shield charge remains', () => {
+      const enemy = createTestEnemy(0, 0, 'heavy');
+      enemy.eliteVariant = 'tank';
+      enemy.directionalShields = Array(8).fill(30);
+
+      const absorbed = checkDirectionalShield(enemy, 50, 0, 10);
+
+      expect(absorbed).toBe(true);
+      expect(enemy.directionalShields[0]).toBe(20);
+    });
+
    it('does not absorb from depleted shield side', () => {
       const enemy = createTestEnemy(0, 0, 'heavy');
       enemy.eliteVariant = 'tank';

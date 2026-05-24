@@ -111,6 +111,7 @@ describe('Emergency Beacon', () => {
       if (gameState === 'gameover' && g.emergencyBeacon.activated) {
         g.player.hp = g.player.maxHp;
         g.player.shield = g.player.maxShield;
+        g.emergencyBeacon.purchased = false;
         g.emergencyBeacon.activated = false;
         g.emergencyBeacon.nodeId = null;
         gameState = 'map';
@@ -119,10 +120,9 @@ describe('Emergency Beacon', () => {
       expect(gameState).toBe('map');
       expect(g.player.hp).toBe(300);
       expect(g.player.shield).toBe(20);
+      expect(g.emergencyBeacon.purchased).toBe(false);
       expect(g.emergencyBeacon.activated).toBe(false);
       expect(g.emergencyBeacon.nodeId).toBeNull();
-      // purchased stays true so UI shows it was consumed but can be repurchased at repair
-      expect(g.emergencyBeacon.purchased).toBe(true);
     });
 
     it('goes to game over when beacon is not activated', () => {
@@ -216,15 +216,17 @@ describe('Emergency Beacon', () => {
       if (gameState === 'gameover' && g.emergencyBeacon.activated) {
         g.player.hp = g.player.maxHp;
         g.player.shield = g.player.maxShield;
+        g.emergencyBeacon.purchased = false;
         g.emergencyBeacon.activated = false;
         g.emergencyBeacon.nodeId = null;
         gameState = 'map';
       }
       expect(gameState).toBe('map');
       expect(g.player.hp).toBe(300);
+      expect(g.emergencyBeacon.purchased).toBe(false);
       expect(g.emergencyBeacon.activated).toBe(false);
 
-      // 4. Visit repair — reset beacon
+      // 4. Visit repair — beacon remains available for repurchase
       g.emergencyBeacon.purchased = false;
       g.emergencyBeacon.activated = false;
       g.emergencyBeacon.nodeId = null;

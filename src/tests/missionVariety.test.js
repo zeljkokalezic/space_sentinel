@@ -4,7 +4,7 @@ import { generateMission } from '../engine/spawner';
 import { createGameState } from '../engine/state';
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { setupGauntlet, setupWaveSurge, resetGauntlet, resetWaveSurge } from '../engine/gauntletSetup';
-import { setupCombatMission } from '../engine/missionSetup';
+import { setupCombatMission, enterNodeMission } from '../engine/missionSetup';
 import { updatePhysics } from '../engine/physics';
 
 // ---- Map generation: gauntlet and wave_surge nodes ----
@@ -324,7 +324,7 @@ describe('gauntlet wave progression in physics loop', () => {
     expect(g.mission.current).toBe(1);
   });
 
-  it('stops advancing waves on last wave', () => {
+  it('completes mission progress on last wave', () => {
     g.enemies = [];
     g.gauntlet.enemiesSpawnedInWave = 2;
     g.gauntlet.currentWave = 2; // Last wave (0-indexed, totalWaves=3)
@@ -335,6 +335,19 @@ describe('gauntlet wave progression in physics loop', () => {
     // Should NOT enter between-waves since this is the last wave
     expect(g.gauntlet.betweenWaves).toBe(false);
     expect(g.gauntlet.currentWave).toBe(2);
+    expect(g.mission.current).toBe(g.mission.target);
+  });
+});
+
+describe('sector weather mission setup', () => {
+  it('copies generated map weather onto normal node missions', () => {
+    const g = createGameState();
+    g.map.weatherTypes = ['solarFlare'];
+
+    enterNodeMission(g, 3, 'combat', { id: 'node-1', type: 'combat' });
+
+    expect(g.mission.weatherTypes).toEqual(['solarFlare']);
+    expect(g.weather.active).toContain('solarFlare');
   });
 });
 

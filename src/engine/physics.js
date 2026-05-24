@@ -137,8 +137,9 @@ export const updatePhysics = (dt, g, cbs) => {
         g.gauntlet.betweenWaves = true;
         g.gauntlet.waveDelay = GAME_CONFIG.gauntlet?.waveDelay ?? 2;
         g.spawnCooldown = 999; // Stop spawning during delay
+      } else {
+        g.mission.current = g.mission.target;
       }
-      // If this was the last wave, mission completion handled by checkMissionProgress
     }
 
     // Between-waves countdown
