@@ -120,6 +120,43 @@ export const createTestState = (overrides = {}) => {
       fireCooldown: 1.5,
       spiralAngle: 0,
     },
+    screenShake: {
+      active: false,
+      intensity: 0,
+    },
+    lowHpWarning: {
+      active: false,
+      intensity: 0,
+      isCritical: false,
+      pulseTimer: 0,
+      heartbeatTimer: 0,
+    },
+    hitStop: {
+      active: false,
+      remaining: 0,
+    },
+    playerIFrames: {
+      active: false,
+      remaining: 0,
+      isInvincible: false,
+      blinkTimer: 0,
+    },
+    deathPulses: [],
+    attackWarnings: [],
+    powerupAuras: [],
+    adaptiveDifficulty: {
+      pressureScore: 0,
+      pressureHistory: [],
+      lowPressureTimer: 0,
+      highPressureTimer: 0,
+      rampageMode: false,
+      missionsHighHp: 0,
+      spawnRateMult: 1,
+      enemyAggressionMult: 1,
+    },
+    emergencyBeacon: {
+      purchased: false, activated: false, nodeId: null,
+    },
   };
 
   // Deep-merge player overrides if provided
@@ -147,8 +184,28 @@ export const createTestState = (overrides = {}) => {
     base.stats = { ...base.stats, ...overrides.stats };
   }
 
-  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, ...restOverrides } = overrides;
+  // Deep-merge screenShake overrides if provided
+  if (overrides.screenShake) {
+    base.screenShake = { ...base.screenShake, ...overrides.screenShake };
+  }
+
+  // Deep-merge lowHpWarning overrides if provided
+  if (overrides.lowHpWarning) {
+    base.lowHpWarning = { ...base.lowHpWarning, ...overrides.lowHpWarning };
+  }
+
+  // Deep-merge playerIFrames overrides if provided
+  if (overrides.playerIFrames) {
+    base.playerIFrames = { ...base.playerIFrames, ...overrides.playerIFrames };
+  }
+
+  // Deep-merge emergencyBeacon overrides if provided
+  if (overrides.emergencyBeacon) {
+    base.emergencyBeacon = { ...base.emergencyBeacon, ...overrides.emergencyBeacon };
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake', 'lowHpWarning', 'playerIFrames', 'emergencyBeacon' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, lowHpWarning: _lowHpWarningOverride, playerIFrames: _playerIFramesOverride, emergencyBeacon: _emergencyBeaconOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 
@@ -180,10 +237,10 @@ export const createTestEnemy = (x, y, type = 'fighter') => {
 
   // Pre-bake common type configs so tests don't need to override manually
   const typeConfigs = {
-    fighter: {},
-    heavy: { hp: 100, maxHp: 100, speed: 50, radius: 25, color: 0xf97316 },
+    fighter: { fireCooldown: 6.0 },
+    heavy: { hp: 100, maxHp: 100, speed: 50, radius: 25, color: 0xf97316, fireCooldown: 4.0 },
     shooter: { hp: 40, maxHp: 40, speed: 80, radius: 16, color: 0xa855f7, fireCooldown: 1.5 },
-    interceptor: { hp: 15, maxHp: 15, speed: 200, radius: 12, color: 0xeab308 },
+    interceptor: { hp: 15, maxHp: 15, speed: 200, radius: 12, color: 0xeab308, fireCooldown: 5.0 },
     shielded: { hp: 40, maxHp: 40, speed: 60, radius: 18, color: 0x3b82f6, shield: 80, maxShield: 80 },
     missile_boat: { hp: 60, maxHp: 60, speed: 40, radius: 22, color: 0xd946ef, fireCooldown: 3.0 },
   };

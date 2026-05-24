@@ -222,6 +222,26 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Adding new variants:** Add entry to `BOSS_ROSTER`/`MINIBOSS_ROSTER` with id, name, colors, geometry, attackPatterns
 - **Adding new attacks:** Add function to `attackPatterns.js`, reference by key in variant config
 
+## Boss Rage Mode
+- **Purpose:** Dramatic visual and audio escalation when bosses enter phase 3 (final phase, ≤33% HP), signaling increased danger and creating tension
+- **Trigger:** Automatically activated in `bossCore.js` when `newPhase === 3 && !boss.rage`
+- **State:** `boss.rage` (boolean), `boss.rageAuraTimer` (seconds since rage started), `boss.rageEmberTimer` (cooldown for ember emission)
+- **Config:** `GAME_CONFIG.boss.rage` — `rageColor: 0xff3333`, `auraBaseRadius: 80`, `auraMaxRadius: 120`, `auraPulsePeriod: 1.5`, `emberSpawnRate: 0.08`, `emberCount: 3`, `emberColor: 0xff6600`, `screenShakePreset: 'bigExplosion'`, `hitStopPreset: 'bossHit'`, `enragedPopupLife: 1.5`
+- **Effects on activation:**
+  - Screen shake (`bigExplosion` preset) + hit stop (`bossHit` preset)
+  - Dual particle burst (rage color + boss normal color)
+  - "⚠ ENRAGED" popup effect (red, shaking + pulsing, 1.5s lifetime)
+  - Audio: `boss_rage` sound (3-layer: deep growl + harsh buzz + rising shriek)
+- **Continuous while enraged:**
+  - Ember particles: 3 per 0.08s, orange (0xff6600), radial emission from boss surface
+  - 3D aura ring: Pulsing red ring (80-120 radius, sine wave on `rageAuraTimer`)
+  - Radar indicator: Pulsing red ring around boss dot (larger dot when enraged)
+- **Rendering:**
+  - 3D: `renderer3d.js` — `THREE.RingGeometry` aura ring for boss + scaled-down for miniboss
+  - 2D: `renderer2d.js` — `enraged` effect type (shaking red text), boss/miniboss radar dots with pulsing rage ring
+- **Applies to both bosses and mini-bosses** (same rage config, scaled aura for minibosses at 70% size)
+- **Audio:** `boss_rage` in `audio.js` — 3-layer sound: sawtooth growl (60-120Hz), square buzz (200-350Hz), sine shriek (400-1200Hz)
+
 ## Mini-Boss System
 - **Purpose:** Scaled-down boss fight every 3 levels as intermediate challenge
 - **State:** `g.miniboss` object with same structure as `g.boss` (active, x, y, hp, maxHp, phase, attackTimer, chargeTimer, chargeTarget, isCharging, radius, speed, fireCooldown, spiralAngle)
@@ -261,3 +281,34 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Map overlay:** Hazard icon badges on affected nodes (Mountain, Wind, CloudLightning, Hexagon from lucide-react) with legend entries
 - **Dev picker:** Hazard selector (None/Asteroids/Gravity/Plasma/EMP) passed to `launchDevMission` in App.jsx
 - **Adding new hazard types:** Update `gameConfig.js`, add new update branch in `systems/environmentalHazards.js`, add spawn logic in `hazardSetup.js`, add 3D/2D rendering, update DevMissionPicker `HAZARD_OPTIONS`
+
+## Low HP Warning System
+- **Purpose:** Visual and audio feedback when player HP drops below safe thresholds, creating tension and urgency
+- **State:** `g.lowHpWarning { active, intensity (0-1), isCritical, pulseTimer, heartbeatTimer }`
+- **Config:** `GAME_CONFIG.lowHpWarning` — `warningThreshold: 0.3` (30% HP), `criticalThreshold: 0.15` (15% HP), `pulsePeriod: 1.5` (seconds), `heartbeatInterval: 1.0` (seconds)
+- **Module:** `lowHpWarning.js` — `getLowHpWarningLevel(hp, maxHp)` (pure), `updateLowHpWarning(dt, g)` (game loop)
+- **Visual:** Red radial gradient vignette from screen edges (transparent at center). Pulsing via sine wave on `pulseTimer`. Intensity maps to alpha (0-0.7). Thicker border at critical (4px vs 2px). "⚠ LOW HULL" text at critical.
+- **Audio:** Heartbeat sound (`SoundManager.play('heartbeat')`) — dual-layer sine oscillators (low thump + higher click). Interval halves when critical (1.0s → 0.5s).
+- **Physics wiring:** Called in `physics.js` after screen shake decay, before escort/beacon/sabotage/boss systems. Null-guarded for test mocks.
+- **Levels:** 0 = inactive (>30% HP), 1 = warning (15-30%), 2 = critical (≤15%)
+- **Intensity:** Linear interpolation from 0 at warningThreshold to 1 at 0 HP
+
+## Scrap Collection Effects
+- **Purpose:** Visual and audio feedback when the player collects scrap, making the core resource loop more satisfying
+- **State:** `g.scrapFloats` array — each entry: `{ x, y, text, life, maxLife, color, active }`
+- **Config:** `GAME_CONFIG.scrapCollection` — `particleCount: 8`, `particleColor: 0xfbbf24`, `floatLife: 1.0`, `floatSpeed: 40`, `floatColor: '#fbbf24'`, `flashOpacity: 0.06`, `flashDuration: 0.1`, `flashMinValue: 3`, `maxFloats: 30`
+- **Module:** `systems/pickups.js` — `triggerScrapCollection(g, x, y, value)` called when scrap is collected
+- **Effects:** Golden burst particles at collection point, floating "+N" number that rises and fades, metallic "cha-ching" audio (`SoundManager.play('scrap_collect')`), screen flash for pickups >= flashMinValue
+- **Rendering:** 2D floating numbers in `renderer2d.js` (projected from world to screen), screen flash via `g.screenFlash` (shared with combo celebration system)
+- **Cleanup:** Inactive floats filtered in `systems/cleanup.js` every 2 seconds
+- **Audio:** Dual-oscillator metallic ping — high sine sweep (1800→2400→1200Hz) + secondary shimmer (2800→1600Hz)
+
+## Power-up Pickup Aura Rings
+- **Purpose:** Expanding energy ring + floating buff name text when collecting power-ups, providing clear visual confirmation
+- **State:** `g.powerupAuras` array — each entry: `{ active, x, y, color, type, icon, name, ringRadius, ringMaxRadius, ringLife, ringMaxLife, textY, textLife, textMaxLife }`
+- **Config:** `GAME_CONFIG.powerupAura` — `expandSpeed: 300`, `maxRadius: 150`, `ringDuration: 0.8`, `lineWidth: 3`, `textDuration: 1.5`, `textFloatSpeed: 30`, `textFontSize: 14`, `maxAuras: 10`
+- **Module:** `combat.js` — `triggerPowerupAura(g, type, color, x, y)` creates aura effect; `systems/particles.js` — `updatePowerupAuras(dt, g)` handles ring expansion + text float + cleanup
+- **Trigger:** Called from `systems/powerups.js` when player enters power-up pickup radius
+- **Visual:** Expanding ring (3D via `geoms.deathPulseRing` + 2D canvas arc), floating buff name with icon (e.g. "⚡ Rapid Fire"), type-matched colors, radar markers
+- **Cleanup:** Dead auras filtered in `updatePowerupAuras` — ring stops at maxRadius, text floats until textLife expires, both must be expired to deactivate
+- **Icon mapping:** `GAME_CONFIG.powerups[type]?.icon` with '✦' fallback; name formatted from camelCase via `/([a-z])([A-Z])/g`

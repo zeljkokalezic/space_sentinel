@@ -1,4 +1,4 @@
-import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Target } from 'lucide-react';
+import { Shield, Heart, Zap, Crosshair, Rocket, Activity, Magnet, Wrench, Target, RadioTower } from 'lucide-react';
 
 export const UPGRADE_DATA = {
   autoAim: { name: 'Targeting AI', icon: Target, desc: 'Automatically locks weapons onto the nearest enemy.', baseCost: 150, costMult: 1, maxLevel: 1 },
@@ -9,5 +9,6 @@ export const UPGRADE_DATA = {
   shield: { name: 'Energy Shield', icon: Shield, desc: 'Adds a regenerating protective forcefield.', baseCost: 100, costMult: 1.5, maxLevel: 10 },
   thrusters: { name: 'Ion Thrusters', icon: Activity, desc: 'Increases ship movement speed & agility.', baseCost: 40, costMult: 1.3, maxLevel: 8 },
   magnet: { name: 'Scrap Magnet', icon: Magnet, desc: 'Increases pickup radius for destroyed enemies.', baseCost: 30, costMult: 1.4, maxLevel: 10 },
-  pointDefense: { name: 'Point Defense', icon: Wrench, desc: 'Short-range auto-lasers shred nearby threats.', baseCost: 150, costMult: 1.6, maxLevel: 10 }
+  pointDefense: { name: 'Point Defense', icon: Wrench, desc: 'Short-range auto-lasers shred nearby threats.', baseCost: 150, costMult: 1.6, maxLevel: 10 },
+  emergencyBeacon: { name: 'Emergency Beacon', icon: RadioTower, desc: 'Save position. Respawn here on death. [B] to activate.', baseCost: 200, costMult: 1, maxLevel: 1, isConsumable: true },
 };

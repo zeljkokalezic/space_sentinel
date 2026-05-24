@@ -11,6 +11,8 @@ import { setupSabotage, resetSabotage } from './sabotageSetup';
 import { setupBoss, resetBoss } from './bossSetup';
 import { setupMiniboss, resetMiniboss } from './minibossSetup';
 import { setupHazards, resetHazards } from './hazardSetup';
+import { setupGauntlet, resetGauntlet, setupWaveSurge, resetWaveSurge } from './gauntletSetup';
+import { initWeather, resetWeather } from './systems/weather';
 
 /**
  * Set up a combat mission on the game state.
@@ -23,6 +25,10 @@ export const setupCombatMission = (g, mission, level) => {
   g.mission = mission;
   g.spawnCooldown = 2.0;
   g.totalTime = 0;
+  // Record mission start time for sector rank calculation
+  if (g.sector) {
+    g.sector.missionStartTime.push(g.totalTime);
+  }
   g.player.x = 0; g.player.y = 0;
   g.player.yaw = Math.PI / 2;
   g.player.vx = 0; g.player.vy = 0;
@@ -36,24 +42,32 @@ export const setupCombatMission = (g, mission, level) => {
     resetSabotage(g);
     resetBoss(g);
     resetMiniboss(g);
+    resetGauntlet(g);
+    resetWaveSurge(g);
   } else if (mission.type === 'defend') {
     setupBeacon(g, level);
     resetEscort(g);
     resetSabotage(g);
     resetBoss(g);
     resetMiniboss(g);
+    resetGauntlet(g);
+    resetWaveSurge(g);
   } else if (mission.type === 'sabotage') {
     setupSabotage(g, level);
     resetEscort(g);
     resetBeacon(g);
     resetBoss(g);
     resetMiniboss(g);
+    resetGauntlet(g);
+    resetWaveSurge(g);
   } else if (mission.type === 'kill_boss') {
     setupBoss(g, level);
     resetEscort(g);
     resetBeacon(g);
     resetSabotage(g);
     resetMiniboss(g);
+    resetGauntlet(g);
+    resetWaveSurge(g);
     g.mission = { ...mission, current: 0, target: 1 };
   } else if (mission.type === 'kill_miniboss') {
     setupMiniboss(g, level);
@@ -61,13 +75,33 @@ export const setupCombatMission = (g, mission, level) => {
     resetBeacon(g);
     resetSabotage(g);
     resetBoss(g);
+    resetGauntlet(g);
+    resetWaveSurge(g);
     g.mission = { ...mission, current: 0, target: 1 };
+  } else if (mission.type === 'gauntlet') {
+    setupGauntlet(g, mission);
+    resetEscort(g);
+    resetBeacon(g);
+    resetSabotage(g);
+    resetBoss(g);
+    resetMiniboss(g);
+    resetWaveSurge(g);
+  } else if (mission.type === 'wave_surge') {
+    setupWaveSurge(g);
+    resetEscort(g);
+    resetBeacon(g);
+    resetSabotage(g);
+    resetBoss(g);
+    resetMiniboss(g);
+    resetGauntlet(g);
   } else {
     resetEscort(g);
     resetBeacon(g);
     resetSabotage(g);
     resetBoss(g);
     resetMiniboss(g);
+    resetGauntlet(g);
+    resetWaveSurge(g);
   }
 
   // ─── Environmental hazards ───────────────────────────────────────────────────
@@ -75,6 +109,13 @@ export const setupCombatMission = (g, mission, level) => {
     setupHazards(g, level, mission.hazardTypes);
   } else {
     resetHazards(g);
+  }
+
+  // ─── Weather effects ────────────────────────────────────────────────────────
+  if (mission.weatherTypes && mission.weatherTypes.length > 0) {
+    initWeather(g, mission.weatherTypes);
+  } else {
+    resetWeather(g);
   }
 };
 
@@ -90,6 +131,11 @@ export const enterNodeMission = (g, level, nodeType, node) => {
   const mission = generateMission(level, nodeType);
   if (node && node.hazardTypes) {
     mission.hazardTypes = node.hazardTypes;
+  }
+  if (node && node.weatherTypes) {
+    mission.weatherTypes = node.weatherTypes;
+  } else if (g.map?.weatherTypes) {
+    mission.weatherTypes = g.map.weatherTypes;
   }
   setupCombatMission(g, mission, level);
 };

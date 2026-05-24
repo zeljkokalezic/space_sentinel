@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb, Mountain, Wind, CloudLightning, Hexagon } from 'lucide-react';
+import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb, Mountain, Wind, CloudLightning, Hexagon, Sun, CircleDashed, Radio } from 'lucide-react';
 import { enterNodeMission } from '../engine/missionSetup';
 
 /**
@@ -16,7 +16,7 @@ import { enterNodeMission } from '../engine/missionSetup';
  *   mapStateVersion — number (consumed only to trigger re-renders, not used directly)
  */
 // eslint-disable-next-line no-unused-vars
-export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels, setUiShipSkin, setUiUnlockedSkins, setMapStateVersion, mapStateVersion }) {
+export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels, setUiShipSkin, setUiUnlockedSkins, setMapStateVersion, mapStateVersion, setUiEmergencyBeacon }) {
   if (!game || !game.map) return null;
 
   const { nodes, edges, currentNodeId } = game.map;
@@ -40,6 +40,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
     if (type === 'escort')   return <Navigation className="w-5 h-5" />;
     if (type === 'defend')   return <Shield className="w-5 h-5" />;
     if (type === 'sabotage') return <Bomb className="w-5 h-5" />;
+    if (type === 'gauntlet') return <span className="text-xl">⚔️</span>;
+    if (type === 'wave_surge') return <span className="text-xl">🌊</span>;
     return <Target className="w-5 h-5" />;
   };
 
@@ -55,6 +57,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
     if (type === 'escort')   return 'border-pink-400 text-pink-400 bg-pink-900/60 shadow-[0_0_15px_#f472b6]';
     if (type === 'defend')   return 'border-cyan-400 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#22d3ee]';
     if (type === 'sabotage') return 'border-amber-500 text-amber-400 bg-amber-900/60 shadow-[0_0_15px_#f59e0b]';
+    if (type === 'gauntlet') return 'border-red-600 text-red-400 bg-red-900/60 shadow-[0_0_15px_#dc2626]';
+    if (type === 'wave_surge') return 'border-yellow-500 text-yellow-400 bg-yellow-900/60 shadow-[0_0_15px_#eab308]';
     return 'border-cyan-500 text-cyan-400 bg-cyan-900/60 shadow-[0_0_15px_#06b6d4]';
   };
 
@@ -83,6 +87,15 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
       n.status = 'cleared';
       const heal = Math.floor(game.player.maxHp * 0.3);
       game.player.hp = Math.min(game.player.maxHp, game.player.hp + heal);
+      // Reset emergency beacon so player can buy a new one
+      if (game.emergencyBeacon) {
+        game.emergencyBeacon.purchased = false;
+        game.emergencyBeacon.activated = false;
+        game.emergencyBeacon.nodeId = null;
+        if (setUiEmergencyBeacon) {
+          setUiEmergencyBeacon({ purchased: false, activated: false, nodeId: null });
+        }
+      }
       unlockNext();
       setMapStateVersion(v => v + 1);
     } else if (n.type === 'event') {
@@ -108,6 +121,40 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
         </div>
       </div>
 
+      {/* Weather effects bar */}
+      {game.weather && game.weather.active.length > 0 && (
+        <div className="absolute top-28 inset-x-0 flex justify-center gap-4 pointer-events-none z-50 flex-wrap px-4">
+          {game.weather.active.includes('solarFlare') && (
+            <div className="flex items-center gap-2 bg-yellow-900/60 border border-yellow-500/50 rounded-lg px-4 py-2 shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+              <Sun className="w-5 h-5 text-yellow-400" />
+              <span className="text-yellow-300 font-bold text-sm">Solar Flare</span>
+              <span className="text-yellow-500 text-xs">— sensor blind</span>
+            </div>
+          )}
+          {game.weather.active.includes('debrisField') && (
+            <div className="flex items-center gap-2 bg-gray-900/60 border border-gray-500/50 rounded-lg px-4 py-2 shadow-[0_0_10px_rgba(107,114,128,0.3)]">
+              <Mountain className="w-5 h-5 text-gray-400" />
+              <span className="text-gray-300 font-bold text-sm">Debris Field</span>
+              <span className="text-gray-500 text-xs">— blocks projectiles</span>
+            </div>
+          )}
+          {game.weather.active.includes('gravityAnomaly') && (
+            <div className="flex items-center gap-2 bg-purple-900/60 border border-purple-500/50 rounded-lg px-4 py-2 shadow-[0_0_10px_rgba(124,58,237,0.3)]">
+              <CircleDashed className="w-5 h-5 text-purple-400" />
+              <span className="text-purple-300 font-bold text-sm">Gravity Anomaly</span>
+              <span className="text-purple-500 text-xs">— slows projectiles</span>
+            </div>
+          )}
+          {game.weather.active.includes('electromagneticInterference') && (
+            <div className="flex items-center gap-2 bg-amber-900/60 border border-amber-500/50 rounded-lg px-4 py-2 shadow-[0_0_10px_rgba(245,158,11,0.3)]">
+              <Radio className="w-5 h-5 text-amber-400" />
+              <span className="text-amber-300 font-bold text-sm">EMI</span>
+              <span className="text-amber-500 text-xs">— disables weapons</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Legend */}
       <div className="absolute bottom-8 left-4 md:left-8 bg-[#0a0a14]/90 border border-gray-700 rounded-xl p-5 font-sans text-sm flex flex-col gap-3 shadow-2xl z-50 backdrop-blur-md">
         <div className="text-gray-400 font-black mb-1 border-b border-gray-700 pb-2 tracking-widest text-xs uppercase">Node Legend</div>
@@ -119,6 +166,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
         <div className="flex items-center gap-3"><Wrench       className="w-5 h-5 text-blue-400"   /> <span className="text-gray-300 font-bold">Systems Shop</span></div>
         <div className="flex items-center gap-3"><Heart        className="w-5 h-5 text-pink-400"   /> <span className="text-gray-300 font-bold">Emergency Repair</span></div>
         <div className="flex items-center gap-3"><Bomb         className="w-5 h-5 text-amber-400"   /> <span className="text-gray-300 font-bold">Sabotage Turrets</span></div>
+        <div className="flex items-center gap-3"><span className="text-lg">⚔️</span> <span className="text-gray-300 font-bold">Gauntlet</span></div>
+        <div className="flex items-center gap-3"><span className="text-lg">🌊</span> <span className="text-gray-300 font-bold">Wave Surge</span></div>
         <div className="flex items-center gap-3"><Skull        className="w-5 h-5 text-red-500"    /> <span className="text-gray-300 font-bold uppercase tracking-wider text-red-400">Sector Boss</span></div>
         <div className="text-gray-400 font-black mt-2 mb-1 border-b border-gray-700 pb-2 tracking-widest text-xs uppercase">Hazards</div>
         <div className="flex items-center gap-3"><Mountain     className="w-4 h-4 text-gray-400"    /> <span className="text-gray-400 text-xs">Asteroid Field</span></div>
@@ -162,6 +211,8 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
             {isAvailable && n.type === 'boss'   && <div className="absolute -bottom-7 whitespace-nowrap text-sm font-black text-red-500 animate-pulse bg-black/80 px-2 py-1 rounded border border-red-500">WARNING</div>}
             {isAvailable && n.type === 'elite'     && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-purple-400 bg-black/60 px-2 py-1 rounded">ELITE</div>}
             {isAvailable && n.type === 'sabotage'  && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-amber-400 bg-black/60 px-2 py-1 rounded">SABOTAGE</div>}
+            {isAvailable && n.type === 'gauntlet'   && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-red-400 bg-black/60 px-2 py-1 rounded">GAUNTLET</div>}
+            {isAvailable && n.type === 'wave_surge' && <div className="absolute -bottom-7 whitespace-nowrap text-xs font-bold text-yellow-400 bg-black/60 px-2 py-1 rounded">WAVE SURGE</div>}
             {/* Hazard badges */}
             {isAvailable && n.hazardTypes && n.hazardTypes.map((ht, i) => (
               <div key={i} className="absolute -top-2 -right-2 w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center border border-gray-600" style={{ transform: `translate(${i * 2}px, ${i * 2}px)` }}>

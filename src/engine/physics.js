@@ -10,6 +10,7 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 import { spawnEnemy } from './spawner';
 import { getNearestHostileTarget } from './targeting';
 import { calculateDifficultyMultiplier } from './difficulty';
+import { updateAdaptiveDifficulty, getAdaptiveSpawnCooldown, getAdaptiveAggression } from './adaptiveDifficulty';
 
 // Systems
 import { updateTransition, createCompleteMission, checkMissionProgress } from './systems/mission';
@@ -19,7 +20,7 @@ import { updateProjectiles } from './systems/projectiles';
 import { updateEnemies } from './systems/enemies';
 import { updatePickups } from './systems/pickups';
 import { updatePowerups } from './systems/powerups';
-import { updateParticles, updateEffects } from './systems/particles';
+import { updateParticles, updateEffects, updateScreenShake, updateHitStop, updatePlayerIFrames, updatePowerupAuras } from './systems/particles';
 import { updateEscort } from './systems/escort';
 import { updateBeacon } from './systems/beacon';
 import { updateSabotage } from './systems/sabotage';
@@ -28,7 +29,13 @@ import { updateMiniboss } from './systems/miniboss';
 import { updateAudio } from './systems/audio';
 import { updateWaveAnnounce } from './systems/waveAnnounce';
 import { updateEnvironmentalHazards } from './systems/environmentalHazards';
+import { updateDeathPulses } from './systems/deathPulses';
+import { updateAttackWarnings } from './systems/attackWarnings';
 import { cleanup } from './systems/cleanup';
+import { updateLowHpWarning } from './lowHpWarning';
+import { updateDynamicFov } from './systems/dynamicFov';
+import { updateSpawnFlashes } from './spawner';
+import { updateWeather } from './systems/weather';
 
 export const updatePhysics = (dt, g, cbs) => {
   const { setGameState, setNotificationVersion } = cbs;
@@ -39,6 +46,9 @@ export const updatePhysics = (dt, g, cbs) => {
     setNotificationVersion(g.achievementVersion);
   }
 
+  // ─── Hit stop (freeze frame) — skip physics while counting down ────────────
+  if (updateHitStop(dt, g)) return;
+
   // ─── Transition timer (runs after mission complete, before returning to map) ───
   if (updateTransition(dt, g, cbs)) return;
 
@@ -48,6 +58,9 @@ export const updatePhysics = (dt, g, cbs) => {
   // ─── Mission progress check (survive type) ────────────────────────────────────
   checkMissionProgress(dt, g, completeMission);
 
+  // ─── Adaptive difficulty update ──────────────────────────────────────────────
+  updateAdaptiveDifficulty(dt, g);
+
   // ─── Time & spawn ─────────────────────────────────────────────────────────────
   g.totalTime += dt;
   g.spawnCooldown -= dt;
@@ -56,12 +69,21 @@ export const updatePhysics = (dt, g, cbs) => {
   updateWaveAnnounce(dt, g);
 
   const C = GAME_CONFIG;
-  const currentDiffMult = calculateDifficultyMultiplier(g.level, g.totalTime, g.settings?.difficulty);
+  // Apply veteran mode difficulty if unlocked (S-rank sectors)
+  const activeDifficulty = g.sector?.veteranMode ? 'veteran' : (g.settings?.difficulty || 'normal');
+  const currentDiffMult = calculateDifficultyMultiplier(g.level, g.totalTime, activeDifficulty);
   const currentSpawnRate = Math.max(0.1, C.enemies.baseSpawnRate - (g.level * C.enemies.spawnRateLevelDecay) - (g.totalTime * C.enemies.spawnRateTimeDecay));
 
   if (g.spawnCooldown <= 0 && !(g.waveAnnounce && g.waveAnnounce.active)) {
     spawnEnemy(g);
-    g.spawnCooldown = currentSpawnRate + Math.random() * C.enemies.spawnCooldownVariance;
+    let nextCooldown = currentSpawnRate + Math.random() * C.enemies.spawnCooldownVariance;
+    // Apply adaptive difficulty spawn cooldown adjustment
+    nextCooldown = getAdaptiveSpawnCooldown(g, nextCooldown);
+    // Wave surge: multiply spawn cooldown by inverse of spawnRateMult (faster spawning)
+    if (g.waveSurge?.active) {
+      nextCooldown /= g.waveSurge.spawnRateMult;
+    }
+    g.spawnCooldown = nextCooldown;
   }
 
   // ─── Player movement (yaw-based) ──────────────────────────────────────────────
@@ -99,10 +121,51 @@ export const updatePhysics = (dt, g, cbs) => {
   updateProjectiles(dt, g, setGameState);
   if (g.player.hp <= 0) return;
 
- // ─── Enemy AI & collision ─────────────────────────────────────────────
+// ─── Enemy AI & collision ─────────────────────────────────────────────
   const enemyDt = g.activeBuffs.timeSlow ? dt * 0.5 : dt;
-  updateEnemies(enemyDt, g, currentDiffMult, completeMission, setGameState);
+  const adaptiveAggression = getAdaptiveAggression(g);
+  updateEnemies(enemyDt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression);
   if (g.player.hp <= 0) return;
+
+  // ─── Gauntlet wave management ──────────────────────────────────────────
+  if (g.gauntlet?.active) {
+    // Check if current wave is complete (all enemies in wave dead)
+    if (!g.gauntlet.betweenWaves && g.enemies.length === 0 && g.gauntlet.enemiesSpawnedInWave >= g.gauntlet.enemiesPerWave) {
+      // Wave cleared — check if more waves remain
+      if (g.gauntlet.currentWave < g.gauntlet.totalWaves - 1) {
+        // Start between-waves delay
+        g.gauntlet.betweenWaves = true;
+        g.gauntlet.waveDelay = GAME_CONFIG.gauntlet?.waveDelay ?? 2;
+        g.spawnCooldown = 999; // Stop spawning during delay
+      } else {
+        g.mission.current = g.mission.target;
+      }
+    }
+
+    // Between-waves countdown
+    if (g.gauntlet.betweenWaves) {
+      g.gauntlet.waveDelay -= dt;
+      if (g.gauntlet.waveDelay <= 0) {
+        g.gauntlet.betweenWaves = false;
+        g.gauntlet.currentWave++;
+        g.gauntlet.enemiesSpawnedInWave = 0;
+        g.mission.current = g.gauntlet.currentWave;
+        g.spawnCooldown = 0.5; // Resume spawning
+      }
+    }
+  }
+
+  // ─── Wave surge countdown ──────────────────────────────────────────────
+  if (g.waveSurge?.active) {
+    g.waveSurge.remaining -= dt;
+    if (g.waveSurge.remaining <= 0) {
+      g.waveSurge.active = false;
+      g.waveSurge.remaining = 0;
+    }
+  }
+
+  // ─── Attack warning indicators (telegraphing) ────────────────────────────
+  updateAttackWarnings(dt, g);
 
   // ─── Environmental hazards ────────────────────────────────────────────────────
   if (updateEnvironmentalHazards(dt, g, completeMission, setGameState)) return;
@@ -113,14 +176,39 @@ export const updatePhysics = (dt, g, cbs) => {
   // ─── Power-up pickup & buff management ──────────────────────────────────────
   updatePowerups(dt, g, completeMission);
 
-  // ─── Particles ────────────────────────────────────────────────────────────────
+ // ─── Particles ────────────────────────────────────────
   updateParticles(dt, g);
 
-  // ─── Effects ──────────────────────────────────────────────────────────────────
+  // ─── Effects ──────────────────────────────────────────
   updateEffects(dt, g);
 
-  // ─── Escort mission logic ────────────────────────────────────────────────────
-  if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState)) return;
+  // ─── Screen shake decay ──────────────────────────────
+  updateScreenShake(dt, g);
+
+  // ─── Player invincibility frames (i-frames) ──────────
+  updatePlayerIFrames(dt, g);
+
+  // ─── Low HP warning (visual + audio) ─────────────────
+  updateLowHpWarning(dt, g);
+
+  // ─── Dynamic FOV (camera tension/release) ────────────
+  updateDynamicFov(dt, g);
+
+  // ─── Death pulse shockwaves ──────────────────────────
+  updateDeathPulses(dt, g, completeMission);
+  if (g.player.hp <= 0) {
+    setGameState('gameover');
+    return;
+  }
+
+  // ─── Enemy spawn flash effects ───────────────────────
+  updateSpawnFlashes(dt, g);
+
+  // ─── Power-up aura ring effects ──────────────────────
+  updatePowerupAuras(dt, g);
+
+  // ─── Escort mission logic ────────────────────────────
+  if (updateEscort(dt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression)) return;
 
   // ─── Beacon mission logic ────────────────────────────────────────────────────
   if (updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)) return;
@@ -133,6 +221,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Mini-boss fight logic ───────────────────────────────────────────────────
   if (updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)) return;
+
+  // ─── Weather system update ────────────────────────────────────────────────
+  updateWeather(dt, g);
 
   // ─── Pool cleanup (every 5 seconds) ──────────────────────────────────────────
   cleanup(dt, g);

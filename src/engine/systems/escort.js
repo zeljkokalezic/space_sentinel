@@ -2,7 +2,7 @@
  * systems/escort.js — Escort drone movement, evasion, collision, and mission checks.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles } from '../combat';
+import { createParticles, spawnDamageNumber } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 
 /**
@@ -11,9 +11,10 @@ import { tryFireEnemyWeapon } from './enemyFire';
  * @param {number} currentDiffMult — Difficulty multiplier
  * @param {function} completeMission — Mission completion callback
  * @param {function} setGameState — React state setter callback
+ * @param {number} [adaptiveAggression=1] — Adaptive aggression multiplier from dynamic difficulty
  * @returns {boolean} true if game should stop (gameover triggered)
  */
-export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameState) => {
+export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression = 1) => {
   const C = GAME_CONFIG;
   if (!g.escort.active || g.mission?.completed) return false;
   const esc = g.escort;
@@ -120,7 +121,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
         esc.hp -= p.damage;
         p.active = false;
         createParticles(g, p.x, p.y, 0x22d3ee, 5);
-        g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: Math.ceil(p.damage).toString(), life: 0.8 });
+        spawnDamageNumber(g, esc.x, esc.y - 10, p.damage, { hitType: 'hull' });
         if (esc.hp <= 0 && handleEscortDeath()) return true;
       }
     }
@@ -133,7 +134,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
       if (Math.hypot(e.x - esc.x, e.y - esc.y) < e.radius + esc.radius) {
         esc.hp -= C.escort.ramDamage;
         createParticles(g, esc.x, esc.y, 0x22d3ee, 10);
-        g.effects.push({ type: 'dmg', x: esc.x, y: esc.y - 10, text: C.escort.ramDamage.toString(), life: 0.8 });
+        spawnDamageNumber(g, esc.x, esc.y - 10, C.escort.ramDamage, { hitType: 'hull' });
         if (esc.hp <= 0 && handleEscortDeath()) return true;
       }
     }
@@ -146,7 +147,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     const distToPlayer = Math.hypot(g.player.x - e.x, g.player.y - e.y);
     if (distToEscort < distToPlayer && distToEscort < C.enemies.spawnRadiusMin) {
       const angle = Math.atan2(esc.y - e.y, esc.x - e.x);
-      tryFireEnemyWeapon(e, angle, distToEscort, dt, currentDiffMult, g);
+      tryFireEnemyWeapon(e, angle, distToEscort, dt, currentDiffMult, g, adaptiveAggression);
     }
   }
 

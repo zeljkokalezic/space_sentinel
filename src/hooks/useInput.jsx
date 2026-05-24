@@ -61,6 +61,17 @@ export const useInput = ({
         return;
       }
 
+      // ── Emergency Beacon activation (B key) ──────────────────────────────
+      if (key === 'b' && !e.repeat && statusRef.current === 'playing' && game.current) {
+        const eb = game.current.emergencyBeacon;
+        if (eb && eb.purchased && !eb.activated) {
+          eb.activated = true;
+          eb.nodeId = game.current.map.currentNodeId;
+        }
+        if (game.current) game.current.keys[key] = true;
+        return;
+      }
+
       if (game.current) game.current.keys[key] = true;
     };
 

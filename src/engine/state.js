@@ -130,8 +130,54 @@
  * @property {number} [hazards[].vy] — Velocity Y (plasma storm)
  * @property {number} [hazards[].timer] — Timer for storm lifetime or EMP cooldown
  * @property {number} [hazards[].empActive] — Whether EMP is currently active (0/1)
+ * @property {Array} deathPulses — Active death pulse shockwave rings
+ * @property {number} deathPulses[].x — World X position (origin of pulse)
+ * @property {number} deathPulses[].y — World Y position (origin of pulse)
+ * @property {number} deathPulses[].radius — Current ring radius
+ * @property {number} deathPulses[].maxRadius — Maximum ring radius
+ * @property {number} deathPulses[].damage — Damage to entities within ring
+ * @property {number} deathPulses[].life — Remaining pulse lifetime
+ * @property {number} deathPulses[].maxLife — Total pulse lifetime
+ * @property {number} deathPulses[].color — Ring color (hex)
+ * @property {boolean} deathPulses[].active — Whether pulse is active
+ * @property {boolean} deathPulses[].hasDamagedPlayer — Whether player was already hit
+ * @property {Array} attackWarnings — Active attack warning indicators
+ * @property {number} attackWarnings[].x — World X position (predicted impact)
+ * @property {number} attackWarnings[].y — World Y position (predicted impact)
+ * @property {number} attackWarnings[].radius — Warning indicator radius
+ * @property {number} attackWarnings[].life — Remaining warning time
+ * @property {number} attackWarnings[].maxLife — Total warning duration
+ * @property {string} attackWarnings[].color — Warning color (hex string)
+ * @property {boolean} attackWarnings[].active — Whether warning is active
+ * @property {function} attackWarnings[].fireCallback — Function to call when warning expires (fires the projectile)
+ * @property {Array} spawnFlashes — Active enemy spawn flash effects
+ * @property {number} spawnFlashes[].x — World X position (center of flash)
+ * @property {number} spawnFlashes[].y — World Y position (center of flash)
+ * @property {number} spawnFlashes[].radius — Current ring radius (expands from 0 to maxRadius)
+ * @property {number} spawnFlashes[].maxRadius — Maximum ring radius
+ * @property {number} spawnFlashes[].life — Remaining flash lifetime
+ * @property {number} spawnFlashes[].maxLife — Total flash lifetime
+ * @property {string} spawnFlashes[].color — Ring color (hex string)
+ * @property {boolean} spawnFlashes[].active — Whether flash is active
+ * @property {Array} scrapFloats — Active scrap collection floating number effects
+ * @property {number} scrapFloats[].x — World X position
+ * @property {number} scrapFloats[].y — World Y position (floats upward over time)
+ * @property {string} scrapFloats[].text — Display text (e.g. "+1")
+ * @property {number} scrapFloats[].life — Remaining lifetime
+ * @property {number} scrapFloats[].maxLife — Total lifetime
+ * @property {string} scrapFloats[].color — Text color (hex string)
+ * @property {boolean} scrapFloats[].active — Whether float is active
  * @property {number} shipSkin — Active skin index (0-4)
  * @property {boolean[]} unlockedSkins — Which skins are unlocked
+ * @property {Object} adaptiveDifficulty — Adaptive difficulty tracking
+ * @property {number} adaptiveDifficulty.pressureScore — Current pressure score (0–1)
+ * @property {number[]} adaptiveDifficulty.pressureHistory — Rolling history of pressure samples
+ * @property {number} adaptiveDifficulty.lowPressureTimer — Seconds spent in low pressure (<0.3)
+ * @property {number} adaptiveDifficulty.highPressureTimer — Seconds spent in high pressure (>0.7)
+ * @property {boolean} adaptiveDifficulty.rampageMode — Whether rampage mode is active
+ * @property {number} adaptiveDifficulty.missionsHighHp — Consecutive missions completed with HP > 80%
+ * @property {number} adaptiveDifficulty.spawnRateMult — Spawn rate multiplier (≤1 reduces spawns)
+ * @property {number} adaptiveDifficulty.enemyAggressionMult — Enemy aggression multiplier (≥1 increases speed/firerate)
  */
 
 import { generateMap } from './mapGenerator';
@@ -164,6 +210,7 @@ export const createGameState = () => ({
     x: 0, y: 0, vx: 0, vy: 0, radius: 38,
     hp: 300, maxHp: 300,
     shield: 20, maxShield: 20,
+    _shieldWasDepleted: false,
     speed: 120, magnetRadius: 150,
     yaw: Math.PI / 2,
   },
@@ -184,12 +231,15 @@ export const createGameState = () => ({
   escort: createDefaultEscort(),
   beacon: createDefaultBeacon(),
   sabotage: createDefaultSabotage(),
+  gauntlet: createDefaultGauntlet(),
+  waveSurge: createDefaultWaveSurge(),
   keys: {}, mouse: { x: 0, y: 0, active: false }, worldMouse: { x: 0, y: 0 },
   touchId: null, touchBase: null, touchCurrent: null,
   devMode: false,
   paused: false,
   audio: { muted: false, volume: 0.5 },
   combo: { count: 0, timer: 0, multiplier: 1 },
+  screenFlash: { active: false, remaining: 0, color: '#ffffff' },
   powerups: [],
   activeBuffs: {},
   waveAnnounce: { active: false, wave: 1, timer: 0 },
@@ -198,9 +248,46 @@ export const createGameState = () => ({
   boss: createDefaultBoss(),
   miniboss: createDefaultMiniboss(),
   hazards: [],
+  deathPulses: [],
   settings: loadSettings(),
   shipSkin: 0,
   unlockedSkins: SHIP_SKINS.map(s => s.cost === 0),
+  screenShake: createDefaultScreenShake(),
+  lowHpWarning: createDefaultLowHpWarning(),
+  emergencyBeacon: {
+    purchased: false, activated: false, nodeId: null,
+  },
+  hitStop: createDefaultHitStop(),
+  playerIFrames: createDefaultPlayerIFrames(),
+  attackWarnings: [],
+  dynamicFov: createDefaultDynamicFov(),
+  spawnFlashes: [],
+  scrapFloats: [],
+  powerupAuras: [],
+  adaptiveDifficulty: {
+    pressureScore: 0,
+    pressureHistory: [],
+    lowPressureTimer: 0,
+    highPressureTimer: 0,
+    rampageMode: false,
+    missionsHighHp: 0,
+    spawnRateMult: 1,
+    enemyAggressionMult: 1,
+  },
+  sector: {
+    number: 1,
+    rank: null,
+    rankScore: 0,
+    consecutiveARank: 0,
+    veteranMode: false,
+    activeBuff: null,
+    missionsCleared: 0,
+    missionsCompleted: 0,
+    totalHpPercent: 0,
+    missionStartTime: [],
+    missionEndTime: [],
+  },
+  weather: createDefaultWeather(),
   lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
 });
 
@@ -256,6 +343,14 @@ export const createDefaultBoss = () => ({
   speed: 60,
   fireCooldown: 1.5,
   spiralAngle: 0,
+  rage: false,
+  rageAuraTimer: 0,
+  rageEmberTimer: 0,
+  voidZones: [],
+  regenTimer: 0,
+  regenActive: false,
+  phaseShiftTimer: 0,
+  decoy: null,
 });
 
 /**
@@ -275,4 +370,101 @@ export const createDefaultMiniboss = () => ({
   speed: 50,
   fireCooldown: 1.5,
   spiralAngle: 0,
+  rage: false,
+  rageAuraTimer: 0,
+  rageEmberTimer: 0,
+});
+
+/**
+ * @returns {Object} Default screen shake state
+ */
+export const createDefaultScreenShake = () => ({
+  active: false,
+  intensity: 0,
+});
+
+/**
+ * @returns {Object} Default low HP warning state
+ */
+export const createDefaultLowHpWarning = () => ({
+  active: false,
+  intensity: 0,
+  isCritical: false,
+  pulseTimer: 0,
+  heartbeatTimer: 0,
+});
+
+/**
+ * @returns {Object} Default hit stop state
+ */
+export const createDefaultHitStop = () => ({
+  active: false,
+  remaining: 0,
+});
+
+/**
+ * @returns {Object} Default player invincibility frames state
+ */
+export const createDefaultPlayerIFrames = () => ({
+  active: false,
+  remaining: 0,
+  isInvincible: false,
+  blinkTimer: 0,
+});
+
+/**
+ * @returns {Object} Default dynamic FOV state
+ */
+export const createDefaultDynamicFov = () => ({
+  current: 75,       // Current FOV value (degrees)
+  target: 75,        // Target FOV to lerp toward
+  hitTimer: 0,       // Remaining time for hit FOV snap
+  bossDeathTimer: 0, // Remaining time for boss death FOV widen
+  bossActiveTime: 0, // Time boss has been active (prevents flicker)
+});
+
+/**
+ * @returns {Object} Default gauntlet mission state
+ */
+export const createDefaultGauntlet = () => ({
+  active: false,
+  currentWave: 0,
+  totalWaves: 3,
+  enemiesPerWave: 0,
+  enemiesSpawnedInWave: 0,
+  waveDelay: 0,
+  betweenWaves: false,
+});
+
+/**
+ * @returns {Object} Default wave surge mission state
+ */
+export const createDefaultWaveSurge = () => ({
+  active: false,
+  remaining: 0,
+  spawnRateMult: 3,
+});
+
+/**
+ * @returns {Object} Default weather system state
+ */
+export const createDefaultWeather = () => ({
+  // Active weather types for this sector (e.g. ['solarFlare', 'debrisField'])
+  active: [],
+  // Solar flare sub-state
+  solarFlare: {
+    timer: 0,
+    active: false,
+    remaining: 0,
+  },
+  // Debris field clusters: [{ x, y, radius, vx, vy, active }]
+  debris: [],
+  // Gravity anomaly zones: [{ x, y, radius, respawnTimer, active }]
+  gravityZones: [],
+  // EMI sub-state
+  emi: {
+    timer: 0,
+    active: false,
+    remaining: 0,
+  },
 });

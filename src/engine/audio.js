@@ -425,6 +425,60 @@ function playBossPhaseChange(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc] };
 }
 
+/** boss_rage — Aggressive multi-layer alarm: deep growl + harsh buzz + rising shriek */
+function playBossRage(ctx, gainNode, now) {
+  const nodes = [];
+  // Layer 1: Deep growl (sawtooth, low)
+  const growl = ctx.createOscillator();
+  growl.type = 'sawtooth';
+  growl.frequency.setValueAtTime(60, now);
+  growl.frequency.linearRampToValueAtTime(120, now + 0.15);
+  growl.frequency.linearRampToValueAtTime(80, now + 0.5);
+  const growlGain = ctx.createGain();
+  growlGain.gain.setValueAtTime(0.3, now);
+  growlGain.gain.linearRampToValueAtTime(0.15, now + 0.5);
+  growl.connect(growlGain);
+  growlGain.connect(gainNode);
+  growl.start(now);
+  growl.stop(now + 0.6);
+  nodes.push(growl);
+
+  // Layer 2: Harsh buzz (square, mid)
+  const buzz = ctx.createOscillator();
+  buzz.type = 'square';
+  buzz.frequency.setValueAtTime(200, now);
+  buzz.frequency.linearRampToValueAtTime(350, now + 0.1);
+  buzz.frequency.linearRampToValueAtTime(250, now + 0.4);
+  const buzzGain = ctx.createGain();
+  buzzGain.gain.setValueAtTime(0.15, now);
+  buzzGain.gain.linearRampToValueAtTime(0.05, now + 0.4);
+  buzz.connect(buzzGain);
+  buzzGain.connect(gainNode);
+  buzz.start(now);
+  buzz.stop(now + 0.5);
+  nodes.push(buzz);
+
+  // Layer 3: Rising shriek (sine, high)
+  const shriek = ctx.createOscillator();
+  shriek.type = 'sine';
+  shriek.frequency.setValueAtTime(400, now + 0.1);
+  shriek.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+  shriek.frequency.exponentialRampToValueAtTime(600, now + 0.6);
+  const shriekGain = ctx.createGain();
+  shriekGain.gain.setValueAtTime(0, now);
+  shriekGain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+  shriekGain.gain.linearRampToValueAtTime(0.1, now + 0.3);
+  shriekGain.gain.linearRampToValueAtTime(0, now + 0.6);
+  shriek.connect(shriekGain);
+  shriekGain.connect(gainNode);
+  shriek.start(now + 0.1);
+  shriek.stop(now + 0.7);
+  nodes.push(shriek);
+
+  const dur = applyEnvelope(gainNode, 0.02, 0.25, 0.5, now);
+  return { duration: Math.max(dur, 0.7), nodes };
+}
+
 /** enemy_shoot — Harsh electronic blast */
 function playEnemyShoot(ctx, gainNode, now) {
   const osc = ctx.createOscillator();
@@ -529,6 +583,140 @@ function playBossIntro(ctx, gainNode, now) {
   return { duration: dur, nodes: [...oscs, subGain] };
 }
 
+/** heartbeat — Low thump for low HP warning (dual-layer: thump + click) */
+function playHeartbeat(ctx, gainNode, now) {
+  // Layer 1: Low thump (first beat of the "lub-dub")
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(60, now);
+  osc1.frequency.exponentialRampToValueAtTime(30, now + 0.08);
+  const gain1 = ctx.createGain();
+  gain1.gain.setValueAtTime(1, now);
+  gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+  osc1.connect(gain1);
+  gain1.connect(gainNode);
+  osc1.start(now);
+  osc1.stop(now + 0.12);
+
+  // Layer 2: Higher click (second beat — "dub")
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(80, now + 0.12);
+  osc2.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+  const gain2 = ctx.createGain();
+  gain2.gain.setValueAtTime(0, now);
+  gain2.gain.setValueAtTime(0.6, now + 0.12);
+  gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+  osc2.connect(gain2);
+  gain2.connect(gainNode);
+  osc2.start(now + 0.12);
+  osc2.stop(now + 0.25);
+
+  return { duration: 0.25, nodes: [osc1, osc2, gain1, gain2] };
+}
+
+/** shield_break — Electric shatter: high-frequency noise burst with descending pitch */
+function playShieldBreak(ctx, gainNode, now) {
+  // Layer 1: High-frequency electric crackle (noise burst)
+  const noise = createWhiteNoiseBuffer(ctx, 0.5);
+  const noiseSource = ctx.createBufferSource();
+  noiseSource.buffer = noise;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.setValueAtTime(4000, now);
+  noiseFilter.frequency.exponentialRampToValueAtTime(500, now + 0.3);
+  noiseFilter.Q.setValueAtTime(2, now);
+  noiseSource.connect(noiseFilter);
+  noiseFilter.connect(gainNode);
+  noiseSource.start(now);
+
+  // Layer 2: Descending electric hum (shield energy dissipating)
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(2000, now);
+  osc.frequency.exponentialRampToValueAtTime(200, now + 0.35);
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0.4, now);
+  osc.connect(oscGain);
+  oscGain.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.4);
+
+  const dur = applyEnvelope(gainNode, 0.005, 0.08, 0.3, now);
+  return { duration: dur, nodes: [noiseSource, noiseFilter, osc, oscGain] };
+}
+
+/** shield_restore — Bright ascending chime: shield fully restored */
+function playShieldRestore(ctx, gainNode, now) {
+  // Layer 1: Ascending chime (C5 → E5 → G5 → C6)
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  const oscs = [];
+  const subGain = ctx.createGain();
+  subGain.connect(gainNode);
+  for (let i = 0; i < notes.length; i++) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(notes[i], now);
+    osc.connect(subGain);
+    osc.start(now + i * 0.06);
+    osc.stop(now + i * 0.06 + 0.2);
+    oscs.push(osc);
+  }
+
+  // Layer 2: Shield hum (rising then settling — like energy building up)
+  const hum = ctx.createOscillator();
+  hum.type = 'sine';
+  hum.frequency.setValueAtTime(200, now);
+  hum.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+  hum.frequency.exponentialRampToValueAtTime(400, now + 0.4);
+  const humGain = ctx.createGain();
+  humGain.gain.setValueAtTime(0.3, now);
+  humGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+  hum.connect(humGain);
+  humGain.connect(gainNode);
+  hum.start(now);
+  hum.stop(now + 0.55);
+
+  const dur = applyEnvelope(gainNode, 0.01, 0.15, 0.35, now);
+  return { duration: dur, nodes: [...oscs, subGain, hum, humGain] };
+}
+
+/** enemy_spawn — Quick sharp pop signaling new enemy appearance */
+function playEnemySpawn(ctx, gainNode, now) {
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(600, now);
+  osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+  osc.connect(gainNode);
+  osc.start(now);
+  osc.stop(now + 0.1);
+  const dur = applyEnvelope(gainNode, 0.002, 0.02, 0.06, now);
+  return { duration: dur, nodes: [osc] };
+}
+
+/** scrap_collect — Bright metallic "cha-ching" coin pickup sound */
+function playScrapCollect(ctx, gainNode, now) {
+  // High metallic ping
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(1800, now);
+  osc1.frequency.exponentialRampToValueAtTime(2400, now + 0.03);
+  osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+  osc1.connect(gainNode);
+  osc1.start(now);
+  osc1.stop(now + 0.15);
+  // Secondary shimmer
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(2800, now + 0.02);
+  osc2.frequency.exponentialRampToValueAtTime(1600, now + 0.12);
+  osc2.connect(gainNode);
+  osc2.start(now + 0.02);
+  osc2.stop(now + 0.15);
+  const dur = applyEnvelope(gainNode, 0.002, 0.02, 0.1, now);
+  return { duration: dur, nodes: [osc1, osc2] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -541,6 +729,8 @@ const SOUND_GENERATORS = {
   explosion: playExplosion,
   pickup: playPickup,
   shield_hit: playShieldHit,
+  shield_break: playShieldBreak,
+  shield_restore: playShieldRestore,
   player_hit: playPlayerHit,
   mission_complete: playMissionComplete,
   game_over: playGameOver,
@@ -550,6 +740,7 @@ const SOUND_GENERATORS = {
   bg_drone: playBgDrone,
   ui_click: playUiClick,
   boss_phase_change: playBossPhaseChange,
+  boss_rage: playBossRage,
  enemy_shoot: playEnemyShoot,
   wave_announce: playWaveAnnounce,
   countdown_beep: playCountdownBeep,
@@ -559,6 +750,9 @@ const SOUND_GENERATORS = {
   soundtrack_triumphant: _playSoundtrackTriumphant,
   boss_spawn: playBossSpawn,
   boss_intro: playBossIntro,
+  heartbeat: playHeartbeat,
+  enemy_spawn: playEnemySpawn,
+  scrap_collect: playScrapCollect,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

@@ -27,6 +27,9 @@ import { createTestState } from './helpers';
 vi.mock('../engine/combat', () => ({
   createParticles: vi.fn(),
   fireProjectile: vi.fn(),
+  triggerScreenShake: vi.fn(),
+  triggerHitStop: vi.fn(),
+  checkShieldBreak: vi.fn(),
 }));
 
 vi.mock('../engine/audio', () => ({

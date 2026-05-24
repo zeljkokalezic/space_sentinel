@@ -7,8 +7,10 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
-import { createParticles } from '../combat';
+import { createParticles, checkShieldBreak, triggerScreenShake, triggerHitStop } from '../combat';
 import { SoundManager } from '../audio';
+import { triggerFovBossDeath } from './dynamicFov';
+import { updateBossSignatureMechanics, checkVoidZoneCollision } from './bossSignatureMechanics';
 
 /**
  * @param {number} dt — Delta time
@@ -78,6 +80,60 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
       text: `PHASE ${boss.phase}!`,
       life: 1.5,
     });
+
+    // ── Rage mode activation (phase 3) ──
+    if (newPhase === 3 && !boss.rage) {
+      boss.rage = true;
+      boss.rageAuraTimer = 0;
+      boss.rageEmberTimer = 0;
+
+      const rageCfg = C.boss.rage;
+
+      // Screen effects
+      triggerScreenShake(g, rageCfg.screenShakePreset);
+      triggerHitStop(g, rageCfg.hitStopPreset);
+
+      // Particle explosions (rage color + normal)
+      createParticles(g, boss.x, boss.y, rageCfg.rageColor, 30);
+      createParticles(g, boss.x, boss.y, boss.color || 0xdc2626, 20);
+
+      // "⚠ ENRAGED" popup effect
+      g.effects.push({
+        type: 'enraged',
+        text: '⚠ ENRAGED',
+        life: rageCfg.enragedPopupLife,
+        color: '#ff3333',
+      });
+
+      // Audio cue
+      SoundManager.play('boss_rage');
+    }
+  }
+
+  // ── Rage ember emission (continuous while enraged) ──
+  if (boss.rage) {
+    boss.rageAuraTimer += dt;
+    boss.rageEmberTimer -= dt;
+    if (boss.rageEmberTimer <= 0) {
+      boss.rageEmberTimer = C.boss.rage.emberSpawnRate;
+      const rageCfg = C.boss.rage;
+      for (let i = 0; i < rageCfg.emberCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = rageCfg.emberSpeedMin + Math.random() * (rageCfg.emberSpeedMax - rageCfg.emberSpeedMin);
+        g.particles.push({
+          x: boss.x + Math.cos(angle) * boss.radius,
+          y: boss.y + Math.sin(angle) * boss.radius,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: rageCfg.emberLife,
+          maxLife: rageCfg.emberLife,
+          color: rageCfg.emberColor,
+          size: 2 + Math.random() * 2,
+          active: true,
+          type: 'ember',
+        });
+      }
+    }
   }
 
   // ── Attacks ──
@@ -113,12 +169,16 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
   if (dist < boss.radius + player.radius) {
     const dmg = scaledRamDamage * currentDiffMult;
     let hpDamage = dmg;
+    const bossRamShieldWasFull = player.shield > 0 && player.maxShield > 0;
     if (player.shield > 0) {
       const absorb = Math.min(player.shield, dmg);
       player.shield -= absorb;
       hpDamage = dmg - absorb;
     }
     player.hp -= hpDamage;
+    if (bossRamShieldWasFull && player.shield <= 0) {
+      checkShieldBreak(g, player, player.x, player.y);
+    }
     if (player.hp <= 0) {
       setGameState('gameover');
       return true;
@@ -136,6 +196,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     createParticles(g, boss.x, boss.y, onDeath.deathColors[0], 40);
     createParticles(g, boss.x, boss.y, onDeath.deathColors[1], 30);
     SoundManager.play('explosion');
+    triggerFovBossDeath(g);
 
     // Guaranteed power-up drops
     if (onDeath.guaranteedDrops) {
@@ -169,6 +230,10 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     completeMission();
     return true;
   }
+
+  // ── Signature mechanics (void zones, shield regen, phase shift) ──
+  updateBossSignatureMechanics(dt, boss, g);
+  checkVoidZoneCollision(g);
 
   return false;
 };

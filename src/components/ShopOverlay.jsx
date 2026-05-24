@@ -1,9 +1,11 @@
 import React from 'react';
-import { Map as MapIcon } from 'lucide-react';
+import { Map as MapIcon, Gift } from 'lucide-react';
 import { UPGRADE_DATA } from '../constants/upgrades';
 import { SHIP_SKINS } from '../constants/skins';
+import { GAME_CONFIG } from '../constants/gameConfig';
 
-export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameState, uiShipSkin, uiUnlockedSkins, buySkin }) {
+export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameState, uiShipSkin, uiUnlockedSkins, buySkin, uiEmergencyBeacon, buyBeacon, activeBuff }) {
+  const hasFreeWeapon = activeBuff === 'free_weapon';
   return (
     <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-40 backdrop-blur-sm">
       <div className="bg-gray-900/95 border border-blue-500/50 rounded-xl p-6 w-full max-w-5xl shadow-2xl shadow-blue-900/30 overflow-y-auto max-h-screen">
@@ -16,8 +18,60 @@ export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameStat
             <div className="w-4 h-4 bg-yellow-400 rounded-sm shadow-[0_0_10px_#facc15]"></div> {uiScrap}
           </div>
         </div>
+
+        {/* Free weapon buff banner */}
+        {hasFreeWeapon && (
+          <div className="mb-6 p-4 rounded-xl border border-yellow-500/40 bg-yellow-950/40 flex items-center gap-3">
+            <Gift className="w-6 h-6 text-yellow-400 flex-shrink-0" />
+            <div>
+              <span className="text-yellow-300 font-bold">FREE WEAPON BONUS ACTIVE</span>
+              <span className="text-yellow-200/70 text-sm ml-2">— Your next weapon upgrade is free!</span>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Object.entries(UPGRADE_DATA).map(([key, data]) => {
+            // ── Consumable items (e.g. emergencyBeacon) ──
+            if (data.isConsumable) {
+              const eb = uiEmergencyBeacon || { purchased: false, activated: false };
+              const isPurchased = eb.purchased;
+              const isActivated = eb.activated;
+              const canAfford = uiScrap >= data.baseCost;
+
+              return (
+                <div key={key}
+                  onClick={() => {
+                    if (!isPurchased && canAfford) buyBeacon(data.baseCost);
+                  }}
+                  className={`relative p-5 rounded-xl border flex flex-col h-full transition-all duration-200
+                    ${isActivated ? 'border-yellow-500/30 bg-yellow-900/10' :
+                      isPurchased ? 'border-green-500/30 bg-green-900/10' :
+                      canAfford ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-800/40 hover:scale-[1.02] cursor-pointer' :
+                      'border-gray-700 bg-gray-800/40 opacity-75'}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <data.icon className={`w-10 h-10 ${isActivated ? 'text-yellow-400' : isPurchased ? 'text-green-400' : 'text-blue-400'}`} />
+                    <div className="text-xs font-mono bg-black/60 px-2 py-1 rounded text-gray-300 border border-gray-700">
+                      {isActivated ? 'ACTIVE' : isPurchased ? 'READY' : 'NEW'}
+                    </div>
+                  </div>
+                  <h3 className="font-bold text-lg mb-1 text-white">{data.name}</h3>
+                  <p className="text-sm text-gray-400 mb-6 flex-grow">{data.desc}</p>
+                  <div className="mt-auto pt-4 border-t border-gray-700/50">
+                    {isActivated ? (
+                      <div className="text-yellow-400 font-bold text-center tracking-widest">BEACON ACTIVE</div>
+                    ) : isPurchased ? (
+                      <div className="text-green-400 font-bold text-center tracking-widest">READY — [B] TO ACTIVATE</div>
+                    ) : (
+                      <div className={`font-bold text-xl text-center flex items-center justify-center gap-2 ${canAfford ? 'text-yellow-400' : 'text-red-400'}`}>
+                        <div className="w-3 h-3 bg-current rounded-sm"></div> {data.baseCost}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
             const currentLevel = uiLevels?.[key] || 0;
             const cost = Math.floor(data.baseCost * Math.pow(data.costMult, currentLevel));
             const isMax = currentLevel >= data.maxLevel;
@@ -50,6 +104,58 @@ export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameStat
               </div>
             )
           })}
+        </div>
+
+        {/* ─── Synergies Section ──────────────────────────────────────────── */}
+        <div className="mt-10 border-t border-gray-700 pt-8">
+          <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300 mb-2">WEAPON SYNERGIES</h2>
+          <p className="text-gray-400 mb-6">Combine weapon levels to unlock powerful synergies.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Object.entries(GAME_CONFIG.weaponSynergies).map(([id, synergy]) => {
+              const reqs = synergy.requirements;
+              const levels = uiLevels || {};
+              const isActive = Object.entries(reqs).every(([w, lvl]) => (levels[w] || 0) >= lvl);
+              const reqText = Object.entries(reqs).map(([w, lvl]) => {
+                const current = levels[w] || 0;
+                const name = UPGRADE_DATA[w]?.name || w;
+                return `${name} ${current}/${lvl}`;
+              }).join(', ');
+
+              return (
+                <div
+                  key={id}
+                  className={`relative p-5 rounded-xl border flex flex-col h-full transition-all duration-200
+                    ${isActive
+                      ? 'border-green-500/60 bg-green-900/20 shadow-[0_0_15px_rgba(34,197,94,0.15)]'
+                      : 'border-gray-700 bg-gray-800/40 opacity-70'
+                    }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold
+                      ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-gray-700/50 text-gray-500'}`}>
+                      ⚔
+                    </div>
+                    <div className={`text-xs font-mono px-2 py-1 rounded border
+                      ${isActive
+                        ? 'bg-green-900/50 text-green-300 border-green-700/50'
+                        : 'bg-gray-800/50 text-gray-500 border-gray-700/50'
+                      }`}>
+                      {isActive ? 'ACTIVE' : 'LOCKED'}
+                    </div>
+                  </div>
+                  <h3 className={`font-bold text-lg mb-1 ${isActive ? 'text-green-300' : 'text-gray-400'}`}>
+                    {synergy.name}
+                  </h3>
+                  <p className="text-sm text-gray-400 mb-4 flex-grow">{synergy.description}</p>
+                  <div className="mt-auto pt-3 border-t border-gray-700/50">
+                    <div className={`text-xs font-mono ${isActive ? 'text-green-400' : 'text-gray-500'}`}>
+                      Requires: {reqText}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* ─── Ship Skins Section ─────────────────────────────────────────── */}

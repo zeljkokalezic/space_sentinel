@@ -229,17 +229,24 @@ describe('spawnEnemy', () => {
 
   // ---------- 16. Enemy HP scaled by difficulty multiplier ----------
   it('enemy HP scaled by difficulty multiplier (higher level = higher HP)', () => {
-    // Level 1 state
+    // Use average HP across many spawns to eliminate type randomness
     const g1 = createTestState({ level: 1, totalTime: 0 });
-    spawnEnemy(g1);
-    const hp1 = g1.enemies[0].hp;
-
-    // Level 10 state
     const g10 = createTestState({ level: 10, totalTime: 0 });
-    spawnEnemy(g10);
-    const hp10 = g10.enemies[0].hp;
 
-    expect(hp10).toBeGreaterThan(hp1);
+    let totalHp1 = 0, totalHp10 = 0;
+    const count = 100;
+    for (let i = 0; i < count; i++) {
+      spawnEnemy(g1);
+      spawnEnemy(g10);
+      totalHp1 += g1.enemies[i].hp;
+      totalHp10 += g10.enemies[i].hp;
+    }
+
+    const avgHp1 = totalHp1 / count;
+    const avgHp10 = totalHp10 / count;
+
+    // Level 10 enemies should have higher average HP
+    expect(avgHp10).toBeGreaterThan(avgHp1);
   });
 
   // ---------- 16b. Difficulty multiplier formula ----------
@@ -295,21 +302,21 @@ describe('spawnEnemy', () => {
     }
   });
 
-  // ---------- 18b. Non-shooting types have fireCooldown === 0 ----------
-  it('fighter, interceptor, heavy have fireCooldown === 0', () => {
+  // ---------- 18b. Shooting types have fireCooldown > 0 ----------
+  it('fighter, interceptor, heavy have fireCooldown > 0', () => {
     const seen = new Set();
     for (let i = 0; i < 500; i++) {
       spawnEnemy(g);
       seen.add(g.enemies[i].type);
     }
 
-    const nonShooters = g.enemies.filter(e =>
+    const shooters = g.enemies.filter(e =>
       e.type === 'fighter' || e.type === 'interceptor' || e.type === 'heavy'
     );
 
-    expect(nonShooters.length).toBeGreaterThan(0);
-    for (const e of nonShooters) {
-      expect(e.fireCooldown).toBe(0);
+    expect(shooters.length).toBeGreaterThan(0);
+    for (const e of shooters) {
+      expect(e.fireCooldown).toBeGreaterThan(0);
     }
   });
 
@@ -368,6 +375,13 @@ describe('spawnEnemy', () => {
       missile_boat: 0xd946ef,
     };
 
+    const eliteVariantColors = {
+      sniper: 0xfbbf24,
+      tank: 0xf97316,
+      swarmLeader: 0xeab308,
+      arsenal: 0xd946ef,
+    };
+
     const seen = new Set();
     for (let i = 0; i < 500; i++) {
       spawnEnemy(g);
@@ -378,7 +392,12 @@ describe('spawnEnemy', () => {
       const enemiesOfType = g.enemies.filter(e => e.type === type);
       if (enemiesOfType.length > 0) {
         for (const e of enemiesOfType) {
-          expect(e.color).toBe(expectedColors[type]);
+          // Elite variants override color — check against variant color instead
+          if (e.eliteVariant) {
+            expect(e.color).toBe(eliteVariantColors[e.eliteVariant]);
+          } else {
+            expect(e.color).toBe(expectedColors[type]);
+          }
         }
       }
     }

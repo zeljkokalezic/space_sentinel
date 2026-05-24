@@ -6,7 +6,7 @@
  * use the legacy direct-charge behavior (backward compatible).
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy } from '../combat';
+import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, isShieldBypassedByArmorPierce } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
@@ -238,6 +238,14 @@ function updateScreen(dt, e, g, tx, ty) {
  * Preserves existing behavior for backward compatibility.
  */
 function updateLegacy(dt, e, g, tx, ty, distToPlayer) {
+  // Mini-interceptors: kamikaze behavior — always charge at target, no firing
+  if (e.type === 'mini_interceptor') {
+    const angle = Math.atan2(ty - e.y, tx - e.x);
+    e.x += Math.cos(angle) * e.speed * dt;
+    e.y += Math.sin(angle) * e.speed * dt;
+    return;
+  }
+
   let moveAngle = Math.atan2(ty - e.y, tx - e.x);
   if (e.type === 'interceptor') moveAngle += Math.sin(g.totalTime * 4 + e.id) * 0.8;
 
@@ -271,8 +279,9 @@ const FORMATION_HANDLERS = {
  * @param {number} currentDiffMult — Difficulty multiplier
  * @param {function} completeMission — Mission completion callback
  * @param {function} setGameState — React state setter callback
+ * @param {number} [adaptiveAggression=1] — Adaptive aggression multiplier from dynamic difficulty
  */
-export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameState) => {
+export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression = 1) => {
   const C = GAME_CONFIG;
   for (let e of g.enemies) {
     if (!e.active) continue;
@@ -289,36 +298,68 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
       updateLegacy(dt, e, g, tx, ty, distToPlayer);
     }
 
-    // ── Enemy firing ──
+    // ── Enemy firing (skip mini-interceptors — they're kamikaze) ──
     const angle = Math.atan2(ty - e.y, tx - e.x);
-    tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g);
+    if (e.type !== 'mini_interceptor') {
+      tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g, adaptiveAggression);
+    }
 
     // ── Enemy rams player ──
     if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < e.radius + g.player.radius) {
-      const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
-      let dmg = baseDmg * currentDiffMult;
-      let shieldAbsorbed = false;
-      if (g.player.shield > 0) {
-        const absorb = Math.min(g.player.shield, dmg);
-        g.player.shield -= absorb; dmg -= absorb;
-        if (absorb > 0) shieldAbsorbed = true;
+      // Check invincibility frames — block ram damage if invincible
+      if (g.playerIFrames && g.playerIFrames.isInvincible) {
+        createParticles(g, e.x, e.y, 0x60a5fa, 5);
+        // Push enemy away
+        const pushAngle = Math.atan2(e.y - g.player.y, e.x - g.player.x);
+        e.x += Math.cos(pushAngle) * 40;
+        e.y += Math.sin(pushAngle) * 40;
+      } else {
+        const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
+        let dmg = baseDmg * currentDiffMult;
+        let shieldAbsorbed = 0;
+        let shieldAbsorbedVal = 0;
+        const playerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
+        if (g.player.shield > 0) {
+          shieldAbsorbedVal = Math.min(g.player.shield, dmg);
+          g.player.shield -= shieldAbsorbedVal; dmg -= shieldAbsorbedVal;
+          if (shieldAbsorbedVal > 0) shieldAbsorbed = true;
+        }
+        if (playerShieldWasFull && g.player.shield <= 0) {
+          checkShieldBreak(g, g.player, g.player.x, g.player.y);
+        }
+        if (shieldAbsorbed) SoundManager.play('shield_hit');
+        else SoundManager.play('player_hit');
+        g.player.hp -= dmg;
+        triggerScreenShake(g, 'playerHit');
+        triggerHitStop(g, 'playerHit');
+        triggerPlayerIFrames(g);
+        let eDamage = C.weapons.missiles.baseDamage;
+        const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
+
+        // Armor-pierce: skip shield absorption for armor-pierced enemies
+        if (isShieldBypassedByArmorPierce(e)) {
+          // shield bypass handled by the function
+        } else if (e.shield > 0) {
+          const absorb = Math.min(e.shield, eDamage);
+          e.shield -= absorb;
+          eDamage -= absorb;
+        }
+        e.hp -= eDamage;
+        if (enemyShieldWasFull && e.shield <= 0) {
+          checkShieldBreak(g, e, e.x, e.y);
+        }
+        spawnDamageNumber(g, g.player.x, g.player.y - 10, dmg, { hitType: 'playerHit', shieldDamage: shieldAbsorbedVal });
+        e.x += Math.cos(angle + Math.PI) * 30;
+        e.y += Math.sin(angle + Math.PI) * 30;
+        createParticles(g, e.x, e.y, 0xef4444, 10);
+        if (g.player.hp <= 0) { setGameState('gameover'); return; }
       }
-      if (shieldAbsorbed) SoundManager.play('shield_hit');
-      else SoundManager.play('player_hit');
-      g.player.hp -= dmg;
-      let eDamage = C.weapons.missiles.baseDamage;
-      if (e.shield > 0) { const absorb = Math.min(e.shield, eDamage); e.shield -= absorb; eDamage -= absorb; }
-      e.hp -= eDamage;
-      g.effects.push({ type: 'dmg', x: g.player.x, y: g.player.y - 10, text: Math.ceil(dmg).toString(), life: 0.8 });
-      e.x += Math.cos(angle + Math.PI) * 30;
-      e.y += Math.sin(angle + Math.PI) * 30;
-      createParticles(g, e.x, e.y, 0xef4444, 10);
-      if (g.player.hp <= 0) { setGameState('gameover'); return; }
     }
 
     // ── Enemy dies ──
     if (e.hp <= 0) {
       killEnemy(g, e, completeMission);
+      triggerScreenShake(g, e.type === 'heavy' || e.type === 'missile_boat' || e.type === 'shielded' ? 'bigExplosion' : 'explosion');
     }
   }
 };

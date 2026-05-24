@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 import { createGameState }      from './engine/state';
+import { generateMap }          from './engine/mapGenerator';
 import { generateMission }         from './engine/spawner';
 import { setupCombatMission }      from './engine/missionSetup';
 import { setupHazards }            from './engine/hazardSetup';
@@ -8,6 +9,9 @@ import { loadGame }                from './engine/saveManager';
 import { SoundManager }            from './engine/audio';
 import { SHIP_SKINS }              from './constants/skins';
 import { UPGRADE_DATA }            from './constants/upgrades';
+import {
+  resetSector,
+} from './engine/sectorRank';
 
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
@@ -34,6 +38,7 @@ export default function App() {
   const [notificationVersion, setNotificationVersion] = useState(0);
   const [devMode,         setDevMode]         = useState(false);
   const [paused,          setPaused]          = useState(false);
+  const [uiEmergencyBeacon, setUiEmergencyBeacon] = useState({ purchased: false, activated: false, nodeId: null });
 
   // ─── Mutable refs (shared across hooks) ─────────────────────────────────────
   const containerRef = useRef(null);
@@ -50,6 +55,30 @@ export default function App() {
   };
 
   const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };
+
+  const nextSector = () => {
+    const g = game.current;
+    if (!g) return;
+    resetSector(g);
+    g.map = generateMap();
+    g.mission = null;
+    g.isVictory = false;
+    g.transitionTimer = undefined;
+    g.spawnCooldown = 2;
+    g.wave = 1;
+    g.totalTime = 0;
+    g.player.x = 0; g.player.y = 0;
+    g.player.vx = 0; g.player.vy = 0;
+    g.player.yaw = Math.PI / 2;
+    g.enemies = []; g.projectiles = []; g.particles = [];
+    g.pickups = []; g.effects = []; g.powerups = [];
+    g.hazards = [];
+    g.paused = false;
+    setPaused(false);
+    syncUiFromGame();
+    setUiEmergencyBeacon({ ...g.emergencyBeacon });
+    setGameState(devMode ? 'dev' : 'map');
+  };
 
   const syncUiFromGame = () => {
     const g = game.current;
@@ -110,10 +139,20 @@ export default function App() {
   // ─── Upgrade purchase ──────────────────────────────────────────────────────
   const buyUpgrade = (key, cost) => {
     const g = game.current;
-    if (g.scrap < cost) return;
+    if (!g) return;
     const upgrade = UPGRADE_DATA[key];
     if (!upgrade || g.levels[key] >= upgrade.maxLevel) return;
-    g.scrap -= cost;
+
+    // Handle free_weapon buff: first weapon purchase is free
+    const weaponKeys = ['autocannon', 'plasma', 'missiles', 'pointDefense', 'autoAim'];
+    if (g.sector?.activeBuff === 'free_weapon' && weaponKeys.includes(key)) {
+      g.sector.activeBuff = null; // Clear buff after use
+    } else if (g.scrap < cost) {
+      return;
+    } else {
+      g.scrap -= cost;
+    }
+
     const nextLevel = g.levels[key] + 1;
     g.levels[key] = nextLevel;
     if (key === 'hull')   { g.player.maxHp += 50; g.player.hp += 50; }
@@ -144,12 +183,46 @@ export default function App() {
     setUiUnlockedSkins([...g.unlockedSkins]);
   };
 
+  // ─── Emergency Beacon purchase ──────────────────────────────────────────────
+  const buyBeacon = (cost) => {
+    const g = game.current;
+    if (!g || g.scrap < cost) return;
+    if (g.emergencyBeacon?.purchased) return;
+    g.scrap -= cost;
+    g.emergencyBeacon.purchased = true;
+    setUiScrap(g.scrap);
+    setUiEmergencyBeacon({ ...g.emergencyBeacon });
+  };
+
+  // ─── Beacon-aware state setter (intercepts gameover for respawn) ────────────
+  const effectiveSetState = (state) => {
+    if (state === 'gameover' && game.current?.emergencyBeacon?.activated) {
+      // Respawn at beacon node instead of game over
+      const g = game.current;
+      g.player.hp = g.player.maxHp;
+      g.player.shield = g.player.maxShield;
+      g.emergencyBeacon.purchased = false;
+      g.emergencyBeacon.activated = false;
+      g.emergencyBeacon.nodeId = null;
+      // Clear entity arrays to prevent stale enemies/projectiles from persisting
+      g.enemies = []; g.projectiles = []; g.particles = [];
+      g.pickups = []; g.effects = [];
+      setUiEmergencyBeacon({ purchased: false, activated: false, nodeId: null });
+      // Sync player stats to UI
+      setUiLevels({ ...g.levels });
+      setUiScrap(g.scrap);
+      setGameState('map');
+      return;
+    }
+    setGameState(state);
+  };
+
   // ─── Init game state on mount ──────────────────────────────────────────────
   useEffect(() => { resetGame(); }, []);
 
   // ─── Hooks ──────────────────────────────────────────────────────────────────
   const { threeRef, statusRef } = useGameLoop({
-    containerRef, canvasRef, game, gameState, setGameState, setMapStateVersion, setNotificationVersion, devMode,
+    containerRef, canvasRef, game, gameState, setGameState: effectiveSetState, setMapStateVersion, setNotificationVersion, devMode,
   });
 
   const { onPointerDown, onPointerMove, onPointerUp } = useInput({
@@ -185,13 +258,14 @@ export default function App() {
           setUiUnlockedSkins={setUiUnlockedSkins}
           setMapStateVersion={setMapStateVersion}
           mapStateVersion={mapStateVersion}
+          setUiEmergencyBeacon={setUiEmergencyBeacon}
         />
       )}
 
-      {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} uiShipSkin={uiShipSkin} uiUnlockedSkins={uiUnlockedSkins} buySkin={buySkin} />}
+      {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} uiShipSkin={uiShipSkin} uiUnlockedSkins={uiUnlockedSkins} buySkin={buySkin} uiEmergencyBeacon={uiEmergencyBeacon} buyBeacon={buyBeacon} activeBuff={game.current?.sector?.activeBuff} />}
       {gameState === 'start'    && <StartScreen    startGame={startGame} continueGame={continueGame} devMode={devMode} gameRef={game} />}
       {gameState === 'gameover' && <GameOverScreen  gameRef={game} startGame={startGame} />}
-      {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} />}
+      {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} nextSector={nextSector} />}
       {gameState === 'event'    && <EventScreen     gameRef={game} setGameState={setGameState} setUiScrap={setUiScrap} setUiLevels={setUiLevels} />}
       {gameState === 'dev'      && <DevMissionPicker onLaunch={launchDevMission} onExit={() => { setDevMode(false); setGameState('start'); }} />}
       {gameState === 'playing' && paused && <PauseOverlay gameRef={game} startGame={startGame} setPaused={setPaused} />}

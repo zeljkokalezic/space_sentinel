@@ -35,5 +35,7 @@ export const cleanup = (dt, g) => {
     g.pickups     = g.pickups.filter(p => p.active && inBounds(p));
     g.powerups    = g.powerups.filter(p => p.active && inBounds(p));
     g.effects     = g.effects.filter(e => e.life > 0);
+    if (g.spawnFlashes) g.spawnFlashes = g.spawnFlashes.filter(f => f.active);
+    if (g.scrapFloats) g.scrapFloats = g.scrapFloats.filter(f => f.active);
   }
 };

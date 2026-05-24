@@ -97,13 +97,15 @@ export const generateMap = () => {
                  let isBeforeMidpoint = (r === Math.floor(rows / 2) - 1);
 
                 let rnum = Math.random();
-                 if (rnum > 0.90) { node.type = 'elite'; eliteAssigned = true; }
-                 else if (rnum > 0.80) node.type = 'defend';
-                 else if (rnum > 0.70) node.type = 'sabotage';
-                 else if (rnum > 0.60) node.type = 'escort';
-                 else if (rnum > 0.52) node.type = 'event';
-                 else if (rnum > 0.22 && !hasShopParent && !isBeforeMidpoint) node.type = 'shop';
-                 else if (rnum > 0.07) node.type = 'repair';
+                 if (rnum > 0.92) { node.type = 'elite'; eliteAssigned = true; }
+                 else if (rnum > 0.82) node.type = 'defend';
+                 else if (rnum > 0.72) node.type = 'sabotage';
+                 else if (rnum > 0.62) node.type = 'escort';
+                 else if (rnum > 0.54) node.type = 'event';
+                 else if (rnum > 0.49) node.type = 'gauntlet';
+                 else if (rnum > 0.46) node.type = 'wave_surge';
+                 else if (rnum > 0.21 && !hasShopParent && !isBeforeMidpoint) node.type = 'shop';
+                 else if (rnum > 0.11) node.type = 'repair';
                  else node.type = 'combat';
             }
         }
@@ -204,6 +206,12 @@ export const generateMap = () => {
         }
     }
 
+    // Assign weather types to sector (0-2 random weather effects)
+    const weatherTypes = Object.keys(GAME_CONFIG.weather.types);
+    const shuffledWeather = [...weatherTypes].sort(() => Math.random() - 0.5);
+    const sectorWeatherCount = Math.floor(Math.random() * 3); // 0, 1, or 2
+    const sectorWeatherTypes = shuffledWeather.slice(0, sectorWeatherCount);
+
     let nodes = [];
     for (let r = 0; r < rows; r++) {
          for (let c = 0; c < cols; c++) {
@@ -212,9 +220,10 @@ export const generateMap = () => {
     }
 
     return {
-      nodes, 
+      nodes,
       edges: Object.values(edgesObj),
       currentRow: -1,
-      currentNodeId: null
+      currentNodeId: null,
+      weatherTypes: sectorWeatherTypes,
     };
 };

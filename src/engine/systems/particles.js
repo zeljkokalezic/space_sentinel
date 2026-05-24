@@ -7,6 +7,7 @@
  * - trail: Persistent trail particles (projectile trails, movement)
  * - explosion: Large burst with shockwave effect
  */
+import { GAME_CONFIG } from '../../constants/gameConfig';
 
 /**
  * Particle type configurations.
@@ -99,9 +100,32 @@ export const updateParticles = (dt, g) => {
  * @param {object} g — Game state
  */
 export const updateEffects = (dt, g) => {
+  const C = GAME_CONFIG.damageNumbers;
   for (let e of g.effects) {
     e.life -= dt;
-    if (e.type === 'dmg') e.y += 40 * dt;
+    if (e.type === 'dmg') {
+      // Float upward
+      e.y += C.floatSpeed * dt;
+
+      // Pop animation: scale from 0.5x → popScale → 1x over popDuration
+      if (e.popTimer !== undefined) {
+        e.popTimer += dt;
+      }
+    }
+    if (e.type === 'shield_down') e.y += 30 * dt;
+    if (e.type === 'combo_milestone') {
+      // Bounce animation timer
+      e.bounceTimer += dt;
+    }
+  }
+
+  // Update screen flash
+  if (g.screenFlash && g.screenFlash.active) {
+    g.screenFlash.remaining -= dt;
+    if (g.screenFlash.remaining <= 0) {
+      g.screenFlash.active = false;
+      g.screenFlash.remaining = 0;
+    }
   }
 };
 
@@ -119,7 +143,7 @@ export const createParticlesWithType = (g, x, y, color, count, type = 'spark') =
   const quality = g.settings?.particlesQuality;
   const qualityMult = quality === 'low' ? 0.35 : quality === 'medium' ? 0.65 : 1;
   const motionMult = g.settings?.reducedMotion ? 0.5 : 1;
-  const actualCount = Math.max(0, Math.round(count * qualityMult * motionMult));
+  const actualCount = count > 0 ? Math.max(1, Math.round(count * qualityMult * motionMult)) : 0;
   for (let i = 0; i < actualCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * (config.speedMax - config.speedMin) + config.speedMin;
@@ -136,4 +160,125 @@ export const createParticlesWithType = (g, x, y, color, count, type = 'spark') =
       size: config.size,
     });
   }
+};
+
+/**
+ * Screen shake decay — reduces intensity each frame.
+ * Deactivates when intensity drops below minThreshold.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export const updateScreenShake = (dt, g) => {
+  if (!g || !g.screenShake) return;
+  const ss = g.screenShake;
+  if (!ss.active) return;
+
+  const C = GAME_CONFIG.screenShake;
+  ss.intensity -= C.decay * dt;
+  if (ss.intensity <= 0) {
+    ss.intensity = 0;
+    ss.active = false;
+  }
+};
+
+/**
+ * Hit stop countdown — pauses physics while counting down.
+ * Returns true while active (signals physics should be skipped).
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ * @returns {boolean} true if hit stop is active (physics should be skipped)
+ */
+export const updateHitStop = (dt, g) => {
+  if (!g || !g.hitStop) return false;
+  const hs = g.hitStop;
+  if (!hs.active) return false;
+
+  hs.remaining -= dt;
+  if (hs.remaining <= 0) {
+    hs.remaining = 0;
+    hs.active = false;
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Player invincibility frames (i-frames) update.
+ * Counts down the invulnerability timer and manages the blink cycle.
+ * During the grace period, the player is always invincible.
+ * After the grace period, invincibility toggles with the blink cycle.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export const updatePlayerIFrames = (dt, g) => {
+  if (!g || !g.playerIFrames) return;
+  const iframes = g.playerIFrames;
+  if (!iframes.active) return;
+
+  const C = GAME_CONFIG.playerIFrames;
+
+  // Count down remaining time
+  iframes.remaining -= dt;
+  if (iframes.remaining <= 0) {
+    iframes.remaining = 0;
+    iframes.active = false;
+    iframes.isInvincible = false;
+    iframes.blinkTimer = 0;
+    return;
+  }
+
+  // Time elapsed since i-frames started
+  const elapsed = C.duration - iframes.remaining;
+
+  if (elapsed < C.gracePeriod) {
+    // Grace period: always invincible, no blinking
+    iframes.isInvincible = true;
+  } else {
+    // Blink phase: toggle invincibility based on blink timer
+    iframes.blinkTimer += dt;
+    if (iframes.blinkTimer >= C.blinkPeriod) {
+      iframes.blinkTimer -= C.blinkPeriod;
+      iframes.isInvincible = !iframes.isInvincible;
+    }
+  }
+};
+
+/**
+ * Power-up aura ring update — expanding ring + floating buff name text.
+ *
+ * @param {number} dt — Delta time
+ * @param {object} g — Game state
+ */
+export const updatePowerupAuras = (dt, g) => {
+  if (!g || !g.powerupAuras) return;
+  const C = GAME_CONFIG.powerupAura;
+  for (const aura of g.powerupAuras) {
+    if (!aura.active) continue;
+
+    // Ring expansion
+    aura.ringLife -= dt;
+    if (aura.ringLife <= 0) {
+      aura.ringLife = 0;
+    } else {
+      aura.ringRadius += C.expandSpeed * dt;
+      if (aura.ringRadius > aura.ringMaxRadius) aura.ringRadius = aura.ringMaxRadius;
+    }
+
+    // Text float upward
+    aura.textLife -= dt;
+    if (aura.textLife > 0) {
+      aura.textY += C.textFloatSpeed * dt;
+    }
+
+    // Deactivate when both ring and text expire
+    if (aura.ringLife <= 0 && aura.textLife <= 0) {
+      aura.active = false;
+    }
+  }
+
+  // Periodic cleanup of dead auras
+  g.powerupAuras = g.powerupAuras.filter(a => a.active);
 };

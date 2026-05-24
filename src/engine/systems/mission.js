@@ -6,6 +6,9 @@ import { UPGRADE_DATA } from '../../constants/upgrades';
 import { SoundManager } from '../audio';
 import { checkAchievements, saveAchievements, getAchievement } from '../achievements';
 import { autoSave } from '../saveManager';
+import { recordMissionCompletion as recordAdaptiveMission } from '../adaptiveDifficulty';
+import { recordMissionCompletion as recordSectorMission } from '../sectorRank';
+import { getScrapMultiplier } from '../difficulty';
 
 /**
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
@@ -33,6 +36,13 @@ export const updateTransition = (dt, g, cbs) => {
     if (g.boss) g.boss.active = false;
     if (g.miniboss) g.miniboss.active = false;
     if (g.hazards) g.hazards = [];
+    if (g.gauntlet) g.gauntlet.active = false;
+    if (g.waveSurge) g.waveSurge.active = false;
+    if (g.boss) {
+      g.boss.voidZones = [];
+      g.boss.decoy = null;
+      g.boss.regenActive = false;
+    }
   }
   return true;
 };
@@ -49,6 +59,17 @@ export const checkMissionProgress = (dt, g, completeMission) => {
     g.mission.current += dt;
     if (g.mission.current >= g.mission.target) completeMission();
   }
+  // Gauntlet: complete when all waves cleared (mission.current tracks currentWave, target is totalWaves)
+  if (g.mission.type === 'gauntlet' && g.gauntlet?.active) {
+    if (g.mission.current >= g.mission.target && !g.gauntlet.betweenWaves) {
+      completeMission();
+    }
+  }
+  // Wave surge: complete when timer expires
+  if (g.mission.type === 'wave_surge' && g.waveSurge?.active) {
+    g.mission.current += dt;
+    if (g.mission.current >= g.mission.target) completeMission();
+  }
 };
 
 /**
@@ -61,8 +82,14 @@ export const createCompleteMission = (g) => {
   return () => {
     if (g.mission.completed) return;
     SoundManager.play('mission_complete');
-    g.scrap += g.mission.reward;
-    g.totalScrapEarned += g.mission.reward;
+
+    // Apply veteran mode scrap multiplier (1.5x)
+    const activeDifficulty = g.sector?.veteranMode ? 'veteran' : (g.settings?.difficulty || 'normal');
+    const scrapMult = getScrapMultiplier(activeDifficulty);
+    const reward = Math.round(g.mission.reward * scrapMult);
+
+    g.scrap += reward;
+    g.totalScrapEarned += reward;
 
     // Track persistent stats
     if (!g.stats) {
@@ -112,7 +139,7 @@ export const createCompleteMission = (g) => {
       type: 'mission_complete',
       x: window.innerWidth / 2,
       y: Math.max(100, window.innerHeight / 4),
-      text: `AREA CLEARED! +${g.mission.reward} SCRAP`,
+      text: `AREA CLEARED! +${reward} SCRAP`,
       life: C.transition.duration,
     });
     g.mission.completed = true;
@@ -122,6 +149,12 @@ export const createCompleteMission = (g) => {
     autoSave(g);
 
     if (g.mission.type === 'kill_boss') g.isVictory = true;
+
+    // Record mission completion for adaptive difficulty / rampage mode tracking
+    recordAdaptiveMission(g);
+
+    // Record mission completion for sector rank calculation
+    recordSectorMission(g);
 
     if (g.map.currentNodeId) {
       let cur = g.map.nodes.find(n => n.id === g.map.currentNodeId);

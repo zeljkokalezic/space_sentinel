@@ -58,6 +58,31 @@ describe('updatePhysics — time advancement', () => {
   });
 });
 
+describe('updatePhysics — death pulse gameover', () => {
+  it('sets gameover when a death pulse kills the player', () => {
+    const cbs = makeCbs();
+    const g = createTestState({
+      player: { hp: 5, shield: 0, maxShield: 0 },
+      spawnCooldown: 10,
+      deathPulses: [{
+        active: true,
+        x: 0,
+        y: 0,
+        radius: 0,
+        maxRadius: 100,
+        life: 1,
+        maxLife: 1,
+        damage: 10,
+      }],
+    });
+
+    updatePhysics(0.5, g, cbs);
+
+    expect(g.player.hp).toBeLessThanOrEqual(0);
+    expect(cbs.setGameState).toHaveBeenCalledWith('gameover');
+  });
+});
+
 /* ─────────────────────────────────────────────────────────
  * 2. updatePhysics decrements spawnCooldown
  * ───────────────────────────────────────────────────────── */
