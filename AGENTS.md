@@ -8,28 +8,32 @@
 
 ### `/src`
 The core directory containing the React-Three.js bridge.
-- `App.jsx`: **Orchestrator (~199 lines).** Owns React state `gameState` (`start`, `map`, `playing`, `shop`, `event`, `gameover`, `victory`, `dev`), `uiScrap`, `uiLevels`, `uiShipSkin`, `uiUnlockedSkins`, `mapStateVersion`, and `devMode`. Refs: `game` (mutable game state), `containerRef` (Three.js container), `canvasRef` (2D HUD canvas). Delegates game loop to `useGameLoop` hook and input handling to `useInput` hook. Contains `resetGame()`, `startGame()`, `continueGame()`, `launchDevMission()`, `buyUpgrade()`, `buySkin()`. Dev mode toggles via backtick key on start/gameover/victory screens and redirects map transitions back to the dev picker.
+- `App.jsx`: **Orchestrator (~276 lines).** Owns React state `gameState` (`start`, `map`, `playing`, `shop`, `event`, `gameover`, `victory`, `dev`), `uiScrap`, `uiLevels`, `uiShipSkin`, `uiUnlockedSkins`, `mapStateVersion`, `notificationVersion`, `devMode`, `paused`, and `uiEmergencyBeacon`. Refs: `game` (mutable game state), `containerRef` (Three.js container), `canvasRef` (2D HUD canvas). Delegates game loop to `useGameLoop` hook and input handling to `useInput` hook. Contains `resetGame()`, `startGame()`, `nextSector()`, `continueGame()`, `launchDevMission()`, `buyUpgrade()`, `buySkin()`, `buyBeacon()`, and `effectiveSetState()`. Dev mode toggles via backtick key on start/gameover/victory screens and redirects map transitions back to the dev picker.
 - `main.jsx`: Standard Vite React DOM initialization with StrictMode.
 
 ### `/src/hooks`
 Custom React hooks that decompose App.jsx concerns.
 - `useGameLoop.jsx`: Three.js scene init, animation frame loop, and resize handling. Returns `{ threeRef, statusRef, devModeRef, physicsCbs }` where `physicsCbs` is the callback object for `updatePhysics`. Manages `requestAnimationFrame` lifecycle and calls `updatePhysics()` + `drawFrame()` each tick.
-- `useInput.jsx`: Keyboard and pointer event handlers. Returns `{ onPointerDown, onPointerMove, onPointerUp }` for attaching to the canvas container. Handles WASD/arrows, space (shop->map), backtick (dev mode toggle), and mouse/touch input for ship aiming and joystick.
+- `useInput.jsx`: Keyboard and pointer event handlers. Returns `{ onPointerDown, onPointerMove, onPointerUp }` for attaching to the canvas container. Handles WASD/arrows, Q/E strafe, space (shop->map), ESC pause, B emergency beacon activation, backtick (dev mode toggle), and mouse/touch input for ship aiming and joystick.
 
 ### `/src/components`
 Contains purely functional, isolated React GUI Overlays that render safely on top of the 3D canvas depending on the state of the game loop.
-- `MapOverlay.jsx`: Sector map screen (Slay the Spire style). Handles node rendering, edge drawing, node-click dispatch logic, and viewport-adaptive layout. Uses `enterNodeMission` from `engine/missionSetup.js` for mission initialization. Props: `game`, `setGameState`, `setUiScrap`, `setUiLevels`, `setMapStateVersion`.
+- `MapOverlay.jsx`: Sector map screen (Slay the Spire style). Handles node rendering, edge drawing, node-click dispatch logic, hazard/weather badges, repair-node beacon reset, and viewport-adaptive layout. Uses `enterNodeMission` from `engine/missionSetup.js` for mission initialization. Props: `game`, `setGameState`, `setUiScrap`, `setUiLevels`, `setUiShipSkin`, `setUiUnlockedSkins`, `setMapStateVersion`, `mapStateVersion`, `setUiEmergencyBeacon`.
 - `StartScreen.jsx`: The initial sequence trigger. Props: `startGame`, `devMode`.
-- `ShopOverlay.jsx`: Renders all system upgrades from `UPGRADE_DATA` with cost calculation, max-level detection, and affordance checking. Props: `uiScrap`, `uiLevels`, `buyUpgrade`, `setGameState`.
+- `ShopOverlay.jsx`: Renders all system upgrades from `UPGRADE_DATA`, ship skins from `SHIP_SKINS`, and consumables such as emergency beacons with cost calculation, max-level detection, and affordance checking. Props: `uiScrap`, `uiLevels`, `buyUpgrade`, `setGameState`, `uiShipSkin`, `uiUnlockedSkins`, `buySkin`, `uiEmergencyBeacon`, `buyBeacon`, `activeBuff`.
 - `EventScreen.jsx`: Renders interactive narrative encounters. Manages its own internal state for the selected random event from `EVENTS_DATA`. Executes choice callbacks then syncs UI state. Props: `gameRef`, `setGameState`, `setUiScrap`, `setUiLevels`.
-- `DevMissionPicker.jsx`: Full-featured development mission selector. Supports 7 mission types (kill, collect, survive, escort, defend, sabotage, elite hunt, boss rush) with adjustable difficulty levels 1-20. Each mission type has color-coded cards with icons. Props: `onLaunch`, `onExit`.
-- `VictoryScreen.jsx`: Handles end-of-sector boss clears. Props: `gameRef`, `startGame`.
+- `DevMissionPicker.jsx`: Full-featured development mission selector. Supports 9 mission types (kill, collect, survive, escort, defend, sabotage, elite hunt, boss rush, mini-boss) with adjustable difficulty levels 1-20, hazard selection, and boss/mini-boss variant selection. Props: `onLaunch`, `onExit`.
+- `VictoryScreen.jsx`: Handles end-of-sector boss clears, sector rank calculation, rewards, buff selection, and next-sector continuation. Props: `gameRef`, `startGame`, `nextSector`.
 - `GameOverScreen.jsx`: Handles hull-breach resets. Props: `gameRef`, `startGame`.
+- `PauseOverlay.jsx`: Pause menu overlay with resume/restart/mute/settings controls. Props include game refs/state setters from `App.jsx`.
+- `PostMissionSummary.jsx`: Shows mission stats and grade during the post-mission transition.
+- `AchievementNotification.jsx` / `AchievementPanel.jsx`: Achievement toast display and panel UI.
+- `SettingsOverlay.jsx`: Settings UI for audio, gameplay difficulty, display, and accessibility options.
 
 ### `/src/constants`
 Static data designed to be completely safely modifiable without touching core game loops.
 - `gameConfig.js`: Centralized game configuration object (`GAME_CONFIG`). Contains all magic numbers for player stats, weapon parameters (damage, cooldowns, speed), enemy types, spawn rates, and game balance values.
-- `upgrades.js`: Contains `UPGRADE_DATA` with 9 upgrade types: autoAim, autocannon, plasma, missiles, hull, shield, thrusters, magnet, pointDefense. Each has name, icon (lucide-react), description, baseCost, costMult, and maxLevel.
+- `upgrades.js`: Contains `UPGRADE_DATA` with 10 upgrade/consumable types: autoAim, autocannon, plasma, missiles, hull, shield, thrusters, magnet, pointDefense, emergencyBeacon. Each has name, icon (lucide-react), description, baseCost, costMult, and maxLevel; consumables use `isConsumable`.
 - `events.js`: Contains `EVENTS_DATA` array of randomized space encounter events. Each event has id, title, text, and choices with resolve callbacks that receive `gameRef`, `setUiScrap`, `setUiLevels`.
 - `bosses.js`: Boss and mini-boss roster data. `BOSS_ROSTER` (3 full boss variants) and `MINIBOSS_ROSTER` (3 mini-boss variants). Each variant: id, name, title, introText, color, innerColor, geometry (box/octahedron/dodecahedron/tetrahedron/icosahedron), radius, HP config, speed, attackPatterns { phase1, phase2, phase3 }, deathColors, guaranteedDrops, scrapReward. Boss selection: `BOSS_ROSTER[level % BOSS_ROSTER.length]`.
 - `attackPatterns.js`: Boss attack pattern function library (`ATTACK_PATTERNS` map). Each pattern: `(g, boss, angle, damage, speed) => void`. Patterns: single_aimed, spread_shot, spiral_barrage, burst_ring, double_aimed, wide_spread, zigzag_spread, orbiting_mines, homing_burst. Boss variants reference patterns by key in their `attackPatterns` config.
@@ -38,16 +42,19 @@ Static data designed to be completely safely modifiable without touching core ga
 Standalone simulation and rendering algorithms detached from React state.
 
 #### Core modules
-- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, hazards, keys, mouse, worldMouse). Defines the `GameState` typedef.
-- `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row.
-- `combat.js`: Low-level combat utilities — `getNearestEnemy(x, y, enemies)` (pure), `fireProjectile(g, x, y, angle, speed, damage, type, pierceCount)` (mutates `g.projectiles`), `createParticles(g, x, y, count, color, speed, life)` (mutates `g.particles`). No React imports.
+- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, gauntlet, waveSurge, hazards, weather, emergencyBeacon, adaptiveDifficulty, keys, mouse, worldMouse). Defines the `GameState` typedef.
+- `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row. Assigns mission node types, hazard metadata, mini-boss nodes, and sector-level weather.
+- `combat.js`: Low-level combat utilities — targeting helpers, projectile creation, particle creation, enemy death handling, directional shield checks, screen shake/hit stop triggers, shield restoration, player i-frames, combo milestones, damage numbers, and power-up aura triggers. No React imports.
 - `targeting.js`: Shared hostile target selection for enemies, bosses, mini-bosses, and sabotage structures. Provides target collection and nearest-target helpers used by auto-aim, missiles, and HUD indicators.
-- `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` (pushes to `g.enemies`), `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage types). No React imports.
+- `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` / wave formation spawning (pushes to `g.enemies`), `spawnMiniInterceptors()`, and `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage/gauntlet/wave_surge/miniboss types). No React imports.
 - `settings.js`: Persistent settings helpers (`getDefaultSettings`, `normalizeSettings`, `loadSettings`, `saveSettings`) backed by localStorage (`space_sentinel_settings`). Used by `createGameState()` and `SettingsOverlay.jsx`.
 - `escortSetup.js`: Reusable escort mission initialization — `setupEscort(g, level)` initializes escort drone state; `resetEscort(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `beaconSetup.js`: Reusable defend mission beacon initialization — `setupBeacon(g, level)` initializes beacon state; `resetBeacon(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `sabotageSetup.js`: Reusable sabotage mission structure initialization — `setupSabotage(g, level)` spawns turret structures; `resetSabotage(g)` clears them. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
-- `missionSetup.js`: Shared combat mission initialization — `setupCombatMission(g, mission, level)` resets per-mission state (player position, arrays, cooldowns); `enterNodeMission(g, level, nodeType)` generates + sets up a mission in one call. Used by both MapOverlay and App.jsx to avoid duplication.
+- `gauntletSetup.js`: Reusable gauntlet/wave-surge initialization — `setupGauntlet`, `resetGauntlet`, `setupWaveSurge`, `resetWaveSurge`.
+- `missionSetup.js`: Shared combat mission initialization — `setupCombatMission(g, mission, level)` resets per-mission state (player position, arrays, cooldowns); `enterNodeMission(g, level, nodeType, node)` generates + sets up a mission in one call, copying node hazards and sector weather. Used by both MapOverlay and App.jsx to avoid duplication.
+- `sectorRank.js`: End-of-sector score/rank system, veteran-mode rewards, next-sector reset, and selected rank buffs.
+- `screenShake.js`, `adaptiveDifficulty.js`, `difficulty.js`, `weaponSynergies.js`: Shared support systems for combat feedback, difficulty scaling, difficulty multipliers, and weapon synergy modifiers.
 
 #### Physics (simulation)
 - `physics.js`: Main simulation step orchestrator — `updatePhysics(dt, g, cbs)`. Delegates to individual system modules below. Handles transition timer (post-mission countdown), mission completion detection, and ties all systems together. React state changes delivered via callbacks `{ setGameState, setMapStateVersion }`.
@@ -60,12 +67,18 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `enemies.js`: Enemy AI — `updateEnemies(dt, g, diffMult)`. Movement toward player, firing, and collision with player hull.
 - `pickups.js`: Scrap magnet — `updatePickups(dt, g)`. Magnet attraction and collection when player is close enough.
 - `particles.js`: Visual effects — `updateParticles(dt, g)` and `updateEffects(dt, g)`. Particle lifecycle, position updates, and fade-out.
+- `attackWarnings.js`: Delayed attack warning indicators with callbacks used by elite/boss-style attacks.
+- `enemyFire.js`: Enemy weapon firing helpers and elite variant attack behavior.
+- `deathPulses.js`: Shockwave/death pulse effects and collision damage.
+- `dynamicFov.js`: Camera FOV response to hits, boss deaths, and combat intensity.
+- `weather.js`: Sector weather effects — solar flare, debris field, gravity anomaly, and EMI logic plus projectile/weapon modifiers.
 - `cleanup.js`: Dead entity removal — `cleanup(dt, g)`. Periodic pool cleanup of dead enemies, projectiles, particles, pickups.
 - `mission.js`: Mission logic — `updateTransition(dt, g, cbs)`, `createCompleteMission(g)`, `checkMissionProgress(g, dt)`. Mission completion detection, rewards calculation, map progression, and transition timer.
 - `escort.js`: Escort drone — `updateEscort(dt, g, diffMult)`. Escort drone movement, evasion behavior, collision, and mission progress checks.
 - `beacon.js`: Beacon defense — `updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)`. Beacon HP management, enemy projectile/ram collision, defense radius targeting, and mission completion checks.
 - `sabotage.js`: Sabotage turrets — `updateSabotage(dt, g, currentDiffMult, completeMission)`. Structure firing at player, player projectile collision with structures, enemy targeting bias toward structures, and mission completion when all structures destroyed.
 - `bossCore.js`: Shared boss/mini-boss AI — `updateBossCore(dt, boss, g, currentDiffMult, damageMult, onDeath, completeMission, setGameState)`. Handles movement (orbit/approach/charge), phase transitions (3 HP-based phases), attacks via ATTACK_PATTERNS lookup from `boss.attackPatterns`, charge attacks (phase 2+), player ram collision, and death (particles, power-up drops, scrap reward, mission completion). Boss-specific differences passed via `damageMult` (1 vs `C.miniboss.damagePercent`) and `onDeath` config (death colors, guaranteed drops, scrap value).
+- `bossSignatureMechanics.js`: Per-boss signature mechanics including void zones, regen windows, and phase-shift decoys.
 - `boss.js`: Boss wrapper — `updateBoss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with boss-specific config (full damage, guaranteed power-up drops, fixed scrap reward).
 - `miniboss.js`: Mini-boss wrapper — `updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with scaled damage (`C.miniboss.damagePercent`), no guaranteed drops, level-scaled scrap reward.
 - `powerups.js`: Power-up pickup & buff management — `updatePowerups(dt, g)`. Power-ups: `nuke` (instant kill all enemies), `repair` (restore HP), `shieldBoost` (temporary shield), `rapidFire` (reduced cooldowns), `damageSurge` (increased damage), `timeSlow` (slowed enemy movement). Dropped on enemy kill (5% chance) or boss death (guaranteed: shieldBoost + damageSurge). Active buffs stored in `g.activeBuffs` with per-buff timers.
@@ -120,6 +133,56 @@ Each system receives explicit parameters (not reading from global state) and mut
   - 3D: Octagonal wireframe cylinder (orange, 0xf97316) with slow rotation
   - 2D: HP bar + "TURRET [X HP]" label + radar square marker
 - **Mission completion:** Destroy all structures
+
+## Gauntlet & Wave Surge Mission Types
+- **Gauntlet purpose:** Clear a fixed sequence of enemy waves with short delays between waves
+- **Wave Surge purpose:** Survive a timed high-intensity spawn burst
+- **State:** `g.gauntlet` (`active`, `currentWave`, `totalWaves`, `enemiesPerWave`, `enemiesSpawnedInWave`, `waveDelay`, `betweenWaves`) and `g.waveSurge` (`active`, `remaining`, `spawnRateMult`)
+- **Config:** `GAME_CONFIG.gauntlet` and `GAME_CONFIG.waveSurge`
+- **Setup:** `gauntletSetup.js` — `setupGauntlet`, `resetGauntlet`, `setupWaveSurge`, `resetWaveSurge`
+- **System wiring:** `physics.js` manages gauntlet wave transitions/final completion and wave-surge countdown/spawn-rate changes; `mission.js` completes gauntlet when all waves are cleared and wave surge when the timer expires
+- **Map integration:** `mapGenerator.js` can place `gauntlet` and `wave_surge` nodes; `spawner.js` returns matching mission descriptors
+- **Rendering:** `renderer2d.js` displays mission progress/wave state through the existing mission HUD
+
+## Emergency Beacon
+- **Purpose:** One-use shop consumable that lets the player respawn once instead of taking a game over
+- **Data:** `UPGRADE_DATA.emergencyBeacon` (`isConsumable: true`)
+- **State:** `g.emergencyBeacon` — `{ purchased, activated, nodeId }`; mirrored to React via `uiEmergencyBeacon`
+- **Purchase:** `ShopOverlay.jsx` renders the beacon item; `App.jsx` `buyBeacon(cost)` subtracts scrap and marks it purchased
+- **Activation:** B key in `useInput.jsx` arms the beacon during gameplay when purchased and not already activated
+- **Respawn:** `App.jsx` `effectiveSetState('gameover')` intercepts death when activated, restores HP/shield, clears combat arrays, returns to map, and consumes the beacon (`purchased=false`)
+- **Reset:** Repair nodes in `MapOverlay.jsx` clear all beacon state so another beacon can be bought later
+
+## Sector Rank / Veteran Progression
+- **Purpose:** End-of-sector grading and next-sector continuity
+- **Module:** `engine/sectorRank.js`
+- **State:** `g.sector` tracks sector number, rank, score, A-rank streak, veteran mode, active buff, cleared/completed missions, HP totals, and mission timing arrays
+- **Completion tracking:** `systems/mission.js` records every mission completion for sector rank and adaptive difficulty
+- **Victory flow:** `VictoryScreen.jsx` calculates sector rank, applies rewards, offers A/S-rank buff choices, and calls `nextSector()`
+- **Next sector:** `App.jsx` mutates the existing run into a fresh generated sector map while preserving player progression, scrap, upgrades, skins, achievements, stats, and selected sector state
+
+## Sector Weather
+- **Purpose:** Sector-wide modifiers that make regular missions play differently
+- **State:** `g.weather` with active weather types and per-weather substates (`solarFlare`, `debris`, `gravityZones`, `emi`)
+- **Config:** `GAME_CONFIG.weather`
+- **System:** `systems/weather.js` — `initWeather`, `updateWeather`, `resetWeather`, projectile speed/block checks, weapon disable checks, and solar flare state helpers
+- **Types:** Solar Flare, Debris Field, Gravity Anomaly, and EMI
+- **Map integration:** `mapGenerator.js` assigns `map.weatherTypes`; `enterNodeMission()` copies those types onto normal missions so `setupCombatMission()` initializes weather
+- **Rendering:** Weather warnings, debris/gravity indicators, and weather-specific HUD/radar feedback live in `renderer2d.js` / `renderer3d.js`
+
+## Adaptive Difficulty
+- **Purpose:** Adjust pressure based on recent player performance without replacing the explicit difficulty setting
+- **Module:** `engine/adaptiveDifficulty.js`
+- **State:** `g.adaptiveDifficulty` tracks pressure history, low/high pressure timers, rampage mode, high-HP mission streaks, spawn-rate multiplier, and enemy-aggression multiplier
+- **Physics wiring:** `physics.js` updates pressure and passes adaptive aggression into enemy behavior; mission completion records high-HP streaks
+
+## Combat Feedback & Elite Variant Systems
+- **Attack warnings:** `systems/attackWarnings.js` renders delayed danger markers and executes queued attack callbacks
+- **Enemy fire:** `systems/enemyFire.js` centralizes enemy weapon logic and elite variant firing behavior
+- **Directional shields:** Tank elites use `combat.checkDirectionalShield()`; any hit against a charged side is absorbed and depletes that side
+- **Death pulses:** `systems/deathPulses.js` handles expanding shockwaves and collision damage after special deaths
+- **Dynamic FOV:** `systems/dynamicFov.js` adjusts camera FOV for hits, boss deaths, and boss presence
+- **Weapon synergies:** `weaponSynergies.js` applies cross-weapon modifiers used by `weapons.js`, `projectiles.js`, and `combat.js`
 
 ## Adding New Mission Types — Checklist
 When adding a new mission type, update ALL of the following:
