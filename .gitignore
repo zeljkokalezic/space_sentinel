@@ -16,6 +16,9 @@ dist-ssr
 .hermes/plans/
 .nanocoder/
 
+# CodeGraph index (local, rebuilt automatically)
+.codegraph/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
