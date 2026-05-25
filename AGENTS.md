@@ -29,6 +29,7 @@ Contains purely functional, isolated React GUI Overlays that render safely on to
 - `PostMissionSummary.jsx`: Shows mission stats and grade during the post-mission transition.
 - `AchievementNotification.jsx` / `AchievementPanel.jsx`: Achievement toast display and panel UI.
 - `SettingsOverlay.jsx`: Settings UI for audio, gameplay difficulty, display, and accessibility options.
+- `ErrorBoundary.jsx`: Class component wrapping the entire app in `main.jsx`. Catches uncaught React errors, displays error message with reload button. Prevents white-screen crashes.
 
 ### `/src/constants`
 Static data designed to be completely safely modifiable without touching core game loops.
@@ -52,6 +53,8 @@ Standalone simulation and rendering algorithms detached from React state.
 - `beaconSetup.js`: Reusable defend mission beacon initialization — `setupBeacon(g, level)` initializes beacon state; `resetBeacon(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `sabotageSetup.js`: Reusable sabotage mission structure initialization — `setupSabotage(g, level)` spawns turret structures; `resetSabotage(g)` clears them. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `gauntletSetup.js`: Reusable gauntlet/wave-surge initialization — `setupGauntlet`, `resetGauntlet`, `setupWaveSurge`, `resetWaveSurge`.
+- `bossSetup.js`: Boss fight initialization — `setupBoss(g, level)`, `resetBoss(g)`. Selects variant from `BOSS_ROSTER`, spreads properties, triggers intro effects + spawn sound.
+- `minibossSetup.js`: Mini-boss fight initialization — `setupMiniboss(g, level)`, `resetMiniboss(g)`. Selects variant from `MINIBOSS_ROSTER`, spreads properties, triggers intro effects + spawn sound.
 - `missionSetup.js`: Shared combat mission initialization — `setupCombatMission(g, mission, level)` resets per-mission state (player position, arrays, cooldowns); `enterNodeMission(g, level, nodeType, node)` generates + sets up a mission in one call, copying node hazards and sector weather. Used by both MapOverlay and App.jsx to avoid duplication.
 - `sectorRank.js`: End-of-sector score/rank system, veteran-mode rewards, next-sector reset, and selected rank buffs.
 - `screenShake.js`, `adaptiveDifficulty.js`, `difficulty.js`, `weaponSynergies.js`: Shared support systems for combat feedback, difficulty scaling, difficulty multipliers, and weapon synergy modifiers.
@@ -82,7 +85,8 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `boss.js`: Boss wrapper — `updateBoss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with boss-specific config (full damage, guaranteed power-up drops, fixed scrap reward).
 - `miniboss.js`: Mini-boss wrapper — `updateMiniboss(dt, g, currentDiffMult, completeMission, setGameState)`. Delegates to `updateBossCore` with scaled damage (`C.miniboss.damagePercent`), no guaranteed drops, level-scaled scrap reward.
 - `powerups.js`: Power-up pickup & buff management — `updatePowerups(dt, g)`. Power-ups: `nuke` (instant kill all enemies), `repair` (restore HP), `shieldBoost` (temporary shield), `rapidFire` (reduced cooldowns), `damageSurge` (increased damage), `timeSlow` (slowed enemy movement). Dropped on enemy kill (5% chance) or boss death (guaranteed: shieldBoost + damageSurge). Active buffs stored in `g.activeBuffs` with per-buff timers.
-- `combo.js`: Kill streak system — increment on enemy kill (`killEnemy` in `combat.js`), timer decay + scrap multiplier applied on pickup collection (`pickups.js`). Config: `GAME_CONFIG.combo` — 3s timer window, milestone tiers at 5/10/15 kills for 1.5x/2x/3x scrap. Milestone sounds via `SoundManager.play('combo_milestone')`.
+- `audio.js`: Per-frame audio event detection — `updateAudio(dt, g)`. Compares current game state against previous frame (`g.audio._prev`) to detect transitions: new enemy deaths (explosion sound), new pickups collected (pickup sound), player HP/shield decreases (hit sounds). Manages dynamic soundtrack intensity (calm/tense/triumphant) based on enemy count and player HP. Wired into `physics.js` before cleanup.
+- **Combo system** (distributed, no standalone file): Kill streak state in `state.js` (`g.combo`), increment on enemy kill via `combat.js` (`killEnemy`), timer decay + scrap multiplier on pickup collection in `pickups.js`, display in `renderer2d.js`, milestone sounds in `audio.js`. Config: `GAME_CONFIG.combo` — 3s timer window, milestone tiers at 5/10/15 kills for 1.5x/2x/3x scrap.
 
 #### Rendering
 - `renderer.js`: **Barrel module** — re-exports from renderer3d.js and renderer2d.js. Provides `drawFrame(threeObj, g, canvasEl, statusRef)` which calls both 3D and 2D renderers.
