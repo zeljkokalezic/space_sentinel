@@ -7,6 +7,7 @@ import { setupCombatMission }      from './engine/missionSetup';
 import { setupHazards }            from './engine/hazardSetup';
 import { loadGame }                from './engine/saveManager';
 import { SoundManager }            from './engine/audio';
+import { clearMissionState }       from './engine/stateCleanup';
 import { SHIP_SKINS }              from './constants/skins';
 import { UPGRADE_DATA }            from './constants/upgrades';
 import {
@@ -72,18 +73,13 @@ export default function App() {
     if (!g) return;
     resetSector(g);
     g.map = generateMap();
-    g.mission = null;
-    g.isVictory = false;
-    g.transitionTimer = undefined;
+    clearMissionState(g);
     g.spawnCooldown = 2;
     g.wave = 1;
     g.totalTime = 0;
     g.player.x = 0; g.player.y = 0;
     g.player.vx = 0; g.player.vy = 0;
     g.player.yaw = Math.PI / 2;
-    g.enemies = []; g.projectiles = []; g.particles = [];
-    g.pickups = []; g.effects = []; g.powerups = [];
-    g.hazards = [];
     g.paused = false;
     setPaused(false);
     syncUiFromGame();

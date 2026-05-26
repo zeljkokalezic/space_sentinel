@@ -32,7 +32,8 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
     const dx = beacon.x - e.x;
     const dy = beacon.y - e.y;
     if (Math.hypot(dx, dy) < beacon.radius + e.radius) {
-      e._beaconRamCooldown = (e._beaconRamCooldown || 0) - dt;
+      if (e._beaconRamCooldown === undefined) e._beaconRamCooldown = 0;
+      e._beaconRamCooldown -= dt;
       if (e._beaconRamCooldown <= 0) {
         beacon.hp -= 15;
         e.hp -= 20;

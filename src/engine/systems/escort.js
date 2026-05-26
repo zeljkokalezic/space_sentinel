@@ -97,10 +97,12 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
   // ── Helper: handle escort death ──
   const handleEscortDeath = () => {
     createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
     g.effects.push({
       type: 'mission_complete',
-      x: window.innerWidth / 2,
-      y: Math.max(100, window.innerHeight / 4),
+      x: vw / 2,
+      y: Math.max(100, vh / 4),
       text: esc.lives > 0 ? `DRONE DESTROYED! ${esc.lives} LIVES LEFT` : 'DRONE DESTROYED!',
       life: 2.5,
     });

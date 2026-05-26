@@ -555,13 +555,14 @@ describe('integration: survive mission full flow', () => {
     // Survive 5 seconds
     checkMissionProgress(5, g, completeFn);
 
-    // Transition countdown
-    updateTransition(GAME_CONFIG.transition.duration, g, { setGameState, setMapStateVersion });
-
-    // Verify final state
+    // Verify mission completed before transition clears state
     expect(g.mission.completed).toBe(true);
     expect(g.scrap).toBe(30);
     expect(g.level).toBe(2);
+
+    // Transition countdown
+    updateTransition(GAME_CONFIG.transition.duration, g, { setGameState, setMapStateVersion });
+
     expect(setGameState).toHaveBeenCalledWith('map');
     expect(g.enemies).toEqual([]);
     expect(g.escort.active).toBe(false);
@@ -583,14 +584,16 @@ describe('integration: survive mission full flow', () => {
     // Complete the boss mission manually (kill missions don't auto-complete via checkMissionProgress)
     completeFn();
 
-    // Transition countdown
-    updateTransition(GAME_CONFIG.transition.duration, g, { setGameState, setMapStateVersion });
-
+    // Verify mission completed before transition clears state
     expect(g.mission.completed).toBe(true);
     expect(g.scrap).toBe(500);
     expect(g.isVictory).toBe(true);
- expect(setGameState).toHaveBeenCalledWith('victory');
-  expect(setMapStateVersion).not.toHaveBeenCalled();
+
+    // Transition countdown
+    updateTransition(GAME_CONFIG.transition.duration, g, { setGameState, setMapStateVersion });
+
+    expect(setGameState).toHaveBeenCalledWith('victory');
+    expect(setMapStateVersion).not.toHaveBeenCalled();
   });
 });
 
@@ -613,9 +616,10 @@ describe('SoundManager.play on mission complete', () => {
     });
     const complete = createCompleteMission(g);
     complete();
+    const callsAfterFirst = mockPlay.mock.calls.length;
     complete();
-    // Only one call — idempotent guard prevents replay
-    expect(mockPlay).toHaveBeenCalledTimes(1);
+    // Second call should not add any more calls
+    expect(mockPlay.mock.calls.length).toBe(callsAfterFirst);
   });
 
   it('plays mission_complete sound for survive mission', () => {

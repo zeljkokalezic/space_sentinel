@@ -237,7 +237,7 @@ function updateScreen(dt, e, g, tx, ty) {
  * Legacy direct-charge movement for enemies without a formation property.
  * Preserves existing behavior for backward compatibility.
  */
-function updateLegacy(dt, e, g, tx, ty, distToPlayer) {
+function updateLegacy(dt, e, g, tx, ty, distToTarget) {
   // Mini-interceptors: kamikaze behavior — always charge at target, no firing
   if (e.type === 'mini_interceptor') {
     const angle = Math.atan2(ty - e.y, tx - e.x);
@@ -251,11 +251,11 @@ function updateLegacy(dt, e, g, tx, ty, distToPlayer) {
 
   let moveSpeed = e.speed;
   if (e.type === 'shooter') {
-    if      (distToPlayer < GAME_CONFIG.player.radius * 8) moveSpeed = e.speed * -0.5;
-    else if (distToPlayer < GAME_CONFIG.player.radius * 10) moveSpeed = 0;
+    if      (distToTarget < GAME_CONFIG.player.radius * 8) moveSpeed = e.speed * -0.5;
+    else if (distToTarget < GAME_CONFIG.player.radius * 10) moveSpeed = 0;
   } else if (e.type === 'missile_boat') {
-    if      (distToPlayer < GAME_CONFIG.player.radius * 13) moveSpeed = e.speed * -1;
-    else if (distToPlayer < GAME_CONFIG.player.radius * 18) moveSpeed = 0;
+    if      (distToTarget < GAME_CONFIG.player.radius * 13) moveSpeed = e.speed * -1;
+    else if (distToTarget < GAME_CONFIG.player.radius * 18) moveSpeed = 0;
   }
 
   e.x += Math.cos(moveAngle) * moveSpeed * dt;
@@ -289,19 +289,19 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
     // Use targetX/targetY if set by beacon/sabotage, otherwise target player
    const tx = e.targetX !== undefined ? e.targetX : g.player.x;
     const ty = e.targetY !== undefined ? e.targetY : g.player.y;
-    const distToPlayer = Math.hypot(tx - e.x, ty - e.y);
+    const distToTarget = Math.hypot(tx - e.x, ty - e.y);
 
     // ── Movement (formation or legacy) ──
     if (e.formation && FORMATION_HANDLERS[e.formation]) {
-      FORMATION_HANDLERS[e.formation](dt, e, g, tx, ty, distToPlayer);
+      FORMATION_HANDLERS[e.formation](dt, e, g, tx, ty, distToTarget);
     } else {
-      updateLegacy(dt, e, g, tx, ty, distToPlayer);
+      updateLegacy(dt, e, g, tx, ty, distToTarget);
     }
 
     // ── Enemy firing (skip mini-interceptors — they're kamikaze) ──
     const angle = Math.atan2(ty - e.y, tx - e.x);
     if (e.type !== 'mini_interceptor') {
-      tryFireEnemyWeapon(e, angle, distToPlayer, dt, currentDiffMult, g, adaptiveAggression);
+      tryFireEnemyWeapon(e, angle, distToTarget, dt, currentDiffMult, g, adaptiveAggression);
     }
 
     // ── Enemy rams player ──

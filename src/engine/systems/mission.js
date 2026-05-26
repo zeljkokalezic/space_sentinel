@@ -10,6 +10,7 @@ import { recordMissionCompletion as recordAdaptiveMission } from '../adaptiveDif
 import { recordMissionCompletion as recordSectorMission } from '../sectorRank';
 import { getScrapMultiplier } from '../difficulty';
 import { tryAddRelic, getRandomRelic } from '../relicSystem';
+import { clearMissionState } from '../stateCleanup';
 
 /**
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
@@ -30,20 +31,7 @@ export const updateTransition = (dt, g, cbs) => {
       cbs.setMapStateVersion(v => v + 1);
     }
     g.transitionTimer = undefined;
-    g.enemies = []; g.projectiles = []; g.particles = []; g.pickups = []; g.effects = [];
-    if (g.escort) g.escort.active = false;
-    if (g.beacon) g.beacon.active = false;
-    if (g.sabotage) { g.sabotage.active = false; g.sabotage.structures = []; }
-    if (g.boss) g.boss.active = false;
-    if (g.miniboss) g.miniboss.active = false;
-    if (g.hazards) g.hazards = [];
-    if (g.gauntlet) g.gauntlet.active = false;
-    if (g.waveSurge) g.waveSurge.active = false;
-    if (g.boss) {
-      g.boss.voidZones = [];
-      g.boss.decoy = null;
-      g.boss.regenActive = false;
-    }
+    clearMissionState(g);
   }
   return true;
 };
@@ -136,10 +124,12 @@ export const createCompleteMission = (g) => {
       saveAchievements(g.achievements.unlocked);
     }
 
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
     g.effects.push({
       type: 'mission_complete',
-      x: window.innerWidth / 2,
-      y: Math.max(100, window.innerHeight / 4),
+      x: vw / 2,
+      y: Math.max(100, vh / 4),
       text: `AREA CLEARED! +${reward} SCRAP`,
       life: C.transition.duration,
     });
