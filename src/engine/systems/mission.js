@@ -9,6 +9,7 @@ import { autoSave } from '../saveManager';
 import { recordMissionCompletion as recordAdaptiveMission } from '../adaptiveDifficulty';
 import { recordMissionCompletion as recordSectorMission } from '../sectorRank';
 import { getScrapMultiplier } from '../difficulty';
+import { tryAddRelic, getRandomRelic } from '../relicSystem';
 
 /**
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
@@ -167,6 +168,14 @@ export const createCompleteMission = (g) => {
       });
     }
     g.level++;
+
+    // Random relic find on combat mission clear (5% chance)
+    if (Math.random() < 0.05) {
+      const relic = getRandomRelic('rare');
+      if (relic) {
+        tryAddRelic(g, relic.id);
+      }
+    }
   };
 };
 

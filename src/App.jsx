@@ -12,6 +12,7 @@ import { UPGRADE_DATA }            from './constants/upgrades';
 import {
   resetSector,
 } from './engine/sectorRank';
+import { tryAddRelic, getRelicById } from './engine/relicSystem';
 
 import { useGameLoop } from './hooks/useGameLoop';
 import { useInput }    from './hooks/useInput';
@@ -26,6 +27,7 @@ import DevMissionPicker       from './components/DevMissionPicker';
 import PauseOverlay           from './components/PauseOverlay';
 import PostMissionSummary     from './components/PostMissionSummary';
 import AchievementNotification from './components/AchievementNotification';
+import RelicChoice from './components/RelicChoice';
 
 export default function App() {
   // ─── React state ────────────────────────────────────────────────────────────
@@ -54,7 +56,16 @@ export default function App() {
     SoundManager.setMuted(game.current.audio?.muted ?? false);
   };
 
-  const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'map'); };
+  const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'relicChoice'); };
+
+  const selectStartingRelic = (relicId) => {
+    tryAddRelic(game.current, relicId);
+    setGameState('map');
+  };
+
+  const skipRelicChoice = () => {
+    setGameState('map');
+  };
 
   const nextSector = () => {
     const g = game.current;
@@ -194,6 +205,17 @@ export default function App() {
     setUiEmergencyBeacon({ ...g.emergencyBeacon });
   };
 
+  // ─── Relic purchase ─────────────────────────────────────────────────
+  const buyRelic = (relicId, cost) => {
+    const g = game.current;
+    if (!g || g.scrap < cost) return;
+    const relic = getRelicById(relicId);
+    if (!relic) return;
+    if (!tryAddRelic(g, relicId)) return;
+    g.scrap -= cost;
+    setUiScrap(g.scrap);
+  };
+
   // ─── Beacon-aware state setter (intercepts gameover for respawn) ────────────
   const effectiveSetState = (state) => {
     if (state === 'gameover' && game.current?.emergencyBeacon?.activated) {
@@ -262,7 +284,10 @@ export default function App() {
         />
       )}
 
-      {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} uiShipSkin={uiShipSkin} uiUnlockedSkins={uiUnlockedSkins} buySkin={buySkin} uiEmergencyBeacon={uiEmergencyBeacon} buyBeacon={buyBeacon} activeBuff={game.current?.sector?.activeBuff} />}
+      {gameState === 'shop'     && <ShopOverlay    uiScrap={uiScrap} uiLevels={uiLevels} buyUpgrade={buyUpgrade} setGameState={setGameState} uiShipSkin={uiShipSkin} uiUnlockedSkins={uiUnlockedSkins} buySkin={buySkin} uiEmergencyBeacon={uiEmergencyBeacon} buyBeacon={buyBeacon} activeBuff={game.current?.sector?.activeBuff} buyRelic={buyRelic} uiRelics={game.current?.relics || []} uiRelicSlotLimit={game.current?.relicSlotLimit || 5} />}
+      {gameState === 'relicChoice' && (
+        <RelicChoice onSelect={selectStartingRelic} onSkip={skipRelicChoice} />
+      )}
       {gameState === 'start'    && <StartScreen    startGame={startGame} continueGame={continueGame} devMode={devMode} gameRef={game} />}
       {gameState === 'gameover' && <GameOverScreen  gameRef={game} startGame={startGame} />}
       {gameState === 'victory'  && <VictoryScreen   gameRef={game} startGame={startGame} nextSector={nextSector} />}

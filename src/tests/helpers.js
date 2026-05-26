@@ -157,6 +157,8 @@ export const createTestState = (overrides = {}) => {
     emergencyBeacon: {
       purchased: false, activated: false, nodeId: null,
     },
+    relics: [],
+    relicSlotLimit: 5,
   };
 
   // Deep-merge player overrides if provided
@@ -204,8 +206,13 @@ export const createTestState = (overrides = {}) => {
     base.emergencyBeacon = { ...base.emergencyBeacon, ...overrides.emergencyBeacon };
   }
 
-  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake', 'lowHpWarning', 'playerIFrames', 'emergencyBeacon' since we already merged them
-  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, lowHpWarning: _lowHpWarningOverride, playerIFrames: _playerIFramesOverride, emergencyBeacon: _emergencyBeaconOverride, ...restOverrides } = overrides;
+  // Deep-merge relics overrides if provided
+  if (overrides.relics) {
+    base.relics = [...overrides.relics];
+  }
+
+  // Spread top-level overrides, but exclude 'player', 'boss', 'miniboss', 'hazards', 'stats', 'screenShake', 'lowHpWarning', 'playerIFrames', 'emergencyBeacon', 'relics' since we already merged them
+  const { player: _playerOverride, boss: _bossOverride, miniboss: _minibossOverride, hazards: _hazardsOverride, stats: _statsOverride, screenShake: _screenShakeOverride, lowHpWarning: _lowHpWarningOverride, playerIFrames: _playerIFramesOverride, emergencyBeacon: _emergencyBeaconOverride, relics: _relicsOverride, ...restOverrides } = overrides;
   return { ...base, ...restOverrides };
 };
 

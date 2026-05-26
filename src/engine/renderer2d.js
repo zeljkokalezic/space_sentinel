@@ -4,6 +4,8 @@
  */
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { getHostileTargets } from './targeting';
+import { getRelicById } from './relicSystem';
+import { CATEGORY_COLORS } from '../constants/relics';
 
 // Radar sweep angle persists across frames
 let radarAngle = 0;
@@ -91,6 +93,38 @@ export const draw2DFrame = (camera, g, canvasEl, statusRef, projectFn) => {
   c.fillText(`HULL: ${Math.ceil(g.player.hp)} / ${g.player.maxHp}`, 230, 25);
   c.fillStyle='#facc15'; c.font='bold 24px monospace'; c.textAlign='right';
   c.fillText(`SCRAP: ${g.scrap}`, w-20, 35);
+
+  // Relic icons (right side, below scrap)
+  if (g.relics && g.relics.length > 0) {
+    const relicIconSize = 22;
+    const relicGap = 4;
+    const relicStartX = w - 20 - (g.relics.length * (relicIconSize + relicGap));
+    const relicY = 48; // Below scrap text, within top bar
+
+    for (let i = 0; i < g.relics.length; i++) {
+      const relic = getRelicById(g.relics[i]);
+      if (!relic) continue;
+
+      const rx = relicStartX + i * (relicIconSize + relicGap);
+      const color = CATEGORY_COLORS[relic.category] || '#888';
+
+      // Background circle
+      c.fillStyle = 'rgba(0,0,0,0.5)';
+      c.strokeStyle = color;
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.arc(rx + relicIconSize / 2, relicY + relicIconSize / 2, relicIconSize / 2, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+
+      // Icon text
+      c.fillStyle = '#ffffff';
+      c.font = `${relicIconSize - 4}px sans-serif`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(relic.icon, rx + relicIconSize / 2, relicY + relicIconSize / 2);
+    }
+  }
 
   // ── Sector number (top-left corner) ─────────────────────────────────────
   if (g.sector) {

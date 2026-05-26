@@ -7,6 +7,7 @@ import { SoundManager } from '../audio';
 import { getNearestHostileTarget } from '../targeting';
 import { getActiveSynergies, applyPlasmaSynergy, applyAutocannonSynergy, applyPointDefenseSynergy } from '../weaponSynergies';
 import { areWeaponsDisabled } from './weather';
+import { getDamageMult, getFireRateMult, getPlasmaDamageMult, getCritChance, getMissileSplitCount, getSelfDamageChance } from '../relicSystem';
 
 /**
  * @param {number} dt — Delta time
@@ -29,11 +30,19 @@ export const updateWeapons = (dt, g, completeMission) => {
   // ── Compute active synergies ──
   const activeSynergies = getActiveSynergies(g.levels);
 
+  // ── Relic multipliers ──
+  const relicDmgMult = getDamageMult(g);
+  const relicFireMult = getFireRateMult(g);
+  const relicPlasmaMult = getPlasmaDamageMult(g);
+  const _relicCritChance = getCritChance(g); // TODO: wire into projectile crit logic
+  const relicMissileSplit = getMissileSplitCount(g);
+  const relicSelfDmgChance = getSelfDamageChance(g);
+
   // ── Autocannon ──
   if (g.levels.autocannon > 0 && g.cooldowns.autocannon <= 0 && hasTarget) {
     SoundManager.play('shoot');
     const angle = g.player.aimAngle;
-    const dmg = (C.weapons.autocannon.baseDamage + g.levels.autocannon * C.weapons.autocannon.damagePerLevel) * dmgMult;
+    const dmg = (C.weapons.autocannon.baseDamage + g.levels.autocannon * C.weapons.autocannon.damagePerLevel) * dmgMult * relicDmgMult;
     const shots = 1 + Math.floor(g.levels.autocannon / C.weapons.autocannon.shotsPerExtraLevels);
     const perpX = -Math.sin(angle);
     const perpY =  Math.cos(angle);
@@ -45,7 +54,12 @@ export const updateWeapons = (dt, g, completeMission) => {
       applyAutocannonSynergy(pConfig, activeSynergies);
       fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', 0, pConfig);
     }
-    g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, (C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction) * fireMult);
+    g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, (C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction) * fireMult * relicFireMult);
+  }
+
+  // Self-damage from Unstable Reactor (autocannon)
+  if (relicSelfDmgChance > 0 && g.levels.autocannon > 0 && g.cooldowns.autocannon > 0 && Math.random() < relicSelfDmgChance) {
+    g.player.hp -= 1;
   }
 
   // ── Plasma Piercer ──
@@ -61,26 +75,36 @@ export const updateWeapons = (dt, g, completeMission) => {
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
       const pConfig = {};
       applyPlasmaSynergy(pConfig, activeSynergies);
-      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2), pConfig);
+      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult * relicDmgMult * relicPlasmaMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2), pConfig);
     }
-    g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, (C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction) * fireMult);
+    g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, (C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction) * fireMult * relicFireMult);
+  }
+
+  // Self-damage from Unstable Reactor (plasma)
+  if (relicSelfDmgChance > 0 && g.levels.plasma > 0 && g.cooldowns.plasma > 0 && Math.random() < relicSelfDmgChance) {
+    g.player.hp -= 1;
   }
 
   // ── Missiles (360-degree ring) ──
   if (g.levels.missiles > 0 && g.cooldowns.missiles <= 0) {
     SoundManager.play('shoot_missile');
-    const count = g.levels.missiles;
+    const count = g.levels.missiles * relicMissileSplit;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i;
-      fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, (C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel) * dmgMult, 'missile', 0);
+      fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, (C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel) * dmgMult * relicDmgMult, 'missile', 0);
     }
-    g.cooldowns.missiles = Math.max(C.weapons.missiles.minCooldown, (C.weapons.missiles.baseCooldown - g.levels.missiles * C.weapons.missiles.cooldownReduction) * fireMult);
+    g.cooldowns.missiles = Math.max(C.weapons.missiles.minCooldown, (C.weapons.missiles.baseCooldown - g.levels.missiles * C.weapons.missiles.cooldownReduction) * fireMult * relicFireMult);
+  }
+
+  // Self-damage from Unstable Reactor (missiles)
+  if (relicSelfDmgChance > 0 && g.levels.missiles > 0 && g.cooldowns.missiles > 0 && Math.random() < relicSelfDmgChance) {
+    g.player.hp -= 1;
   }
 
   // ── Point Defense (auto-targets nearby enemy missiles, then enemies) ──
   if (g.levels.pointDefense > 0 && g.cooldowns.pointDefense <= 0) {
     const range = C.weapons.pointDefense.baseRange + g.levels.pointDefense * C.weapons.pointDefense.rangePerLevel;
-    const dmg = (C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel) * dmgMult;
+    const dmg = (C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel) * dmgMult * relicDmgMult;
     const baseMaxHits = 1 + Math.floor(g.levels.pointDefense / C.weapons.pointDefense.maxHitsPer2Levels);
     const maxHits = applyPointDefenseSynergy(baseMaxHits, activeSynergies);
     let hits = 0;
@@ -120,7 +144,7 @@ export const updateWeapons = (dt, g, completeMission) => {
         }
       }
     }
-    if (hit) g.cooldowns.pointDefense = Math.max(C.weapons.pointDefense.minCooldown, (C.weapons.pointDefense.baseCooldown - g.levels.pointDefense * C.weapons.pointDefense.cooldownReduction) * fireMult);
+    if (hit) g.cooldowns.pointDefense = Math.max(C.weapons.pointDefense.minCooldown, (C.weapons.pointDefense.baseCooldown - g.levels.pointDefense * C.weapons.pointDefense.cooldownReduction) * fireMult * relicFireMult);
   }
 
   g.cooldowns.shieldRegen -= dt;

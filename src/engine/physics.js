@@ -36,6 +36,7 @@ import { updateLowHpWarning } from './lowHpWarning';
 import { updateDynamicFov } from './systems/dynamicFov';
 import { updateSpawnFlashes } from './spawner';
 import { updateWeather } from './systems/weather';
+import { applyPerFrameEffects } from './relicSystem';
 
 export const updatePhysics = (dt, g, cbs) => {
   const { setGameState, setNotificationVersion } = cbs;
@@ -224,6 +225,9 @@ export const updatePhysics = (dt, g, cbs) => {
 
   // ─── Weather system update ────────────────────────────────────────────────
   updateWeather(dt, g);
+
+  // ─── Relic per-frame effects ──────────────────────────────────────────────
+  applyPerFrameEffects(dt, g);
 
   // ─── Pool cleanup (every 5 seconds) ──────────────────────────────────────────
   cleanup(dt, g);

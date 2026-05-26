@@ -4,7 +4,6 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { updateBossCore } from './bossCore';
-
 /**
  * @param {number} dt — Delta time
  * @param {object} g — Game state
@@ -19,5 +18,6 @@ export const updateMiniboss = (dt, g, currentDiffMult, completeMission, setGameS
     deathColors: [0xf97316, 0xfbbf24],
     guaranteedDrops: null,
     scrapValue: C.miniboss.scrapReward + Math.floor(g.level * 20),
+    relicRarity: 'common',
   }, completeMission, setGameState);
 };

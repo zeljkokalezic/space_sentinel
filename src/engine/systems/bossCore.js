@@ -11,6 +11,7 @@ import { createParticles, checkShieldBreak, triggerScreenShake, triggerHitStop }
 import { SoundManager } from '../audio';
 import { triggerFovBossDeath } from './dynamicFov';
 import { updateBossSignatureMechanics, checkVoidZoneCollision } from './bossSignatureMechanics';
+import { tryAddRelic, getRandomRelic } from '../relicSystem';
 
 /**
  * @param {number} dt — Delta time
@@ -225,6 +226,13 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
       active: true,
       radius: 8,
     });
+
+    // Boss relic drop (default: uncommon; miniboss overrides to common)
+    const relicRarity = onDeath.relicRarity || 'uncommon';
+    const bossRelic = getRandomRelic(relicRarity);
+    if (bossRelic) {
+      tryAddRelic(g, bossRelic.id);
+    }
 
     // Complete mission
     completeMission();

@@ -6,6 +6,7 @@ export const EVENTS_DATA = [
     choices: [
       {
         text: "Scavenge the cargo bays (Gain 50 Scrap, 30% chance to take 30 DMG)",
+        relicReward: { rarity: 'common' },
         resolve: (gameRef) => {
            if (Math.random() < 0.3) gameRef.current.player.hp -= 30;
            gameRef.current.scrap += 50;
@@ -29,6 +30,7 @@ export const EVENTS_DATA = [
     choices: [
       {
         text: "Fly into the rift (Gain +20 Speed, Lose 20 Max HP)",
+        relicReward: { rarity: 'uncommon' },
         resolve: (gameRef) => {
             gameRef.current.player.speed += 20;
             gameRef.current.player.maxHp -= 20;
@@ -73,6 +75,7 @@ export const EVENTS_DATA = [
     choices: [
       {
         text: "Offer vitality (Take 30 DMG, Upgrade Autocannon level +1)",
+        relicReward: { rarity: 'uncommon' },
         resolve: (gameRef) => {
            gameRef.current.player.hp -= 30;
            gameRef.current.levels.autocannon = Math.min(20, gameRef.current.levels.autocannon + 1);
@@ -154,6 +157,7 @@ export const EVENTS_DATA = [
     choices: [
       {
         text: "Carefully disarm the mines (Gain 120 Scrap, 60% chance for 40 DMG)",
+        relicReward: { rarity: 'common' },
         resolve: (gameRef) => {
            gameRef.current.scrap += 120;
            if (Math.random() < 0.6) gameRef.current.player.hp -= 40;

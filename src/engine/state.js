@@ -178,6 +178,8 @@
  * @property {number} adaptiveDifficulty.missionsHighHp — Consecutive missions completed with HP > 80%
  * @property {number} adaptiveDifficulty.spawnRateMult — Spawn rate multiplier (≤1 reduces spawns)
  * @property {number} adaptiveDifficulty.enemyAggressionMult — Enemy aggression multiplier (≥1 increases speed/firerate)
+ * @property {string[]} relics — Relic IDs collected this run
+ * @property {number} relicSlotLimit — Maximum number of relics (expandable)
  */
 
 import { generateMap } from './mapGenerator';
@@ -257,6 +259,8 @@ export const createGameState = () => ({
   emergencyBeacon: {
     purchased: false, activated: false, nodeId: null,
   },
+  relics: [],           // Array of relic IDs collected this run
+  relicSlotLimit: 5,    // Maximum relics (expandable)
   hitStop: createDefaultHitStop(),
   playerIFrames: createDefaultPlayerIFrames(),
   attackWarnings: [],

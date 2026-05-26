@@ -8,6 +8,7 @@ import { getHostileTargets } from './targeting';
 import { createParticlesWithType } from './systems/particles';
 import { spawnMiniInterceptors } from './spawner';
 import { applyMissileKillSynergy, getActiveSynergies } from './weaponSynergies';
+import { getExtraScrapPerKill } from './relicSystem';
 
 /**
  * Check if a directional shield on the enemy absorbs the hit.
@@ -211,10 +212,11 @@ export const killEnemy = (g, e, completeMission) => {
     }
   }
 
-  // Scrap pickup (3x in rampage mode)
+  // Scrap pickup (3x in rampage mode, +Salvager bonus)
   const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
   const rampageMult = (g.adaptiveDifficulty?.rampageMode) ? 3 : 1;
-  g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val * rampageMult, active: true, radius: 6 });
+  const extraScrap = getExtraScrapPerKill(g);
+  g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val * rampageMult + extraScrap, active: true, radius: 6 });
 
   // Death pulse for eligible enemy types
   if (C.deathPulse && C.deathPulse.eligibleTypes && C.deathPulse.eligibleTypes.includes(e.type)) {

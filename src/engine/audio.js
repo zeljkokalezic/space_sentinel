@@ -717,6 +717,44 @@ function playScrapCollect(ctx, gainNode, now) {
   return { duration: dur, nodes: [osc1, osc2] };
 }
 
+/** relic_acquired — Mystical chime with harmonic overtones (relic pickup) */
+function playRelicAcquired(ctx, gainNode, now) {
+  // Main chime (sine, C5)
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(523.25, now);
+  osc1.connect(gainNode);
+  osc1.start(now);
+  osc1.stop(now + 0.6);
+
+  // Fifth harmonic (G5)
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(783.99, now + 0.05);
+  const osc2Gain = ctx.createGain();
+  osc2Gain.gain.setValueAtTime(0.3, now + 0.05);
+  osc2Gain.gain.linearRampToValueAtTime(0.15, now + 0.3);
+  osc2.connect(osc2Gain);
+  osc2Gain.connect(gainNode);
+  osc2.start(now + 0.05);
+  osc2.stop(now + 0.65);
+
+  // Octave harmonic (C6)
+  const osc3 = ctx.createOscillator();
+  osc3.type = 'sine';
+  osc3.frequency.setValueAtTime(1046.5, now + 0.1);
+  const osc3Gain = ctx.createGain();
+  osc3Gain.gain.setValueAtTime(0.15, now + 0.1);
+  osc3Gain.gain.linearRampToValueAtTime(0, now + 0.4);
+  osc3.connect(osc3Gain);
+  osc3Gain.connect(gainNode);
+  osc3.start(now + 0.1);
+  osc3.stop(now + 0.5);
+
+  const dur = applyEnvelope(gainNode, 0.01, 0.1, 0.5, now);
+  return { duration: dur, nodes: [osc1, osc2, osc2Gain, osc3, osc3Gain] };
+}
+
 /* ────────────────────────────────────────────── */
 /*  Sound definitions map                         */
 /* ────────────────────────────────────────────── */
@@ -753,6 +791,7 @@ const SOUND_GENERATORS = {
   heartbeat: playHeartbeat,
   enemy_spawn: playEnemySpawn,
   scrap_collect: playScrapCollect,
+  relic_acquired: playRelicAcquired,
 };
 
 const CONTINUOUS_SOUNDS = new Set(['engine', 'bg_drone', 'soundtrack_calm', 'soundtrack_tense', 'soundtrack_triumphant']);

@@ -3,6 +3,7 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
+import { getScrapMult } from '../relicSystem';
 
 /**
  * Create a scrap collection effect at the given position.
@@ -90,7 +91,8 @@ export const updatePickups = (dt, g, completeMission) => {
       p.y += Math.sin(angle) * C.magnet.pullSpeed * dt;
       if (Math.hypot(p.x - g.player.x, p.y - g.player.y) < g.player.radius + p.radius) {
         const mult = g.combo?.multiplier ?? 1;
-        const value = Math.floor(p.value * mult);
+        const relicScrapMult = getScrapMult(g);
+        const value = Math.floor(p.value * mult * relicScrapMult);
         g.scrap += value;
         g.totalScrapEarned += value;
         if (g.stats) g.stats.totalScrap += value;

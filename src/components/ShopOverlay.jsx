@@ -3,9 +3,12 @@ import { Map as MapIcon, Gift } from 'lucide-react';
 import { UPGRADE_DATA } from '../constants/upgrades';
 import { SHIP_SKINS } from '../constants/skins';
 import { GAME_CONFIG } from '../constants/gameConfig';
+import { RELIC_DATA, CATEGORY_COLORS } from '../constants/relics';
 
-export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameState, uiShipSkin, uiUnlockedSkins, buySkin, uiEmergencyBeacon, buyBeacon, activeBuff }) {
+export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameState, uiShipSkin, uiUnlockedSkins, buySkin, uiEmergencyBeacon, buyBeacon, activeBuff, buyRelic, uiRelics, uiRelicSlotLimit }) {
   const hasFreeWeapon = activeBuff === 'free_weapon';
+  const ownedRelicIds = uiRelics || [];
+  const slotLimit = uiRelicSlotLimit || 5;
   return (
     <div className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-40 backdrop-blur-sm">
       <div className="bg-gray-900/95 border border-blue-500/50 rounded-xl p-6 w-full max-w-5xl shadow-2xl shadow-blue-900/30 overflow-y-auto max-h-screen">
@@ -155,6 +158,66 @@ export default function ShopOverlay({ uiScrap, uiLevels, buyUpgrade, setGameStat
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* ─── Relics Section ─────────────────────────────────────────── */}
+        <div className="mt-10 border-t border-gray-700 pt-8">
+          <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-300 mb-2">RELICS</h2>
+          <p className="text-gray-400 mb-6">Passive modifiers that persist across missions. Limited slots available.</p>
+
+          {/* Relic slot indicator */}
+          <div className="mb-4 text-sm text-gray-400">
+            Slots: {ownedRelicIds.length}/{slotLimit} used
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {RELIC_DATA.filter(relic => !ownedRelicIds.includes(relic.id) && ownedRelicIds.length < slotLimit).map(relic => {
+              const canAfford = uiScrap >= relic.cost;
+              const color = CATEGORY_COLORS[relic.category] || '#888';
+
+              return (
+                <div
+                  key={relic.id}
+                  onClick={() => {
+                    if (canAfford && ownedRelicIds.length < slotLimit) buyRelic(relic.id, relic.cost);
+                  }}
+                  className={`relative p-5 rounded-xl border flex flex-col h-full transition-all duration-200
+                    ${canAfford && ownedRelicIds.length < slotLimit
+                      ? 'border-blue-500/50 bg-blue-900/20 hover:bg-blue-800/40 hover:scale-[1.02] cursor-pointer'
+                      : 'border-gray-700 bg-gray-800/40 opacity-50'
+                    }`}
+                  style={{ borderColor: canAfford ? color : undefined }}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="text-3xl">{relic.icon}</div>
+                    <div className={`text-xs font-mono px-2 py-1 rounded border`}
+                      style={{ backgroundColor: `${color}20`, color, borderColor: `${color}50` }}>
+                      {relic.rarity.toUpperCase()}
+                    </div>
+                  </div>
+                  <h3 className="font-bold text-lg mb-1 text-white">{relic.name}</h3>
+                  <p className="text-sm text-gray-400 mb-4 flex-grow">{relic.description}</p>
+                  <div className="mt-auto pt-3 border-t border-gray-700/50">
+                    {ownedRelicIds.length >= slotLimit ? (
+                      <div className="text-gray-500 font-bold text-center text-sm">NO SLOTS AVAILABLE</div>
+                    ) : canAfford ? (
+                      <div className="font-bold text-xl text-center flex items-center justify-center gap-2 text-yellow-400">
+                        <div className="w-3 h-3 bg-current rounded-sm"></div> {relic.cost}
+                      </div>
+                    ) : (
+                      <div className="font-bold text-xl text-center flex items-center justify-center gap-2 text-red-400">
+                        <div className="w-3 h-3 bg-current rounded-sm"></div> {relic.cost}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {ownedRelicIds.length >= slotLimit && RELIC_DATA.every(r => ownedRelicIds.includes(r.id)) && (
+              <div className="col-span-full text-center text-gray-500 py-8">All relics collected!</div>
+            )}
           </div>
         </div>
 

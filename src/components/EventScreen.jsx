@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { EVENTS_DATA } from '../constants/events';
+import { tryAddRelic, getRandomRelic } from '../engine/relicSystem';
 
 export default function EventScreen(  { gameRef, setGameState, setUiScrap, setUiLevels }) {
   const [eventData, setEventData] = useState(null);
+  const [relicAcquired, setRelicAcquired] = useState(null);
 
   useEffect(() => {
     // Select a random event on mount
@@ -18,12 +20,20 @@ export default function EventScreen(  { gameRef, setGameState, setUiScrap, setUi
     if (choice.resolve) {
       choice.resolve(gameRef);
     }
-    
+
+    // Handle relic reward
+    if (choice.relicReward) {
+      const relic = getRandomRelic(choice.relicReward.rarity);
+      if (relic && tryAddRelic(gameRef.current, relic.id)) {
+        setRelicAcquired(relic);
+      }
+    }
+
     // Always sync React UI state
     setUiScrap(gameRef.current.scrap);
     setUiLevels({ ...gameRef.current.levels });
 
-    // Check for death via event 
+    // Check for death via event
     if (gameRef.current.player.hp <= 0) {
       setGameState('gameover');
     } else {
@@ -66,6 +76,16 @@ export default function EventScreen(  { gameRef, setGameState, setUiScrap, setUi
           );
         })}
       </div>
+
+      {relicAcquired && (
+        <div className="mt-8 p-4 bg-yellow-900/40 border border-yellow-500/50 rounded-xl animate-pulse">
+          <div className="text-2xl text-center">
+            <span className="text-yellow-300">{relicAcquired.icon}</span>
+            <span className="text-yellow-200 font-bold ml-2">{relicAcquired.name}</span>
+          </div>
+          <div className="text-yellow-400/80 text-sm text-center mt-1">{relicAcquired.description}</div>
+        </div>
+      )}
     </div>
   );
 }

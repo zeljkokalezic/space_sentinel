@@ -1,6 +1,8 @@
 import React from 'react';
 import { Skull, Heart, Zap, Crosshair, Activity, Magnet, Wrench, Target, AlertTriangle, Map as MapIcon, Navigation, Shield, Bomb, Mountain, Wind, CloudLightning, Hexagon, Sun, CircleDashed, Radio } from 'lucide-react';
 import { enterNodeMission } from '../engine/missionSetup';
+import { getRelicById } from '../engine/relicSystem';
+import { CATEGORY_COLORS } from '../constants/relics';
 
 /**
  * MapOverlay — Sector map screen (Slay-the-Spire style).
@@ -175,6 +177,32 @@ export default function MapOverlay({ game, setGameState, setUiScrap, setUiLevels
         <div className="flex items-center gap-3"><CloudLightning className="w-4 h-4 text-purple-400"/> <span className="text-gray-400 text-xs">Plasma Storm</span></div>
         <div className="flex items-center gap-3"><Hexagon      className="w-4 h-4 text-yellow-400"  /> <span className="text-gray-400 text-xs">EMP Zone</span></div>
       </div>
+
+      {/* Relic inventory */}
+      {game.relics && game.relics.length > 0 && (
+        <div className="absolute bottom-8 right-4 bg-[#0a0a14]/90 border border-gray-700 rounded-xl p-5 font-sans text-sm shadow-2xl z-50 backdrop-blur-md">
+          <div className="text-gray-400 font-black mb-2 tracking-widest text-xs uppercase">
+            RELICS ({game.relics.length}/{game.relicSlotLimit || 5})
+          </div>
+          <div className="flex flex-wrap gap-2 max-w-48">
+            {game.relics.map((rId, i) => {
+              const relic = getRelicById(rId);
+              if (!relic) return null;
+              const color = CATEGORY_COLORS[relic.category] || '#888';
+              return (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded bg-gray-800 border flex items-center justify-center cursor-help"
+                  style={{ borderColor: color }}
+                  title={`${relic.name}: ${relic.description}`}
+                >
+                  <span>{relic.icon}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Edges */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none">
