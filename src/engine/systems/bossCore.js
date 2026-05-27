@@ -12,6 +12,7 @@ import { SoundManager } from '../audio';
 import { triggerFovBossDeath } from './dynamicFov';
 import { updateBossSignatureMechanics, checkVoidZoneCollision } from './bossSignatureMechanics';
 import { tryAddRelic, getRandomRelic } from '../relicSystem';
+import { spawnEffect, spawnParticle, spawnPickup, spawnPowerup } from '../pool';
 
 /**
  * @param {number} dt — Delta time
@@ -76,7 +77,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     boss.phase = newPhase;
     SoundManager.play('boss_phase_change');
     createParticles(g, boss.x, boss.y, 0xfbbf24, 20);
-    g.effects.push({
+    spawnEffect(g, {
       type: 'phase_change',
       text: `PHASE ${boss.phase}!`,
       life: 1.5,
@@ -99,7 +100,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
       createParticles(g, boss.x, boss.y, boss.color || 0xdc2626, 20);
 
       // "⚠ ENRAGED" popup effect
-      g.effects.push({
+      spawnEffect(g, {
         type: 'enraged',
         text: '⚠ ENRAGED',
         life: rageCfg.enragedPopupLife,
@@ -121,7 +122,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
       for (let i = 0; i < rageCfg.emberCount; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = rageCfg.emberSpeedMin + Math.random() * (rageCfg.emberSpeedMax - rageCfg.emberSpeedMin);
-        g.particles.push({
+        spawnParticle(g, {
           x: boss.x + Math.cos(angle) * boss.radius,
           y: boss.y + Math.sin(angle) * boss.radius,
           vx: Math.cos(angle) * speed,
@@ -204,7 +205,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
       for (const dropType of onDeath.guaranteedDrops) {
         const cfg = C.powerups?.types?.[dropType];
         if (cfg) {
-          g.powerups.push({
+          spawnPowerup(g, {
             id: Math.random(),
             x: boss.x + (Math.random() - 0.5) * 40,
             y: boss.y + (Math.random() - 0.5) * 40,
@@ -218,7 +219,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     }
 
     // Scrap reward
-    g.pickups.push({
+    spawnPickup(g, {
       id: Math.random(),
       x: boss.x,
       y: boss.y,

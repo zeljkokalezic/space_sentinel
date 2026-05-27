@@ -6,6 +6,7 @@
 
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, spawnDamageNumber } from '../combat';
+import { spawnParticle } from '../pool';
 
 export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameState) => {
   if (!g.beacon || !g.beacon.active || g.mission?.completed) return false;
@@ -48,7 +49,7 @@ export const updateBeacon = (dt, g, currentDiffMult, completeMission, setGameSta
     beacon.active = false;
     // Spawn explosion particles
     for (let i = 0; i < 20; i++) {
-      g.particles.push({
+      spawnParticle(g, {
         x: beacon.x, y: beacon.y,
         vx: (Math.random()-0.5)*200,
         vy: (Math.random()-0.5)*200,

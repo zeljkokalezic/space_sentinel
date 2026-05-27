@@ -8,6 +8,7 @@
  * - explosion: Large burst with shockwave effect
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { spawnParticle } from '../pool';
 
 /**
  * Particle type configurations.
@@ -147,7 +148,7 @@ export const createParticlesWithType = (g, x, y, color, count, type = 'spark') =
   for (let i = 0; i < actualCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * (config.speedMax - config.speedMin) + config.speedMin;
-    g.particles.push({
+    spawnParticle(g, {
       x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,

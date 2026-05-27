@@ -4,6 +4,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 import { getScrapMult } from '../relicSystem';
+import { spawnParticle } from '../pool';
 
 /**
  * Create a scrap collection effect at the given position.
@@ -24,7 +25,7 @@ export function triggerScrapCollection(g, x, y, value) {
     for (let i = 0; i < C.particleCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = C.particleSpeedMin + Math.random() * (C.particleSpeedMax - C.particleSpeedMin);
-      g.particles.push({
+      spawnParticle(g, {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,

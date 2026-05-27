@@ -6,6 +6,7 @@
  * Spawns thrust trail particles behind the ship when thrusting forward.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { spawnParticle } from '../pool';
 
 /**
  * Interpolate between color stops based on speed ratio (0-1).
@@ -97,7 +98,7 @@ function spawnThrustTrail(g, yaw, dt) {
     const spawnX = g.player.x + Math.cos(backAngle) * C.offset;
     const spawnY = g.player.y + Math.sin(backAngle) * C.offset;
 
-    g.particles.push({
+    spawnParticle(g, {
       x: spawnX,
       y: spawnY,
       vx: Math.cos(particleAngle) * speed,

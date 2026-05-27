@@ -46,6 +46,7 @@ Standalone simulation and rendering algorithms detached from React state.
 - `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, gauntlet, waveSurge, hazards, weather, emergencyBeacon, adaptiveDifficulty, keys, mouse, worldMouse). Defines the `GameState` typedef.
 - `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row. Assigns mission node types, hazard metadata, mini-boss nodes, and sector-level weather.
 - `combat.js`: Low-level combat utilities — targeting helpers, projectile creation, particle creation, enemy death handling, directional shield checks, screen shake/hit stop triggers, shield restoration, player i-frames, combo milestones, damage numbers, and power-up aura triggers. No React imports.
+- `pool.js`: Fixed-capacity object pool infrastructure for high-churn entities. `createPools(g)` attaches `g.entityPools` and active array views for enemies, projectiles, particles, pickups, powerups, and effects. Spawn helpers (`spawnProjectileEntity`, `spawnParticle`, `spawnPickup`, `spawnPowerup`, `spawnEffect`, `spawnEnemy`) recycle objects and fall back to plain arrays for isolated tests.
 - `targeting.js`: Shared hostile target selection for enemies, bosses, mini-bosses, and sabotage structures. Provides target collection and nearest-target helpers used by auto-aim, missiles, and HUD indicators.
 - `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` / wave formation spawning (pushes to `g.enemies`), `spawnMiniInterceptors()`, and `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage/gauntlet/wave_surge/miniboss types). No React imports.
 - `settings.js`: Persistent settings helpers (`getDefaultSettings`, `normalizeSettings`, `loadSettings`, `saveSettings`) backed by localStorage (`space_sentinel_settings`). Used by `createGameState()` and `SettingsOverlay.jsx`.
@@ -75,7 +76,7 @@ Each system receives explicit parameters (not reading from global state) and mut
 - `deathPulses.js`: Shockwave/death pulse effects and collision damage.
 - `dynamicFov.js`: Camera FOV response to hits, boss deaths, and combat intensity.
 - `weather.js`: Sector weather effects — solar flare, debris field, gravity anomaly, and EMI logic plus projectile/weapon modifiers.
-- `cleanup.js`: Dead entity removal — `cleanup(dt, g)`. Periodic pool cleanup of dead enemies, projectiles, particles, pickups.
+- `cleanup.js`: Dead entity recycling — `cleanup(dt, g)`. Runs every frame, releases inactive/out-of-bounds enemies, projectiles, particles, pickups, powerups, and expired effects back to `entityPools`, with in-place array compaction fallback for tests or non-pooled state.
 - `mission.js`: Mission logic — `updateTransition(dt, g, cbs)`, `createCompleteMission(g)`, `checkMissionProgress(g, dt)`. Mission completion detection, rewards calculation, map progression, and transition timer.
 - `escort.js`: Escort drone — `updateEscort(dt, g, diffMult)`. Escort drone movement, evasion behavior, collision, and mission progress checks.
 - `beacon.js`: Beacon defense — `updateBeacon(dt, g, currentDiffMult, completeMission, setGameState)`. Beacon HP management, enemy projectile/ram collision, defense radius targeting, and mission completion checks.
@@ -265,7 +266,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 ## Performance Optimizations
 - **Spatial Culling:** `cleanup.js` removes entities beyond 3000 units from player
 - **Render Distance:** `renderer3d.js` skips rendering entities beyond 1800 units
-- **Entity Cleanup:** `cleanup.js` uses filter-based GC on entity arrays (enemies, projectiles, particles, pickups, effects) at 5-second intervals
+- **Entity Cleanup:** `cleanup.js` recycles dead/out-of-bounds entities into fixed-capacity pools each frame instead of filter-replacing arrays
 
 ## Post-Mission Summary
 - **Component:** `PostMissionSummary.jsx` — Shows mission stats during transition

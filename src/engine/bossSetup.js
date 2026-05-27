@@ -8,6 +8,7 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 import { BOSS_ROSTER } from '../constants/bosses';
 import { createParticles } from './combat';
 import { SoundManager } from './audio';
+import { spawnEffect } from './pool';
 
 /**
  * Initialize a boss fight.
@@ -61,13 +62,13 @@ export const setupBoss = (g, level) => {
   g.spawnCooldown = 999;
 
   // Intro announcement
-  g.effects.push({
+  spawnEffect(g, {
     type: 'boss_intro',
     text: variant.introText,
     life: 2.5,
     big: false,
   });
-  g.effects.push({
+  spawnEffect(g, {
     type: 'boss_intro',
     text: variant.name,
     life: 2.5,

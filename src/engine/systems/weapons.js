@@ -8,6 +8,7 @@ import { getNearestHostileTarget } from '../targeting';
 import { getActiveSynergies, applyPlasmaSynergy, applyAutocannonSynergy, applyPointDefenseSynergy } from '../weaponSynergies';
 import { areWeaponsDisabled } from './weather';
 import { getDamageMult, getFireRateMult, getPlasmaDamageMult, getCritChance, getMissileSplitCount, getSelfDamageChance } from '../relicSystem';
+import { spawnEffect } from '../pool';
 
 /**
  * @param {number} dt — Delta time
@@ -110,11 +111,11 @@ export const updateWeapons = (dt, g, completeMission) => {
     let hits = 0;
     let hit = false;
 
-    const enemyMissiles = g.projectiles.filter(p => p.active && p.isEnemy && p.type === 'enemy_missile');
-    for (let m of enemyMissiles) {
+    for (let m of g.projectiles) {
+      if (!m.active || !m.isEnemy || m.type !== 'enemy_missile') continue;
       if (Math.hypot(m.x - g.player.x, m.y - g.player.y) < range) {
         m.active = false; hit = true;
-        g.effects.push({ type: 'laser', source: g.player, target: m, life: 0.1 });
+        spawnEffect(g, { type: 'laser', source: g.player, target: m, life: 0.1 });
         spawnDamageNumber(g, m.x, m.y, dmg, { hitType: 'hull', isCrit: true, life: 0.5 });
         hits++;
         if (hits >= maxHits) break;
@@ -133,7 +134,7 @@ export const updateWeapons = (dt, g, completeMission) => {
           if (pdShieldWasFull && e.shield <= 0) {
             checkShieldBreak(g, e, e.x, e.y);
           }
-          g.effects.push({ type: 'laser', source: g.player, target: e, life: 0.1 });
+          spawnEffect(g, { type: 'laser', source: g.player, target: e, life: 0.1 });
           spawnDamageNumber(g, e.x, e.y, ad, { shieldDamage: shieldAbsorbed, isCrit: true });
           hits++;
           if (e.hp <= 0) {

@@ -20,6 +20,7 @@ import {
   createDefaultDynamicFov,
   createDefaultWeather,
 } from './state';
+import { resetEntityPools } from './pool';
 
 /**
  * Reset all per-mission state to defaults.
@@ -30,12 +31,7 @@ import {
  */
 export const clearMissionState = (g) => {
   // ── Entity arrays ──
-  g.enemies = [];
-  g.projectiles = [];
-  g.particles = [];
-  g.pickups = [];
-  g.effects = [];
-  g.powerups = [];
+  resetEntityPools(g);
   g.hazards = [];
 
   // ── Visual / effect arrays ──

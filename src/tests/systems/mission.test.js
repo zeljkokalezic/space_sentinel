@@ -195,8 +195,8 @@ describe('createCompleteMission', () => {
     });
     const complete = createCompleteMission(g);
     complete();
-    expect(g.effects.length).toBe(1);
-    const effect = g.effects[0];
+    const effect = g.effects.find(e => e.type === 'mission_complete');
+    expect(effect).toBeDefined();
     expect(effect.type).toBe('mission_complete');
     expect(effect.text).toBe('AREA CLEARED! +40 SCRAP');
     expect(effect.life).toBe(GAME_CONFIG.transition.duration);
@@ -208,8 +208,9 @@ describe('createCompleteMission', () => {
     });
     const complete = createCompleteMission(g);
     complete();
-    expect(g.effects[0].x).toBe(640); // 1280 / 2
-    expect(g.effects[0].y).toBe(180); // 720 / 4 = 180, max(100, 180) = 180
+    const effect = g.effects.find(e => e.type === 'mission_complete');
+    expect(effect.x).toBe(640); // 1280 / 2
+    expect(effect.y).toBe(180); // 720 / 4 = 180, max(100, 180) = 180
   });
 
   it('uses 100 as minimum Y for effect position', () => {
@@ -225,7 +226,8 @@ describe('createCompleteMission', () => {
     const complete = createCompleteMission(g);
     complete();
     // innerHeight/4 = 50, max(100, 50) = 100
-    expect(g.effects[0].y).toBe(100);
+    const effect = g.effects.find(e => e.type === 'mission_complete');
+    expect(effect.y).toBe(100);
   });
 
   it('sets transitionTimer to config duration', () => {
@@ -293,7 +295,7 @@ describe('createCompleteMission', () => {
     complete();
     expect(g.scrap).toBe(scrapAfterFirst);
     expect(g.level).toBe(levelAfterFirst);
-    expect(g.effects.length).toBe(1); // only one effect pushed
+    expect(g.effects.filter(e => e.type === 'mission_complete')).toHaveLength(1);
   });
 
   /* ── Map node updates ── */

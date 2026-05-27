@@ -11,6 +11,7 @@ import { recordMissionCompletion as recordSectorMission } from '../sectorRank';
 import { getScrapMultiplier } from '../difficulty';
 import { tryAddRelic, getRandomRelic } from '../relicSystem';
 import { clearMissionState } from '../stateCleanup';
+import { spawnEffect } from '../pool';
 
 /**
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
@@ -126,7 +127,7 @@ export const createCompleteMission = (g) => {
 
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
-    g.effects.push({
+    spawnEffect(g, {
       type: 'mission_complete',
       x: vw / 2,
       y: Math.max(100, vh / 4),

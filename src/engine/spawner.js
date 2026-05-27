@@ -6,6 +6,7 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 import { BOSS_ROSTER, MINIBOSS_ROSTER } from '../constants/bosses';
 import { calculateDifficultyMultiplier } from './difficulty';
 import { SoundManager } from './audio';
+import { spawnEnemy as spawnEnemyEntity, spawnParticle } from './pool';
 
 let _enemyIdCounter = 0;
 let _spawnFlashIdCounter = 0;
@@ -236,7 +237,7 @@ function spawnWavePattern(g, pattern, level) {
       }
     }
 
-    g.enemies.push(enemyObj);
+    spawnEnemyEntity(g, enemyObj);
 
     // Create spawn flash effect at enemy spawn location
     createSpawnFlash(g, x, y);
@@ -400,7 +401,7 @@ export function spawnMiniInterceptors(g, x, y, count) {
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
     const spread = 30 + Math.random() * 20;
-    g.enemies.push({
+    spawnEnemyEntity(g, {
       id: ++_enemyIdCounter,
       x: x + Math.cos(angle) * spread,
       y: y + Math.sin(angle) * spread,
@@ -467,7 +468,7 @@ export function createSpawnFlash(g, x, y) {
     for (let i = 0; i < C.particleCount; i++) {
       const angle = (i / C.particleCount) * Math.PI * 2;
       const speed = 60 + Math.random() * 40;
-      g.particles.push({
+      spawnParticle(g, {
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,

@@ -82,6 +82,15 @@ export const GAME_CONFIG = {
     eliteBonusMax: 0.4,
   },
 
+  pools: {
+    enemies: 200,
+    projectiles: 1000,
+    particles: 3000,
+    pickups: 500,
+    powerups: 100,
+    effects: 500,
+  },
+
   enemyWeapons: {
     shooter: {
       damage: 15,

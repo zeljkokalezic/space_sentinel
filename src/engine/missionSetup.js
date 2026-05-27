@@ -13,6 +13,7 @@ import { setupMiniboss, resetMiniboss } from './minibossSetup';
 import { setupHazards, resetHazards } from './hazardSetup';
 import { setupGauntlet, resetGauntlet, setupWaveSurge, resetWaveSurge } from './gauntletSetup';
 import { initWeather, resetWeather } from './systems/weather';
+import { resetEntityPools } from './pool';
 
 /**
  * Set up a combat mission on the game state.
@@ -33,8 +34,7 @@ export const setupCombatMission = (g, mission, level) => {
   g.player.yaw = Math.PI / 2;
   g.player.vx = 0; g.player.vy = 0;
   g.worldMouse = { x: 0, y: 200 };
-  g.enemies = []; g.projectiles = [];
-  g.particles = []; g.pickups = []; g.effects = [];
+  resetEntityPools(g);
 
   if (mission.type === 'escort') {
     setupEscort(g, level);

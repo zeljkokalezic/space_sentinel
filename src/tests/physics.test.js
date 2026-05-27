@@ -386,12 +386,10 @@ describe('updatePhysics — mission completion', () => {
 });
 
 /* ─────────────────────────────────────────────────────────
- * 6. Cleanup removes inactive entities after interval
+ * 6. Cleanup recycles inactive entities immediately
  * ───────────────────────────────────────────────────────── */
 describe('updatePhysics — entity cleanup', () => {
-  const ci = GAME_CONFIG.cleanup.interval;
-
-  it('does NOT remove inactive entities before cleanup interval', () => {
+  it('removes inactive entities without waiting for the old cleanup interval', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
@@ -403,15 +401,16 @@ describe('updatePhysics — entity cleanup', () => {
     });
     g.enemies[0].active = false;
 
-    updatePhysics(ci - 1, g, makeCbs()); // timer = ci-1, below interval — no cleanup
-    expect(g.enemies.length).toBe(2); // still has the inactive one
+    updatePhysics(0.1, g, makeCbs());
+    expect(g.enemies.length).toBe(1);
+    expect(g._cleanupTimer).toBe(0);
   });
 
   it('removes inactive enemies when cleanup interval is reached', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 1, // almost at interval
+      _cleanupTimer: 0,
       enemies: [
         createTestEnemy(100, 0),
         createTestEnemy(200, 0),
@@ -419,7 +418,7 @@ describe('updatePhysics — entity cleanup', () => {
     });
     g.enemies[0].active = false;
 
-    updatePhysics(1.0, g, makeCbs()); // timer = ci, triggers cleanup
+    updatePhysics(1.0, g, makeCbs());
     expect(g.enemies.length).toBe(1);
     expect(g.enemies[0].active).toBe(true);
   });
@@ -428,7 +427,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 1,
+      _cleanupTimer: 0,
       cooldowns: { autocannon: 999, plasma: 999, missiles: 999, pointDefense: 999, shieldRegen: 999 },
       projectiles: [
         { x: 0, y: 0, active: true, life: 0, vx: 100, vy: 0, radius: 5, type: 'autocannon', isEnemy: false, hitList: [], pierce: 0 },
@@ -445,7 +444,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 1,
+      _cleanupTimer: 0,
       particles: [
         { x: 0, y: 0, active: true, life: 10.0, maxLife: 10.0, vx: 0, vy: 0, vz: 0, color: 0xffffff },
         { x: 0, y: 0, active: false, life: 0, maxLife: 1.0, vx: 0, vy: 0, vz: 0, color: 0xffffff },
@@ -461,7 +460,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 1,
+      _cleanupTimer: 0,
       pickups: [
         { x: 0, y: 0, active: true, value: 1, radius: 6 },
         { x: 0, y: 0, active: false, value: 2, radius: 6 },
@@ -477,7 +476,7 @@ describe('updatePhysics — entity cleanup', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 1,
+      _cleanupTimer: 0,
       effects: [
         { type: 'dmg', x: 0, y: 0, text: '10', life: 10.0 },
         { type: 'dmg', x: 0, y: 0, text: '20', life: -0.5 },
@@ -489,32 +488,34 @@ describe('updatePhysics — entity cleanup', () => {
     expect(g.effects[0].life).toBeGreaterThan(0);
   });
 
-  it('resets cleanup timer after running cleanup', () => {
+  it('leaves the legacy cleanup timer untouched', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 0.5,
+      _cleanupTimer: 1.5,
       enemies: [createTestEnemy(100, 0)],
     });
 
-    updatePhysics(0.5, g, makeCbs()); // timer becomes ci, cleanup runs, timer resets
-    expect(g._cleanupTimer).toBe(0);
+    updatePhysics(0.5, g, makeCbs());
+    expect(g._cleanupTimer).toBe(1.5);
   });
 
-  it('cleanup timer accumulates across multiple calls', () => {
+  it('does not accumulate the legacy cleanup timer across calls', () => {
     const g = createTestState({
       totalTime: 0,
       spawnCooldown: 10,
-      _cleanupTimer: ci - 2,
+      _cleanupTimer: 0,
       enemies: [createTestEnemy(100, 0)],
     });
     g.enemies[0].active = false;
 
-    updatePhysics(1.0, g, makeCbs()); // timer = ci-1, no cleanup
-    expect(g.enemies.length).toBe(1);
-
-    updatePhysics(1.0, g, makeCbs()); // timer = ci, cleanup runs
+    updatePhysics(1.0, g, makeCbs());
     expect(g.enemies.length).toBe(0);
+    expect(g._cleanupTimer).toBe(0);
+
+    updatePhysics(1.0, g, makeCbs());
+    expect(g.enemies.length).toBe(0);
+    expect(g._cleanupTimer).toBe(0);
   });
 });
 

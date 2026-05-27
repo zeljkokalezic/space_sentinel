@@ -33,11 +33,12 @@
  * @property {boolean} [mission.completed] — Whether this mission has been completed
  * @property {Object} map — Sector map state (from generateMap)
  * @property {number} spawnCooldown — Time until next enemy spawn
- * @property {Array} enemies — Active enemy pool
- * @property {Array} projectiles — Active projectile pool
- * @property {Array} particles — Active particle pool
- * @property {Array} pickups — Active scrap pickup pool
- * @property {Array} effects — Active visual effect pool
+ * @property {Object} entityPools — Fixed-capacity pools backing high-churn entity arrays
+ * @property {Array} enemies — Active enemy entities
+ * @property {Array} projectiles — Active projectile entities
+ * @property {Array} particles — Active particle entities
+ * @property {Array} pickups — Active scrap pickup entities
+ * @property {Array} effects — Active visual effect entities
  * @property {Array} stars — Star field particles
  * @property {Object} levels — Upgrade levels
  * @property {Object} cooldowns — Weapon/system cooldown timers
@@ -58,7 +59,6 @@
  * @property {Object} audio — Audio system state
  * @property {boolean} audio.muted — Whether audio is muted
  * @property {number} audio.volume — Master volume (0.0–1.0)
- * @property {number} [_cleanupTimer] — Internal cleanup interval timer
  * @property {Object} [settings] — Display/gameplay settings
  * @property {boolean} settings.showFPS — Show FPS counter
  * @property {boolean} settings.screenShake — Enable screen shake
@@ -186,13 +186,15 @@ import { generateMap } from './mapGenerator';
 import { loadAchievements } from './achievements';
 import { loadSettings } from './settings';
 import { SHIP_SKINS } from '../constants/skins';
+import { createPools } from './pool';
 
 /**
  * Creates a fresh game state object with all default values.
  * @returns {GameState}
  */
-export const createGameState = () => ({
-  achievements: {
+export const createGameState = () => {
+  const g = {
+    achievements: {
     unlocked: loadAchievements(),
     notifications: [],
   },
@@ -292,8 +294,11 @@ export const createGameState = () => ({
     missionEndTime: [],
   },
   weather: createDefaultWeather(),
-  lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
-});
+    lastTime: typeof performance !== 'undefined' ? performance.now() : 0,
+  };
+  createPools(g);
+  return g;
+};
 
 /**
  * @returns {Object} Default escort drone state

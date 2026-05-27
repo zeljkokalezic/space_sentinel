@@ -9,6 +9,7 @@ import { createParticlesWithType } from './systems/particles';
 import { spawnMiniInterceptors } from './spawner';
 import { applyMissileKillSynergy, getActiveSynergies } from './weaponSynergies';
 import { getExtraScrapPerKill } from './relicSystem';
+import { spawnEffect, spawnParticle, spawnPickup, spawnPowerup, spawnProjectileEntity } from './pool';
 
 /**
  * Check if a directional shield on the enemy absorbs the hit.
@@ -90,7 +91,7 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
     target = g.player;
   }
 
-  const proj = {
+  const proj = spawnProjectileEntity(g, {
     x, y,
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
@@ -101,7 +102,8 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
     life: 0,
     target,
     isEnemy: type.startsWith('enemy'),
-  };
+  });
+  if (!proj) return;
 
   // Apply synergy flags
   if (synergyFlags && synergyFlags.armorPierce) {
@@ -114,7 +116,6 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
     proj.steerAngle = synergyFlags.steerAngle ?? (Math.PI / 6);
   }
 
-  g.projectiles.push(proj);
 };
 
 /**
@@ -200,7 +201,7 @@ export const killEnemy = (g, e, completeMission) => {
     const types = Object.keys(C.powerups.types);
     const type = types[Math.floor(Math.random() * types.length)];
     if (g.powerups) {
-      g.powerups.push({
+      spawnPowerup(g, {
         id: Math.random(),
         x: e.x + (Math.random() - 0.5) * 20,
         y: e.y + (Math.random() - 0.5) * 20,
@@ -216,7 +217,7 @@ export const killEnemy = (g, e, completeMission) => {
   const val = e.type === 'heavy' ? 5 : (e.type === 'interceptor' ? 2 : 1);
   const rampageMult = (g.adaptiveDifficulty?.rampageMode) ? 3 : 1;
   const extraScrap = getExtraScrapPerKill(g);
-  g.pickups.push({ id: Math.random(), x: e.x, y: e.y, value: val * rampageMult + extraScrap, active: true, radius: 6 });
+  spawnPickup(g, { id: Math.random(), x: e.x, y: e.y, value: val * rampageMult + extraScrap, active: true, radius: 6 });
 
   // Death pulse for eligible enemy types
   if (C.deathPulse && C.deathPulse.eligibleTypes && C.deathPulse.eligibleTypes.includes(e.type)) {
@@ -234,7 +235,7 @@ export const killEnemy = (g, e, completeMission) => {
       fireProjectile(g, e.x, e.y, angle, 600, pdDmg, 'chain_reaction', 0);
       // Visual laser effect
       if (g.effects) {
-        g.effects.push({ type: 'laser', source: { x: e.x, y: e.y }, target: t, life: 0.15 });
+        spawnEffect(g, { type: 'laser', source: { x: e.x, y: e.y }, target: t, life: 0.15 });
       }
     }
   }
@@ -367,7 +368,7 @@ export const checkShieldBreak = (g, entity, x, y) => {
 
   // "SHIELD DOWN" popup effect
   if (g.effects) {
-    g.effects.push({
+    spawnEffect(g, {
       type: 'shield_down',
       x, y,
       text: C.popupText,
@@ -396,7 +397,7 @@ export const triggerShieldRestoration = (g) => {
 
   // "SHIELD UP" popup effect (world-space, above player)
   if (g.effects) {
-    g.effects.push({
+    spawnEffect(g, {
       type: 'shield_up',
       x: g.player.x,
       y: g.player.y - 40,
@@ -425,7 +426,7 @@ export const triggerShieldRestoration = (g) => {
     for (let i = 0; i < C.particleCount; i++) {
       const angle = (Math.PI * 2 / C.particleCount) * i + (Math.random() - 0.5) * 0.3;
       const speed = C.particleSpeedMin + Math.random() * (C.particleSpeedMax - C.particleSpeedMin);
-      g.particles.push({
+      spawnParticle(g, {
         x: g.player.x,
         y: g.player.y,
         vx: Math.cos(angle) * speed,
@@ -443,7 +444,7 @@ export const triggerShieldRestoration = (g) => {
 
   // Expanding shield ring effect
   if (g.effects) {
-    g.effects.push({
+    spawnEffect(g, {
       type: 'shield_ring',
       x: g.player.x,
       y: g.player.y,
@@ -493,7 +494,7 @@ export const triggerComboMilestone = (g, count) => {
   const color = C.colors[count] || C.colors[5];
 
   // Milestone popup effect (screen-space, centered)
-  g.effects.push({
+  spawnEffect(g, {
     type: 'combo_milestone',
     count,
     color,
@@ -516,7 +517,7 @@ export const triggerComboMilestone = (g, count) => {
     for (let i = 0; i < C.particleCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 60 + Math.random() * 120;
-      g.particles.push({
+      spawnParticle(g, {
         x: g.player.x,
         y: g.player.y,
         vx: Math.cos(angle) * speed,
@@ -576,7 +577,7 @@ export const spawnDamageNumber = (g, x, y, damage, opts = {}) => {
   const offsetX = (Math.random() - 0.5) * 12;
   const offsetY = (Math.random() - 0.5) * 6;
 
-  g.effects.push({
+  spawnEffect(g, {
     type: 'dmg',
     x: x + offsetX,
     y: y + offsetY,
@@ -592,7 +593,7 @@ export const spawnDamageNumber = (g, x, y, damage, opts = {}) => {
 
   // If shield absorbed some damage, spawn a secondary shield damage number
   if (shieldDamage > 0) {
-    g.effects.push({
+    spawnEffect(g, {
       type: 'dmg',
       x: x + (Math.random() - 0.5) * 16,
       y: y + (Math.random() - 0.5) * 10 - 5,

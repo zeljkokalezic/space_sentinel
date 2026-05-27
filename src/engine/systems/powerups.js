@@ -4,6 +4,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, killEnemy, triggerPowerupAura, triggerShieldRestoration } from '../combat';
 import { SoundManager } from '../audio';
+import { spawnEffect } from '../pool';
 
 /**
  * @param {number} dt — Delta time
@@ -12,7 +13,7 @@ import { SoundManager } from '../audio';
 export const updatePowerups = (dt, g, completeMission) => {
   const C = GAME_CONFIG;
   if (!g.activeBuffs) g.activeBuffs = {};
-  if (!g.powerups) g.powerups = [];
+  if (!g.powerups) g.powerups = g.entityPools?.powerups?.active || [];
 
   // Decay active buffs
   for (const [type, buff] of Object.entries(g.activeBuffs)) {
@@ -54,7 +55,7 @@ export const updatePowerups = (dt, g, completeMission) => {
           }
         }
         // White flash effect
-        g.effects.push({ type: 'flash', color: '#ffffff', life: 0.5 });
+        spawnEffect(g, { type: 'flash', color: '#ffffff', life: 0.5 });
       } else if (pu.type === 'repair') {
         // Heal 30% max HP
         const heal = g.player.maxHp * 0.3;

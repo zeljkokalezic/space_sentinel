@@ -87,18 +87,15 @@ function updateSwarm(dt, e, g, tx, ty) {
   const C = GAME_CONFIG.formations.swarm;
   const separationDist = C.separationDist;
 
-  // Find nearby swarm enemies
-  const nearby = g.enemies.filter(
-    other => other !== e && other.active && other.formation === 'swarm' &&
-      Math.hypot(other.x - e.x, other.y - e.y) < separationDist * 4
-  );
-
   let sepX = 0, sepY = 0; // separation
   let cohX = 0, cohY = 0; // cohesion (toward group center)
   let aliVx = 0, aliVy = 0; // alignment (match group velocity)
+  let nearbyCount = 0;
 
-  if (nearby.length > 0) {
-    for (const other of nearby) {
+  for (const other of g.enemies) {
+    if (other !== e && other.active && other.formation === 'swarm' &&
+      Math.hypot(other.x - e.x, other.y - e.y) < separationDist * 4) {
+      nearbyCount++;
       const dx = e.x - other.x;
       const dy = e.y - other.y;
       const d = Math.hypot(dx, dy) || 1;
@@ -113,15 +110,17 @@ function updateSwarm(dt, e, g, tx, ty) {
       aliVx += Math.cos(other.angle || 0);
       aliVy += Math.sin(other.angle || 0);
     }
+  }
 
-    cohX = cohX / nearby.length - e.x;
-    cohY = cohY / nearby.length - e.y;
+  if (nearbyCount > 0) {
+    cohX = cohX / nearbyCount - e.x;
+    cohY = cohY / nearbyCount - e.y;
     const cohDist = Math.hypot(cohX, cohY) || 1;
     cohX /= cohDist;
     cohY /= cohDist;
 
-    aliVx /= nearby.length;
-    aliVy /= nearby.length;
+    aliVx /= nearbyCount;
+    aliVy /= nearbyCount;
   }
 
   // Target direction

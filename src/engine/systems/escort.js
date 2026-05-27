@@ -4,6 +4,7 @@
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles, spawnDamageNumber } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
+import { spawnEffect } from '../pool';
 
 /**
  * @param {number} dt — Delta time
@@ -99,7 +100,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
     createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
-    g.effects.push({
+    spawnEffect(g, {
       type: 'mission_complete',
       x: vw / 2,
       y: Math.max(100, vh / 4),

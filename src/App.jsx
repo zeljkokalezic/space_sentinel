@@ -8,6 +8,7 @@ import { setupHazards }            from './engine/hazardSetup';
 import { loadGame }                from './engine/saveManager';
 import { SoundManager }            from './engine/audio';
 import { clearMissionState }       from './engine/stateCleanup';
+import { resetEntityPools }         from './engine/pool';
 import { SHIP_SKINS }              from './constants/skins';
 import { UPGRADE_DATA }            from './constants/upgrades';
 import {
@@ -223,8 +224,7 @@ export default function App() {
       g.emergencyBeacon.activated = false;
       g.emergencyBeacon.nodeId = null;
       // Clear entity arrays to prevent stale enemies/projectiles from persisting
-      g.enemies = []; g.projectiles = []; g.particles = [];
-      g.pickups = []; g.effects = [];
+      resetEntityPools(g);
       setUiEmergencyBeacon({ purchased: false, activated: false, nodeId: null });
       // Sync player stats to UI
       setUiLevels({ ...g.levels });

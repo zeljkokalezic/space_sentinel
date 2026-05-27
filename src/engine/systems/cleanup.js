@@ -1,41 +1,55 @@
 /**
- * systems/cleanup.js — Dead entity pool cleanup with proper timer.
+ * systems/cleanup.js - Dead entity recycling and spatial culling.
  */
-import { GAME_CONFIG } from '../../constants/gameConfig';
 
 /**
- * Periodically filter out dead/inactive entities from all pools.
- * Uses a proper accumulator timer instead of the fragile g.totalTime % 5 < dt check.
- *
- * Also performs spatial culling: removes entities far outside the camera view
- * to reduce per-frame update cost.
- *
  * @param {number} dt — Delta time
  * @param {object} g — Game state
  */
 export const cleanup = (dt, g) => {
-  const C = GAME_CONFIG;
-  g._cleanupTimer = (g._cleanupTimer ?? 0) + dt;
-  if (g._cleanupTimer >= C.cleanup.interval) {
-    g._cleanupTimer = 0;
-    
-    // Single-pass: filter dead + spatial cull in one go
-    const cullDistSq = 3000 * 3000; // 3km squared
-    const px = g.player.x;
-    const py = g.player.y;
+  const cullDistSq = 3000 * 3000;
+  const px = g.player.x;
+  const py = g.player.y;
 
-    const inBounds = (e) => {
-      const dx = e.x - px, dy = e.y - py;
-      return dx * dx + dy * dy < cullDistSq;
-    };
+  cleanupEntities(g, 'enemies', (e) => e.active && inBounds(e, px, py, cullDistSq));
+  cleanupEntities(g, 'projectiles', (p) => p.active && inBounds(p, px, py, cullDistSq));
+  cleanupEntities(g, 'particles', (p) => p.active && p.life > 0 && inBounds(p, px, py, cullDistSq));
+  cleanupEntities(g, 'pickups', (p) => p.active && inBounds(p, px, py, cullDistSq));
+  cleanupEntities(g, 'powerups', (p) => p.active && inBounds(p, px, py, cullDistSq));
+  cleanupEntities(g, 'effects', (e) => e.life > 0);
 
-    g.enemies     = g.enemies.filter(e => e.active && inBounds(e));
-    g.projectiles = g.projectiles.filter(p => p.active && inBounds(p));
-    g.particles   = g.particles.filter(p => p.active && inBounds(p));
-    g.pickups     = g.pickups.filter(p => p.active && inBounds(p));
-    g.powerups    = g.powerups.filter(p => p.active && inBounds(p));
-    g.effects     = g.effects.filter(e => e.life > 0);
-    if (g.spawnFlashes) g.spawnFlashes = g.spawnFlashes.filter(f => f.active);
-    if (g.scrapFloats) g.scrapFloats = g.scrapFloats.filter(f => f.active);
-  }
+  compactArray(g.spawnFlashes, (f) => f.active);
+  compactArray(g.scrapFloats, (f) => f.active);
 };
+
+function cleanupEntities(g, type, keep) {
+  const pool = g.entityPools?.[type];
+  if (pool && g[type] === pool.active) recyclePool(pool, keep);
+  else compactArray(g[type], keep);
+}
+
+function inBounds(e, px, py, cullDistSq) {
+  const dx = e.x - px, dy = e.y - py;
+  return dx * dx + dy * dy < cullDistSq;
+}
+
+function recyclePool(pool, keep) {
+  if (!pool) return;
+  for (let i = pool.active.length - 1; i >= 0; i--) {
+    const entity = pool.active[i];
+    if (!keep(entity)) pool.release(entity);
+  }
+}
+
+function compactArray(arr, keep) {
+  if (!arr) return;
+  let write = 0;
+  for (let read = 0; read < arr.length; read++) {
+    const item = arr[read];
+    if (keep(item)) {
+      arr[write] = item;
+      write++;
+    }
+  }
+  arr.length = write;
+}

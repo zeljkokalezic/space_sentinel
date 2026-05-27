@@ -6,6 +6,7 @@
 
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createParticles } from '../combat';
+import { spawnEffect, spawnPickup, spawnProjectileEntity } from '../pool';
 
 /**
  * @param {number} dt — Delta time
@@ -38,7 +39,7 @@ export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
       const dx = g.player.x - s.x;
       const dy = g.player.y - s.y;
       const angle = Math.atan2(dy, dx);
-      g.projectiles.push({
+      spawnProjectileEntity(g, {
         id: Math.random(),
         x: s.x + Math.cos(angle) * (s.radius + 5),
         y: s.y + Math.sin(angle) * (s.radius + 5),
@@ -64,7 +65,7 @@ export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
         s.hp -= p.damage;
         p.active = false;
         createParticles(g, p.x, p.y, cfg.color, 5);
-        g.effects.push({
+        spawnEffect(g, {
           type: 'dmg',
           x: s.x,
           y: s.y - s.radius - 10,
@@ -77,7 +78,7 @@ export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
           s.active = false;
           createParticles(g, s.x, s.y, cfg.color, 20);
           // Drop scrap
-          g.pickups.push({
+          spawnPickup(g, {
             id: Math.random(),
             x: s.x + (Math.random() - 0.5) * 30,
             y: s.y + (Math.random() - 0.5) * 30,

@@ -1,8 +1,8 @@
 /**
  * Unit tests for systems/cleanup.js — cleanup(dt, g)
  *
- * Covers: dead entity removal from enemies/projectiles/particles/pickups/effects,
- * periodic cleanup timer behavior, active entity preservation, and empty array safety.
+ * Covers: dead entity recycling from enemies/projectiles/particles/pickups/effects,
+ * active entity preservation, immediate cleanup behavior, and empty array safety.
  *
  * Run:  npm run test:run -- src/tests/systems/cleanup.test.js
  */
@@ -323,153 +323,38 @@ describe('active entities are preserved', () => {
 });
 
 /* ──────────────────────────────────────────────
- * 7. Cleanup only runs periodically (timer behavior)
+ * 7. Cleanup recycles immediately
  * ────────────────────────────────────────────── */
-describe('periodic cleanup timer', () => {
-  it('does not clean when timer has not reached interval', () => {
+describe('immediate cleanup', () => {
+  it('removes inactive entities without waiting for an interval', () => {
     const g = createTestState();
     const deadEnemy = createTestEnemy(0, 0);
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
-    const ci = GAME_CONFIG.cleanup.interval;
-    // Call with dt less than interval
-    cleanup(ci - 1, g);
-
-    expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(ci - 1);
-  });
-
-  it('does not clean when timer is below interval after accumulation', () => {
-    const g = createTestState();
-    const deadEnemy = createTestEnemy(0, 0);
-    deadEnemy.active = false;
-    g.enemies = [deadEnemy];
-
-    const ci = GAME_CONFIG.cleanup.interval;
-    const step = ci / 4; // 4 steps = ci, so 3 steps = 0.75*ci < ci
-
-    cleanup(step, g);
-    expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(step);
-
-    cleanup(step, g);
-    expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(step * 2);
-
-    cleanup(step, g);
-    expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(step * 3);
-  });
-
-  it('cleans when timer reaches exactly the interval', () => {
-    const g = createTestState();
-    const deadEnemy = createTestEnemy(0, 0);
-    deadEnemy.active = false;
-    g.enemies = [deadEnemy];
-
-    const interval = GAME_CONFIG.cleanup.interval;
-
-    cleanup(interval, g);
+    cleanup(0.016, g);
 
     expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
+    expect(g._cleanupTimer).toBeUndefined();
   });
 
-  it('cleans when timer exceeds the interval', () => {
+  it('does not create or use the legacy cleanup timer', () => {
     const g = createTestState();
-    const deadEnemy = createTestEnemy(0, 0);
-    deadEnemy.active = false;
-    g.enemies = [deadEnemy];
 
-    const interval = GAME_CONFIG.cleanup.interval;
+    cleanup(0.5, g);
+    cleanup(0.5, g);
 
-    cleanup(interval + 2.0, g);
-
-    expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
+    expect(g._cleanupTimer).toBeUndefined();
   });
 
-  it('resets timer to 0 after cleanup fires', () => {
+  it('keeps active entities on every cleanup call', () => {
     const g = createTestState();
     g.enemies = [createTestEnemy(0, 0)];
 
-    cleanup(GAME_CONFIG.cleanup.interval, g);
-
-    expect(g._cleanupTimer).toBe(0);
-  });
-
-  it('accumulates timer across multiple calls and cleans on threshold', () => {
-    const g = createTestState();
-    const deadEnemy = createTestEnemy(0, 0);
-    deadEnemy.active = false;
-    g.enemies = [deadEnemy];
-
-    const ci = GAME_CONFIG.cleanup.interval;
-
-    // Accumulate: half + half = interval
-    cleanup(ci / 2, g);
+    cleanup(0, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(ci / 2);
-
-    cleanup(ci / 2, g);
-    expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
-  });
-
-  it('accumulates timer across multiple calls and cleans when exceeded', () => {
-    const g = createTestState();
-    const deadEnemy = createTestEnemy(0, 0);
-    deadEnemy.active = false;
-    g.enemies = [deadEnemy];
-
-    const ci = GAME_CONFIG.cleanup.interval;
-
-    // Accumulate: 0.75*ci + 0.5*ci = 1.25*ci > ci
-    cleanup(ci * 0.75, g);
+    cleanup(1.0, g);
     expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(ci * 0.75);
-
-    cleanup(ci * 0.5, g);
-    expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
-  });
-
-  it('cleans multiple times as timer accumulates across calls', () => {
-    const g = createTestState();
-    const interval = GAME_CONFIG.cleanup.interval;
-
-    // First round
-    g.enemies = [{ ...createTestEnemy(0, 0), active: false }];
-    cleanup(interval, g);
-    expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
-
-    // Add new dead enemy for second round
-    g.enemies = [{ ...createTestEnemy(10, 10), active: false }];
-    cleanup(interval, g);
-    expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
-  });
-
-  it('initializes _cleanupTimer to 0 when undefined', () => {
-    const g = createTestState();
-    // _cleanupTimer is not set on fresh state
-    expect(g._cleanupTimer).toBeUndefined();
-
-    cleanup(1.0, g);
-
-    expect(g._cleanupTimer).toBe(1.0);
-  });
-
-  it('uses existing _cleanupTimer value if already set', () => {
-    const g = createTestState();
-    const ci = GAME_CONFIG.cleanup.interval;
-    g._cleanupTimer = ci - 2; // start well below interval
-
-    cleanup(1.0, g);
-
-    expect(g._cleanupTimer).toBe(ci - 1); // accumulated but still below interval
   });
 });
 
@@ -649,7 +534,7 @@ describe('mixed entity cleanup across all arrays', () => {
  * 10. Edge cases
  * ────────────────────────────────────────────── */
 describe('edge cases', () => {
-  it('handles dt of 0 without cleaning', () => {
+  it('handles dt of 0 while still recycling inactive entities', () => {
     const g = createTestState();
     const deadEnemy = createTestEnemy(0, 0);
     deadEnemy.active = false;
@@ -657,36 +542,26 @@ describe('edge cases', () => {
 
     cleanup(0, g);
 
-    expect(g.enemies.length).toBe(1);
-    expect(g._cleanupTimer).toBe(0);
+    expect(g.enemies.length).toBe(0);
+    expect(g._cleanupTimer).toBeUndefined();
   });
 
-  it('handles very small dt accumulating toward threshold', () => {
+  it('handles very small dt without deferring cleanup', () => {
     const g = createTestState();
     const deadEnemy = createTestEnemy(0, 0);
     deadEnemy.active = false;
     g.enemies = [deadEnemy];
 
-    const ci = GAME_CONFIG.cleanup.interval;
-    const steps = 20;
-    const step = ci / steps; // exact fraction of interval, avoids FP drift
-
-    for (let i = 0; i < steps - 1; i++) {
-      cleanup(step, g);
-      expect(g.enemies.length).toBe(1);
-    }
-
-    // Final call pushes timer to exactly ci
-    cleanup(step, g);
+    cleanup(0.0001, g);
     expect(g.enemies.length).toBe(0);
-    expect(g._cleanupTimer).toBe(0);
+    expect(g._cleanupTimer).toBeUndefined();
   });
 
   it('cleanup interval matches GAME_CONFIG value', () => {
     expect(GAME_CONFIG.cleanup.interval).toBe(2.0);
   });
 
-  it('does not modify game state other than arrays and timer when below threshold', () => {
+  it('does not modify active entity fields while compacting arrays', () => {
     const g = createTestState();
     g.enemies = [createTestEnemy(0, 0)];
     g.projectiles = [createTestProjectile(0, 0, 0)];
