@@ -59,14 +59,8 @@ function formatTime(seconds) {
 export default function PostMissionSummary({ game, visible }) {
   if (!visible || !game?.current) return null;
   const g = game.current;
-  const stats = {
-    missionType: g.mission?.type || 'unknown',
-    enemiesDestroyed: g.stats?.enemiesDestroyed ?? 0,
-    totalTime: g.totalTime || 0,
-    playerHpPercent: Math.max(0, (g.player?.hp || 0) / (g.player?.maxHp || 100) * 100),
-    scrapEarned: g.mission?.reward || 0,
-    level: g.level || 1,
-  };
+  const stats = g.lastMissionSummary;
+  if (!stats) return null;
   
   const rating = calculateRating(stats);
   

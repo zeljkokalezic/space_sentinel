@@ -110,6 +110,8 @@ export const clearMissionState = (g) => {
 
   // ── Mission / transition ──
   g.mission = null;
+  g.lastMissionSummary = null;
+  g.missionStartStats = null;
   g.isVictory = false;
   g.transitionTimer = undefined;
 };

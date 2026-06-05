@@ -43,7 +43,7 @@ Static data designed to be completely safely modifiable without touching core ga
 Standalone simulation and rendering algorithms detached from React state.
 
 #### Core modules
-- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, gauntlet, waveSurge, hazards, weather, emergencyBeacon, adaptiveDifficulty, keys, mouse, worldMouse). Defines the `GameState` typedef.
+- `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, lastMissionSummary, missionStartStats, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, gauntlet, waveSurge, hazards, weather, emergencyBeacon, adaptiveDifficulty, keys, mouse, worldMouse). Defines the `GameState` typedef.
 - `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row. Assigns mission node types, hazard metadata, mini-boss nodes, and sector-level weather.
 - `combat.js`: Low-level combat utilities — targeting helpers, projectile creation, particle creation, enemy death handling, directional shield checks, screen shake/hit stop triggers, shield restoration, player i-frames, combo milestones, damage numbers, power-up aura triggers, `applyDamageWithShield()` (shared shield-first damage absorption), and `getViewportSize()`. No React imports.
 - `pool.js`: Fixed-capacity object pool infrastructure for high-churn entities. `createPools(g)` attaches `g.entityPools` and active array views for enemies, projectiles, particles, pickups, powerups, and effects. Spawn helpers (`spawnProjectileEntity`, `spawnParticle`, `spawnPickup`, `spawnPowerup`, `spawnEffect`, `spawnEnemy`) recycle objects and fall back to plain arrays for isolated tests.
@@ -229,7 +229,8 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Auto-save:** Triggers on every mission completion
 - **Storage:** localStorage (`space_sentinel_autosave` for auto, `space_sentinel_save` for manual)
 - **Continue Button:** Appears on StartScreen when auto-save exists
-- **Saved Data:** Player stats, scrap, level, upgrades, map state, achievements, persistent stats
+- **Saved Data:** Player stats, scrap, level, upgrades, map state, achievements, persistent stats, sector progression/buffs, relics/relic slot limit, emergency beacon state, ship skin state
+- **Not Saved:** Transient combat state such as enemies, projectiles, cooldowns, hazards, transition timers, and active temporary powerups
 
 ## Settings System
 - **Component:** `SettingsOverlay.jsx` — Accessed from Pause Menu
@@ -270,7 +271,8 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 
 ## Post-Mission Summary
 - **Component:** `PostMissionSummary.jsx` — Shows mission stats during transition
-- **Stats Displayed:** Enemies destroyed, scrap earned, time elapsed, accuracy, mission grade
+- **Stats Source:** `g.lastMissionSummary`, captured by `systems/mission.js` before `g.level` increments and cleared when starting or cleaning up missions
+- **Stats Displayed:** Mission-local enemies destroyed, scrap earned after difficulty multiplier, elapsed time, HP remaining, completed level, mission grade
 - **Grade System:** S/A/B/C/D based on performance score
 - **Timing:** Displays during `transitionTimer` countdown before map screen
 

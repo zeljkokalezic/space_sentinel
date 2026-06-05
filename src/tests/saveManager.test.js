@@ -32,10 +32,10 @@ afterEach(() => {
  * 1. createSaveData
  * ────────────────────────────────────────────── */
 describe('createSaveData', () => {
-  it('returns object with version 2', () => {
+  it('returns object with version 3', () => {
     const g = createTestState();
     const data = createSaveData(g);
-    expect(data.version).toBe(2);
+    expect(data.version).toBe(3);
   });
 
   it('includes ISO timestamp', () => {
@@ -132,6 +132,39 @@ describe('createSaveData', () => {
     const data = createSaveData(g);
     expect(data.shipSkin).toBe(2);
     expect(data.unlockedSkins).toEqual([true, false, true]);
+  });
+
+  it('serializes persistent run systems without combat state', () => {
+    const g = createTestState({
+      sector: {
+        number: 3,
+        rank: 'A',
+        rankScore: 72,
+        consecutiveARank: 2,
+        veteranMode: true,
+        activeBuff: 'speed_boost',
+        missionsCleared: 4,
+        missionsCompleted: 4,
+        totalHpPercent: 350,
+        missionStartTime: [0, 10],
+        missionEndTime: [8, 22],
+      },
+      relics: ['salvager', 'overcharger'],
+      relicSlotLimit: 7,
+      emergencyBeacon: { purchased: true, activated: true, nodeId: 'node_4' },
+      enemies: [{ active: true }],
+      projectiles: [{ active: true }],
+      cooldowns: { autocannon: 42 },
+    });
+    const data = createSaveData(g);
+    expect(data.sector.activeBuff).toBe('speed_boost');
+    expect(data.sector.veteranMode).toBe(true);
+    expect(data.relics).toEqual(['salvager', 'overcharger']);
+    expect(data.relicSlotLimit).toBe(7);
+    expect(data.emergencyBeacon).toEqual({ purchased: true, activated: true, nodeId: 'node_4' });
+    expect(data.enemies).toBeUndefined();
+    expect(data.projectiles).toBeUndefined();
+    expect(data.cooldowns).toBeUndefined();
   });
 });
 
@@ -312,6 +345,52 @@ describe('applySaveData', () => {
     applySaveData(g, { version: 1, scrap: 500 });
     expect(g.shipSkin).toBe(0);
     expect(g.unlockedSkins).toEqual([true, false, false]);
+  });
+
+  it('restores newer persistent run systems from version 3 saves', () => {
+    const g = createTestState({
+      sector: { number: 1, activeBuff: null, veteranMode: false },
+      relics: [],
+      relicSlotLimit: 5,
+      emergencyBeacon: { purchased: false, activated: false, nodeId: null },
+    });
+    applySaveData(g, {
+      version: 3,
+      sector: {
+        number: 4,
+        activeBuff: 'scrap_bonus',
+        veteranMode: true,
+        missionsCleared: 5,
+        missionStartTime: [0],
+        missionEndTime: [20],
+      },
+      relics: ['phase_core'],
+      relicSlotLimit: 8,
+      emergencyBeacon: { purchased: true, activated: false, nodeId: 'node_9' },
+    });
+    expect(g.sector.number).toBe(4);
+    expect(g.sector.activeBuff).toBe('scrap_bonus');
+    expect(g.sector.veteranMode).toBe(true);
+    expect(g.sector.missionsCleared).toBe(5);
+    expect(g.sector.missionStartTime).toEqual([0]);
+    expect(g.relics).toEqual(['phase_core']);
+    expect(g.relicSlotLimit).toBe(8);
+    expect(g.emergencyBeacon).toEqual({ purchased: true, activated: false, nodeId: 'node_9' });
+  });
+
+  it('keeps defaults when loading older saves without new persistent fields', () => {
+    const g = createTestState({
+      sector: { number: 2, activeBuff: 'speed_boost', veteranMode: true },
+      relics: ['salvager'],
+      relicSlotLimit: 6,
+      emergencyBeacon: { purchased: true, activated: false, nodeId: 'node_1' },
+    });
+    applySaveData(g, { version: 2, scrap: 500 });
+    expect(g.sector.number).toBe(2);
+    expect(g.sector.activeBuff).toBe('speed_boost');
+    expect(g.relics).toEqual(['salvager']);
+    expect(g.relicSlotLimit).toBe(6);
+    expect(g.emergencyBeacon).toEqual({ purchased: true, activated: false, nodeId: 'node_1' });
   });
 });
 

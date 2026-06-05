@@ -11,6 +11,8 @@
  * Run:  npm run test:run -- src/tests/systems/mission.test.js
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 /* ──────────────────────────────────────────────
  * Mock SoundManager so we can assert .play() calls
@@ -28,6 +30,7 @@ import {
 } from '../../engine/systems/mission';
 import { createTestState, createTestEnemy } from '../helpers';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import PostMissionSummary from '../../components/PostMissionSummary';
 
 /* ──────────────────────────────────────────────
  * Mock window for node environment
@@ -247,6 +250,56 @@ describe('createCompleteMission', () => {
     const complete = createCompleteMission(g);
     complete();
     expect(g.level).toBe(4);
+  });
+
+  it('records a per-mission summary before incrementing level', () => {
+    const g = createTestState({
+      level: 3,
+      totalTime: 42,
+      player: { hp: 150, maxHp: 300 },
+      stats: { enemiesDestroyed: 12 },
+      missionStartStats: { enemiesDestroyed: 9 },
+      mission: { type: 'kill', current: 5, target: 5, reward: 50, completed: false },
+    });
+    const complete = createCompleteMission(g);
+    complete();
+    expect(g.lastMissionSummary).toEqual({
+      missionType: 'kill',
+      enemiesDestroyed: 3,
+      totalTime: 42,
+      playerHpPercent: 50,
+      scrapEarned: 50,
+      level: 3,
+    });
+    expect(g.level).toBe(4);
+  });
+
+  it('post-mission summary renders the last mission summary instead of cumulative stats', () => {
+    const g = createTestState({
+      stats: { enemiesDestroyed: 999 },
+      level: 8,
+      mission: { type: 'kill', reward: 10 },
+      lastMissionSummary: {
+        missionType: 'kill',
+        enemiesDestroyed: 4,
+        totalTime: 65,
+        playerHpPercent: 76,
+        scrapEarned: 125,
+        level: 7,
+      },
+    });
+    const html = renderToStaticMarkup(React.createElement(PostMissionSummary, {
+      game: { current: g },
+      visible: true,
+    }));
+    expect(html).toContain('Kill Mission');
+    expect(html).toContain('>4<');
+    expect(html).toContain('1:05');
+    expect(html).toContain('76%');
+    expect(html).toContain('+125');
+    expect(html).toContain('>7<');
+    expect(html).not.toContain('999');
+    expect(html).not.toContain('>8<');
   });
 
   it('sets isVictory for kill_boss mission type', () => {

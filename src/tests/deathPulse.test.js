@@ -344,6 +344,21 @@ describe('updateDeathPulses', () => {
       expect(shieldedEnemy.shield).toBeLessThan(80);
     });
 
+    it('depleted shield triggers shield-break effects without crashing', () => {
+      triggerDeathPulse(g, 0, 0, 'heavy');
+
+      const shieldedEnemy = createTestEnemy(10, 10, 'shielded');
+      shieldedEnemy.hp = 100;
+      shieldedEnemy.shield = 5;
+      shieldedEnemy.maxShield = 5;
+      g.enemies.push(shieldedEnemy);
+
+      expect(() => updateDeathPulses(0.05, g)).not.toThrow();
+      expect(shieldedEnemy.shield).toBe(0);
+      expect(g.effects.some(e => e.type === 'shield_down')).toBe(true);
+      expect(g.particles.length).toBeGreaterThan(0);
+    });
+
     it('chain kill triggers secondary pulse with probability', () => {
       // We can't easily test probability, but we can verify the mechanic
       // doesn't crash when a chain kill occurs

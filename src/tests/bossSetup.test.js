@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { createTestState } from './helpers';
+import { setupBoss } from '../engine/bossSetup';
 
 /* ──────────────────────────────────────────────
  * Mock dependencies
@@ -45,18 +46,11 @@ describe('setupBoss', () => {
   });
 
   it('should activate the boss', () => {
-    // Simulate setupBoss logic
-    const C = GAME_CONFIG;
-    const level = 1;
-    const bossHp = C.boss.baseHp + level * C.boss.hpPerLevel;
-
-    g.boss.active = true;
-    g.boss.hp = bossHp;
-    g.boss.maxHp = bossHp;
-
+    expect(() => setupBoss(g, 1)).not.toThrow();
     expect(g.boss.active).toBe(true);
-    expect(g.boss.hp).toBe(bossHp);
-    expect(g.boss.maxHp).toBe(bossHp);
+    expect(g.boss.hp).toBeGreaterThan(0);
+    expect(g.boss.maxHp).toBe(g.boss.hp);
+    expect(g.spawnCooldown).toBe(999);
   });
 
   it('should set HP based on level', () => {

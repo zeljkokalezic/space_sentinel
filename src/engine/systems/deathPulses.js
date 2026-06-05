@@ -14,7 +14,7 @@
  * 5. Removed when life expires
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerPlayerIFrames, applyDamageWithShield, killEnemy } from '../combat';
+import { createParticles, triggerPlayerIFrames, applyDamageWithShield, killEnemy, checkShieldBreak } from '../combat';
 
 /**
  * Update all active death pulses: expand rings, check collisions, apply damage.

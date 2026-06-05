@@ -79,6 +79,11 @@ export const createCompleteMission = (g, cbs) => {
     const activeDifficulty = g.sector?.veteranMode ? 'veteran' : (g.settings?.difficulty || 'normal');
     const scrapMult = getScrapMultiplier(activeDifficulty);
     const reward = Math.round(g.mission.reward * scrapMult);
+    const levelBeforeIncrement = g.level;
+    const missionType = g.mission.type;
+    const enemiesAtStart = g.missionStartStats?.enemiesDestroyed ?? g.stats?.enemiesDestroyed ?? 0;
+    const enemiesDestroyed = Math.max(0, (g.stats?.enemiesDestroyed ?? 0) - enemiesAtStart);
+    const playerHpPercent = Math.max(0, (g.player?.hp || 0) / (g.player?.maxHp || 100) * 100);
 
     g.scrap += reward;
     g.totalScrapEarned += reward;
@@ -99,6 +104,15 @@ export const createCompleteMission = (g, cbs) => {
     if (g.mission.type === 'sabotage') g.stats.sabotageMissions++;
     if (g.mission.type === 'kill_boss') g.stats.bossesDefeated++;
     if (g.mission.type === 'kill_miniboss') g.stats.minibossesDefeated = (g.stats.minibossesDefeated || 0) + 1;
+
+    g.lastMissionSummary = {
+      missionType,
+      enemiesDestroyed,
+      totalTime: g.totalTime || 0,
+      playerHpPercent,
+      scrapEarned: reward,
+      level: levelBeforeIncrement,
+    };
 
     // Check achievements
     if (!g.achievements) {

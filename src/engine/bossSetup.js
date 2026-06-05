@@ -79,7 +79,7 @@ export const setupBossCore = (g, level, roster, config) => {
 export const setupBoss = (g, level) => {
   setupBossCore(g, level, BOSS_ROSTER, {
     stateKey: 'boss',
-    spawnDist: C.boss.spawnDistance,
+    spawnDist: GAME_CONFIG.boss.spawnDistance,
     defaultColor: 0xdc2626,
     hpCalc: (variant, level) => ({
       hp: variant.baseHp + level * variant.hpPerLevel,

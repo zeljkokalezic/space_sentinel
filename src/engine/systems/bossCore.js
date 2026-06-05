@@ -169,7 +169,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
   // ── Boss rams player ──
   const scaledRamDamage = C.boss.ramDamage * damageMult;
   if (dist < boss.radius + player.radius) {
-    const { actualDmg } = applyDamageWithShield(g, player, scaledRamDamage * currentDiffMult, player.x, player.y);
+    applyDamageWithShield(g, player, scaledRamDamage * currentDiffMult, player.x, player.y);
     if (player.hp <= 0) {
       setGameState('gameover');
       return true;

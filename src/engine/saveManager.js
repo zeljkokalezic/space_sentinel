@@ -7,7 +7,7 @@
 
 const SAVE_KEY = 'space_sentinel_save';
 const AUTO_SAVE_KEY = 'space_sentinel_autosave';
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 /**
  * Serializable save data structure.
@@ -30,6 +30,10 @@ const SAVE_VERSION = 2;
  * @property {Set<string>} achievements - Unlocked achievement IDs
  * @property {number} shipSkin - Active ship skin index
  * @property {boolean[]} unlockedSkins - Purchased ship skins
+ * @property {Object} sector - Persistent sector progression
+ * @property {string[]} relics - Collected relic IDs
+ * @property {number} relicSlotLimit - Maximum relic slots
+ * @property {Object} emergencyBeacon - One-use respawn beacon state
  */
 
 /**
@@ -68,6 +72,10 @@ export function createSaveData(g) {
     achievements: g.achievements?.unlocked ? [...g.achievements.unlocked] : [],
     shipSkin: g.shipSkin ?? 0,
     unlockedSkins: Array.isArray(g.unlockedSkins) ? [...g.unlockedSkins] : undefined,
+    sector: normalizeSector(g.sector),
+    relics: Array.isArray(g.relics) ? [...g.relics] : [],
+    relicSlotLimit: typeof g.relicSlotLimit === 'number' ? g.relicSlotLimit : 5,
+    emergencyBeacon: normalizeEmergencyBeacon(g.emergencyBeacon),
   };
 }
 
@@ -142,6 +150,22 @@ export function applySaveData(g, data) {
   // Stats
   if (data.stats) {
     g.stats = data.stats;
+  }
+
+  if (data.sector) {
+    g.sector = normalizeSector(data.sector, g.sector);
+  }
+
+  if (Array.isArray(data.relics)) {
+    g.relics = [...data.relics];
+  }
+
+  if (typeof data.relicSlotLimit === 'number') {
+    g.relicSlotLimit = data.relicSlotLimit;
+  }
+
+  if (data.emergencyBeacon) {
+    g.emergencyBeacon = normalizeEmergencyBeacon(data.emergencyBeacon, g.emergencyBeacon);
   }
 
   // Achievements
@@ -223,4 +247,34 @@ export function autoSave(g) {
  */
 export function loadAutoSave(g) {
   return loadGame(g, 'auto');
+}
+
+function normalizeSector(sector, fallback = {}) {
+  const source = sector || {};
+  return {
+    number: source.number ?? fallback.number ?? 1,
+    rank: source.rank ?? fallback.rank ?? null,
+    rankScore: source.rankScore ?? fallback.rankScore ?? 0,
+    consecutiveARank: source.consecutiveARank ?? fallback.consecutiveARank ?? 0,
+    veteranMode: source.veteranMode ?? fallback.veteranMode ?? false,
+    activeBuff: source.activeBuff ?? fallback.activeBuff ?? null,
+    missionsCleared: source.missionsCleared ?? fallback.missionsCleared ?? 0,
+    missionsCompleted: source.missionsCompleted ?? fallback.missionsCompleted ?? 0,
+    totalHpPercent: source.totalHpPercent ?? fallback.totalHpPercent ?? 0,
+    missionStartTime: Array.isArray(source.missionStartTime)
+      ? [...source.missionStartTime]
+      : (Array.isArray(fallback.missionStartTime) ? [...fallback.missionStartTime] : []),
+    missionEndTime: Array.isArray(source.missionEndTime)
+      ? [...source.missionEndTime]
+      : (Array.isArray(fallback.missionEndTime) ? [...fallback.missionEndTime] : []),
+  };
+}
+
+function normalizeEmergencyBeacon(beacon, fallback = {}) {
+  const source = beacon || {};
+  return {
+    purchased: source.purchased ?? fallback.purchased ?? false,
+    activated: source.activated ?? fallback.activated ?? false,
+    nodeId: source.nodeId ?? fallback.nodeId ?? null,
+  };
 }

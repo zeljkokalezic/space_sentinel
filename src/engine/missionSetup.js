@@ -26,6 +26,10 @@ export const setupCombatMission = (g, mission, level) => {
   g.mission = mission;
   g.spawnCooldown = 2.0;
   g.totalTime = 0;
+  g.lastMissionSummary = null;
+  g.missionStartStats = {
+    enemiesDestroyed: g.stats?.enemiesDestroyed ?? 0,
+  };
   // Record mission start time for sector rank calculation
   if (g.sector) {
     g.sector.missionStartTime.push(g.totalTime);

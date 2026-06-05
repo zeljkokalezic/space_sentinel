@@ -220,6 +220,8 @@ export const createGameState = () => {
   },
   scrap: 200, totalScrapEarned: 0,
   wave: 1, totalTime: 0, level: 1, mission: null,
+  lastMissionSummary: null,
+  missionStartStats: null,
   map: generateMap(),
   spawnCooldown: 2,
   enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
