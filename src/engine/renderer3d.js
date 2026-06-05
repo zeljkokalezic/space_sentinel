@@ -15,6 +15,8 @@ const _ndcVec = new THREE.Vector2();
 const _plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 const _target = new THREE.Vector3();
 const _projVec = new THREE.Vector3();
+const _camLerp = new THREE.Vector3();
+const _camLookAt = new THREE.Vector3();
 
 // Module-level reusable collections (avoid per-frame allocation)
 const _activeKeys = new Set();
@@ -116,9 +118,9 @@ export const draw3DFrame = (threeObj, g) => {
   const shakeEnabled = g.settings?.screenShake !== false;
   const shake = shakeEnabled && g.screenShake?.active ? getScreenShakeOffset(g.screenShake.intensity, g.totalTime) : { x: 0, y: 0 };
 
-  camera.position.lerp(new THREE.Vector3(g.player.x - camFwdX * 220 + shake.x, g.player.y - camFwdY * 220 + shake.y, 120), 0.03);
+  camera.position.lerp(_camLerp.set(g.player.x - camFwdX * 220 + shake.x, g.player.y - camFwdY * 220 + shake.y, 120), 0.03);
   camera.up.set(0, 0, 1);
-  camera.lookAt(new THREE.Vector3(g.player.x + camFwdX * 80 + shake.x, g.player.y + camFwdY * 80 + shake.y, 0));
+  camera.lookAt(_camLookAt.set(g.player.x + camFwdX * 80 + shake.x, g.player.y + camFwdY * 80 + shake.y, 0));
 
   // Dynamic FOV — apply camera field-of-view from game state
   if (g.dynamicFov && g.dynamicFov.current !== undefined) {
@@ -704,7 +706,7 @@ export const draw3DFrame = (threeObj, g) => {
       const lifeRatio = zone.maxLife > 0 ? zone.life / zone.maxLife : 0;
 
       // Dark purple fill disc
-      const fillKey = `void_zone_fill_${g.boss.voidZones.indexOf(zone)}`;
+      const fillKey = `void_zone_fill_${zone.id || g.boss.voidZones.indexOf(zone)}`;
       const fillMesh = getMesh(fillKey, meshes, scene, () => {
         const disc = new THREE.Mesh(
           new THREE.CircleGeometry(1, 24),
@@ -718,7 +720,7 @@ export const draw3DFrame = (threeObj, g) => {
       fillMesh.material.opacity = 0.25 + lifeRatio * 0.25;
 
       // Pulsing edge ring
-      const edgeKey = `void_zone_edge_${g.boss.voidZones.indexOf(zone)}`;
+      const edgeKey = `void_zone_edge_${zone.id || g.boss.voidZones.indexOf(zone)}`;
       const edgeMesh = getMesh(edgeKey, meshes, scene, () => {
         const ring = new THREE.Mesh(
           new THREE.RingGeometry(0.9, 1, 24),

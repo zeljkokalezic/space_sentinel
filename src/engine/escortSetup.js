@@ -35,4 +35,16 @@ export const setupEscort = (g, level) => {
  */
 export const resetEscort = (g) => {
   g.escort.active = false;
+  g.escort.hp = 0;
+  g.escort.maxHp = 0;
+  g.escort.lives = 0;
+  g.escort.x = 0;
+  g.escort.y = 0;
+  g.escort.targetX = 0;
+  g.escort.targetY = 0;
+  g.escort.speed = 0;
+  g.escort.respawnTimer = 0;
+  g.escort.evasionTimer = 0;
+  g.escort.evasionAngle = 0;
+  g.escort.startDist = 0;
 };

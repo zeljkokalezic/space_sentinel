@@ -11,23 +11,21 @@ import { SoundManager } from './audio';
 import { spawnEffect } from './pool';
 
 /**
- * Initialize a boss fight.
+ * Shared boss/miniboss setup logic.
  * @param {object} g — Game state
- * @param {number} level — Current player level
+ * @param {number} level — Current level
+ * @param {Array} roster — Boss or miniboss roster
+ * @param {object} config — { stateKey, spawnDist, hpCalc, defaultColor }
+ * @returns {object} The created boss/miniboss state
  */
-export const setupBoss = (g, level) => {
+export const setupBossCore = (g, level, roster, config) => {
   const C = GAME_CONFIG;
-
-  // Select boss variant (dev override or deterministic by level, cycles through roster)
-  const variantIdx = g.devVariantIndex != null ? g.devVariantIndex : level % BOSS_ROSTER.length;
-  const variant = BOSS_ROSTER[variantIdx];
-
-  const bossHp = variant.baseHp + level * variant.hpPerLevel;
-  const spawnDist = 1200;
+  const variantIdx = g.devVariantIndex != null ? g.devVariantIndex : level % roster.length;
+  const variant = roster[variantIdx];
+  const { hp, radius, speed } = config.hpCalc(variant, level, C);
   const angle = Math.random() * Math.PI * 2;
 
-  g.boss = {
-    ...g.boss,
+  const state = {
     // Variant identity
     id: variant.id,
     name: variant.name,
@@ -41,46 +39,54 @@ export const setupBoss = (g, level) => {
 
     // Core state
     active: true,
-    x: g.player.x + Math.cos(angle) * spawnDist,
-    y: g.player.y + Math.sin(angle) * spawnDist,
-    hp: bossHp,
-    maxHp: bossHp,
+    x: g.player.x + Math.cos(angle) * config.spawnDist,
+    y: g.player.y + Math.sin(angle) * config.spawnDist,
+    hp,
+    maxHp: hp,
     phase: 1,
-    attackTimer: 2, // Initial delay before first attack
+    attackTimer: 2,
     chargeTimer: C.boss.chargeCooldown,
     chargeTarget: { x: 0, y: 0 },
     isCharging: false,
-    radius: variant.radius,
-    speed: variant.speed + level * variant.speedPerLevel,
+    radius,
+    speed,
     fireCooldown: C.boss.fireCooldown,
     spiralAngle: 0,
     shield: 0,
     maxShield: 0,
   };
 
-  // Stop regular enemy spawning during boss fight
+  g[config.stateKey] = { ...g[config.stateKey], ...state };
   g.spawnCooldown = 999;
 
   // Intro announcement
-  spawnEffect(g, {
-    type: 'boss_intro',
-    text: variant.introText,
-    life: 2.5,
-    big: false,
-  });
-  spawnEffect(g, {
-    type: 'boss_intro',
-    text: variant.name,
-    life: 2.5,
-    big: true,
-  });
+  spawnEffect(g, { type: 'boss_intro', text: variant.introText, life: 2.5, big: false });
+  spawnEffect(g, { type: 'boss_intro', text: variant.name, life: 2.5, big: true });
 
-  // Visual effect for boss spawn
-  createParticles(g, g.boss.x, g.boss.y, variant.color || 0xdc2626, 30);
-
-  // Audio
+  // Visual + audio
+  createParticles(g, state.x, state.y, variant.color || config.defaultColor, 30);
   SoundManager.play('boss_spawn');
   SoundManager.play('boss_intro');
+
+  return g[config.stateKey];
+};
+
+/**
+ * Initialize a boss fight.
+ * @param {object} g — Game state
+ * @param {number} level — Current player level
+ */
+export const setupBoss = (g, level) => {
+  setupBossCore(g, level, BOSS_ROSTER, {
+    stateKey: 'boss',
+    spawnDist: C.boss.spawnDistance,
+    defaultColor: 0xdc2626,
+    hpCalc: (variant, level) => ({
+      hp: variant.baseHp + level * variant.hpPerLevel,
+      radius: variant.radius,
+      speed: variant.speed + level * variant.speedPerLevel,
+    }),
+  });
 };
 
 /**
@@ -89,17 +95,9 @@ export const setupBoss = (g, level) => {
  */
 export const resetBoss = (g) => {
   g.boss = {
-    active: false,
-    x: 0, y: 0,
-    hp: 0, maxHp: 0,
-    phase: 1,
-    attackTimer: 0,
-    chargeTimer: 0,
-    chargeTarget: { x: 0, y: 0 },
-    isCharging: false,
-    radius: 60,
-    speed: 60,
-    fireCooldown: 1.5,
-    spiralAngle: 0,
+    active: false, x: 0, y: 0, hp: 0, maxHp: 0,
+    phase: 1, attackTimer: 0, chargeTimer: 0,
+    chargeTarget: { x: 0, y: 0 }, isCharging: false,
+    radius: 60, speed: 60, fireCooldown: 1.5, spiralAngle: 0,
   };
 };

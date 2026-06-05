@@ -2,7 +2,7 @@
  * systems/escort.js — Escort drone movement, evasion, collision, and mission checks.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, spawnDamageNumber } from '../combat';
+import { createParticles, getViewportSize, spawnDamageNumber } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { spawnEffect } from '../pool';
 
@@ -17,7 +17,7 @@ import { spawnEffect } from '../pool';
  */
 export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameState, adaptiveAggression = 1) => {
   const C = GAME_CONFIG;
-  if (!g.escort.active || g.mission?.completed) return false;
+  if (!g.escort.active || !g.mission || g.mission.completed) return false;
   const esc = g.escort;
 
   // ── Handle respawn (drone destroyed but has lives left) ──
@@ -98,8 +98,7 @@ export const updateEscort = (dt, g, currentDiffMult, completeMission, setGameSta
   // ── Helper: handle escort death ──
   const handleEscortDeath = () => {
     createParticles(g, esc.x, esc.y, 0x22d3ee, 15);
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    const { vw, vh } = getViewportSize();
     spawnEffect(g, {
       type: 'mission_complete',
       x: vw / 2,

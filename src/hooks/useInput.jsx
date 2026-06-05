@@ -21,6 +21,7 @@ export const useInput = ({
   setDevMode,
   startGame,
   setPaused,
+  setUiEmergencyBeacon,
 }) => {
   // ─── Keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -67,6 +68,7 @@ export const useInput = ({
         if (eb && eb.purchased && !eb.activated) {
           eb.activated = true;
           eb.nodeId = game.current.map.currentNodeId;
+          if (setUiEmergencyBeacon) setUiEmergencyBeacon({ ...eb });
         }
         if (game.current) game.current.keys[key] = true;
         return;

@@ -7,7 +7,7 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
-import { createParticles, checkShieldBreak, triggerScreenShake, triggerHitStop } from '../combat';
+import { createParticles, applyDamageWithShield, triggerScreenShake, triggerHitStop } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovBossDeath } from './dynamicFov';
 import { updateBossSignatureMechanics, checkVoidZoneCollision } from './bossSignatureMechanics';
@@ -45,18 +45,18 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
     const cdx = boss.chargeTarget.x - boss.x;
     const cdy = boss.chargeTarget.y - boss.y;
     const cDist = Math.hypot(cdx, cdy);
-    if (cDist > 10) {
+    if (cDist > C.boss.chargeArrivalThreshold) {
       boss.x += (cdx / cDist) * C.boss.chargeSpeed * dt;
       boss.y += (cdy / cDist) * C.boss.chargeSpeed * dt;
     } else {
       boss.isCharging = false;
       boss.chargeTimer = C.boss.chargeCooldown / speedMult;
     }
-  } else if (dist > 400) {
+  } else if (dist > C.boss.orbitOuterRadius) {
     // Approach player
     boss.x += Math.cos(angle) * moveSpeed * dt;
     boss.y += Math.sin(angle) * moveSpeed * dt;
-  } else if (dist < 300) {
+  } else if (dist < C.boss.orbitInnerRadius) {
     // Back away if too close
     boss.x -= Math.cos(angle) * moveSpeed * 0.5 * dt;
     boss.y -= Math.sin(angle) * moveSpeed * 0.5 * dt;
@@ -169,18 +169,7 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
   // ── Boss rams player ──
   const scaledRamDamage = C.boss.ramDamage * damageMult;
   if (dist < boss.radius + player.radius) {
-    const dmg = scaledRamDamage * currentDiffMult;
-    let hpDamage = dmg;
-    const bossRamShieldWasFull = player.shield > 0 && player.maxShield > 0;
-    if (player.shield > 0) {
-      const absorb = Math.min(player.shield, dmg);
-      player.shield -= absorb;
-      hpDamage = dmg - absorb;
-    }
-    player.hp -= hpDamage;
-    if (bossRamShieldWasFull && player.shield <= 0) {
-      checkShieldBreak(g, player, player.x, player.y);
-    }
+    const { actualDmg } = applyDamageWithShield(g, player, scaledRamDamage * currentDiffMult, player.x, player.y);
     if (player.hp <= 0) {
       setGameState('gameover');
       return true;

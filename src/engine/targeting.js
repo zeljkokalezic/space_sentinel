@@ -2,6 +2,16 @@
  * targeting.js — Shared hostile target selection.
  */
 
+/**
+ * Get the enemy target position (escort drone if active, otherwise player).
+ * @param {object} g — Game state
+ * @returns {{ x: number, y: number }}
+ */
+export const getEnemyTarget = (g) => {
+  if (g.escort?.active) return { x: g.escort.x, y: g.escort.y };
+  return { x: g.player.x, y: g.player.y };
+};
+
 export const getTargetPosition = (target) => {
   if (!target) return null;
   return { x: target.x, y: target.y };

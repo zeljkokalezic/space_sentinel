@@ -7,7 +7,7 @@
  * @returns {boolean} true if player died (gameover)
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy, triggerPlayerIFrames, checkShieldBreak } from '../combat';
+import { createParticles, killEnemy, triggerPlayerIFrames, applyDamageWithShield } from '../combat';
 
 export const updateEnvironmentalHazards = (dt, g, completeMission, setGameState) => {
   // Guard for backwards compatibility with tests
@@ -191,19 +191,7 @@ const updatePlasmaStorm = (dt, h, g, completeMission) => {
     // Check invincibility frames — block damage if invincible
     if (!(g.playerIFrames && g.playerIFrames.isInvincible)) {
       const damage = damagePerSecond * dt;
-      // Apply to shield first, then hull
-      const stormShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
-      if (g.player.shield > 0) {
-        const shieldAbsorb = Math.min(g.player.shield, damage);
-        g.player.shield -= shieldAbsorb;
-        const remaining = damage - shieldAbsorb;
-        g.player.hp -= remaining;
-      } else {
-        g.player.hp -= damage;
-      }
-      if (stormShieldWasFull && g.player.shield <= 0) {
-        checkShieldBreak(g, g.player, g.player.x, g.player.y);
-      }
+      applyDamageWithShield(g, g.player, damage, g.player.x, g.player.y);
       triggerPlayerIFrames(g);
     }
     // Spawn ambient particles inside storm

@@ -6,7 +6,7 @@
  * use the legacy direct-charge behavior (backward compatible).
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, isShieldBypassedByArmorPierce } from '../combat';
+import { createParticles, killEnemy, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, applyDamageWithShield, spawnDamageNumber, isShieldBypassedByArmorPierce } from '../combat';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { SoundManager } from '../audio';
 
@@ -314,40 +314,14 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
         e.y += Math.sin(pushAngle) * 40;
       } else {
         const baseDmg = e.type === 'heavy' ? 20 : C.weapons.autocannon.baseDamage;
-        let dmg = baseDmg * currentDiffMult;
-        let shieldAbsorbed = 0;
-        let shieldAbsorbedVal = 0;
-        const playerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
-        if (g.player.shield > 0) {
-          shieldAbsorbedVal = Math.min(g.player.shield, dmg);
-          g.player.shield -= shieldAbsorbedVal; dmg -= shieldAbsorbedVal;
-          if (shieldAbsorbedVal > 0) shieldAbsorbed = true;
-        }
-        if (playerShieldWasFull && g.player.shield <= 0) {
-          checkShieldBreak(g, g.player, g.player.x, g.player.y);
-        }
-        if (shieldAbsorbed) SoundManager.play('shield_hit');
+        const { actualDmg: playerDmg, shieldAbsorbed: playerShieldDmg } = applyDamageWithShield(g, g.player, baseDmg * currentDiffMult, g.player.x, g.player.y);
+        if (playerShieldDmg > 0) SoundManager.play('shield_hit');
         else SoundManager.play('player_hit');
-        g.player.hp -= dmg;
         triggerScreenShake(g, 'playerHit');
         triggerHitStop(g, 'playerHit');
         triggerPlayerIFrames(g);
-        let eDamage = C.weapons.missiles.baseDamage;
-        const enemyShieldWasFull = e.shield > 0 && e.maxShield > 0;
-
-        // Armor-pierce: skip shield absorption for armor-pierced enemies
-        if (isShieldBypassedByArmorPierce(e)) {
-          // shield bypass handled by the function
-        } else if (e.shield > 0) {
-          const absorb = Math.min(e.shield, eDamage);
-          e.shield -= absorb;
-          eDamage -= absorb;
-        }
-        e.hp -= eDamage;
-        if (enemyShieldWasFull && e.shield <= 0) {
-          checkShieldBreak(g, e, e.x, e.y);
-        }
-        spawnDamageNumber(g, g.player.x, g.player.y - 10, dmg, { hitType: 'playerHit', shieldDamage: shieldAbsorbedVal });
+        applyDamageWithShield(g, e, C.weapons.missiles.baseDamage, e.x, e.y, { skipShield: isShieldBypassedByArmorPierce(e) });
+        spawnDamageNumber(g, g.player.x, g.player.y - 10, playerDmg, { hitType: 'playerHit', shieldDamage: playerShieldDmg });
         e.x += Math.cos(angle + Math.PI) * 30;
         e.y += Math.sin(angle + Math.PI) * 30;
         createParticles(g, e.x, e.y, 0xef4444, 10);

@@ -14,7 +14,7 @@
  * 5. Removed when life expires
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerPlayerIFrames, checkShieldBreak, killEnemy } from '../combat';
+import { createParticles, triggerPlayerIFrames, applyDamageWithShield, killEnemy } from '../combat';
 
 /**
  * Update all active death pulses: expand rings, check collisions, apply damage.
@@ -101,17 +101,7 @@ export const updateDeathPulses = (dt, g, completeMission) => {
             g.player.y += (g.player.y - pulse.y) / distToPlayer * pushForce * dt * 3;
           }
         } else {
-          let dmg = pulse.damage;
-          const dpPlayerShieldWasFull = g.player.shield > 0 && g.player.maxShield > 0;
-          if (g.player.shield > 0) {
-            const absorb = Math.min(g.player.shield, dmg);
-            g.player.shield -= absorb;
-            dmg -= absorb;
-          }
-          g.player.hp -= dmg;
-          if (dpPlayerShieldWasFull && g.player.shield <= 0) {
-            checkShieldBreak(g, g.player, g.player.x, g.player.y);
-          }
+          applyDamageWithShield(g, g.player, pulse.damage, g.player.x, g.player.y);
 
           // Push player away
           if (distToPlayer > 0) {

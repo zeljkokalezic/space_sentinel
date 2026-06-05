@@ -36,73 +36,25 @@ export const setupCombatMission = (g, mission, level) => {
   g.worldMouse = { x: 0, y: 200 };
   resetEntityPools(g);
 
-  if (mission.type === 'escort') {
-    setupEscort(g, level);
-    resetBeacon(g);
-    resetSabotage(g);
-    resetBoss(g);
-    resetMiniboss(g);
-    resetGauntlet(g);
-    resetWaveSurge(g);
-  } else if (mission.type === 'defend') {
-    setupBeacon(g, level);
-    resetEscort(g);
-    resetSabotage(g);
-    resetBoss(g);
-    resetMiniboss(g);
-    resetGauntlet(g);
-    resetWaveSurge(g);
-  } else if (mission.type === 'sabotage') {
-    setupSabotage(g, level);
-    resetEscort(g);
-    resetBeacon(g);
-    resetBoss(g);
-    resetMiniboss(g);
-    resetGauntlet(g);
-    resetWaveSurge(g);
-  } else if (mission.type === 'kill_boss') {
-    setupBoss(g, level);
-    resetEscort(g);
-    resetBeacon(g);
-    resetSabotage(g);
-    resetMiniboss(g);
-    resetGauntlet(g);
-    resetWaveSurge(g);
-    g.mission = { ...mission, current: 0, target: 1 };
-  } else if (mission.type === 'kill_miniboss') {
-    setupMiniboss(g, level);
-    resetEscort(g);
-    resetBeacon(g);
-    resetSabotage(g);
-    resetBoss(g);
-    resetGauntlet(g);
-    resetWaveSurge(g);
-    g.mission = { ...mission, current: 0, target: 1 };
-  } else if (mission.type === 'gauntlet') {
-    setupGauntlet(g, mission);
-    resetEscort(g);
-    resetBeacon(g);
-    resetSabotage(g);
-    resetBoss(g);
-    resetMiniboss(g);
-    resetWaveSurge(g);
-  } else if (mission.type === 'wave_surge') {
-    setupWaveSurge(g);
-    resetEscort(g);
-    resetBeacon(g);
-    resetSabotage(g);
-    resetBoss(g);
-    resetMiniboss(g);
-    resetGauntlet(g);
-  } else {
-    resetEscort(g);
-    resetBeacon(g);
-    resetSabotage(g);
-    resetBoss(g);
-    resetMiniboss(g);
-    resetGauntlet(g);
-    resetWaveSurge(g);
-  }
+  // Reset all mission subsystems, then set up the active one
+  resetEscort(g);
+  resetBeacon(g);
+  resetSabotage(g);
+  resetBoss(g);
+  resetMiniboss(g);
+  resetGauntlet(g);
+  resetWaveSurge(g);
+
+  const SETUP_MAP = {
+    escort:      () => setupEscort(g, level),
+    defend:      () => setupBeacon(g, level),
+    sabotage:    () => setupSabotage(g, level),
+    kill_boss:   () => { setupBoss(g, level); g.mission = { ...mission, current: 0, target: 1 }; },
+    kill_miniboss: () => { setupMiniboss(g, level); g.mission = { ...mission, current: 0, target: 1 }; },
+    gauntlet:    () => setupGauntlet(g, mission),
+    wave_surge:  () => setupWaveSurge(g),
+  };
+  SETUP_MAP[mission.type]?.();
 
   // ─── Environmental hazards ───────────────────────────────────────────────────
   if (mission.hazardTypes && mission.hazardTypes.length > 0) {

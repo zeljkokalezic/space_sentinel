@@ -8,7 +8,7 @@
  * when new notifications are pushed, and by the component on dismiss).
  * No polling required.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 /**
  * Single achievement toast notification.
@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 function AchievementToast({ notification, onDismiss }) {
   const [opacity, setOpacity] = useState(0);
   const [timer, setTimer] = useState(notification.timer || 6);
+  const fadeOutRef = useRef(null);
 
   useEffect(() => {
     // Fade in
@@ -27,7 +28,7 @@ function AchievementToast({ notification, onDismiss }) {
     // Auto dismiss after timer
     const dismiss = setTimeout(() => {
       setOpacity(0);
-      setTimeout(onDismiss, 300); // Wait for fade out
+      fadeOutRef.current = setTimeout(onDismiss, 300); // Wait for fade out
     }, (notification.timer || 6) * 1000);
 
     // Periodic timer update
@@ -38,6 +39,7 @@ function AchievementToast({ notification, onDismiss }) {
     return () => {
       clearTimeout(fadeIn);
       clearTimeout(dismiss);
+      clearTimeout(fadeOutRef.current);
       clearInterval(tick);
     };
   }, [notification.timer, onDismiss]);
@@ -118,10 +120,11 @@ export default function AchievementNotification({ game, visible, notificationVer
     return null;
   }
 
-  const dismissNotification = (index) => {
+  const dismissNotification = (id) => {
     const live = game.current?.achievements?.notifications;
     if (!live) return;
-    live.splice(index, 1);
+    const idx = live.findIndex(n => n.id === id);
+    if (idx !== -1) live.splice(idx, 1);
     onBumpNotification(v => v + 1);
   };
 
@@ -141,7 +144,7 @@ export default function AchievementNotification({ game, visible, notificationVer
         <AchievementToast
           key={notificationVersion + '-' + notif.id + '-' + i}
           notification={notif}
-          onDismiss={() => dismissNotification(i)}
+          onDismiss={() => dismissNotification(notif.id)}
         />
       ))}
     </div>

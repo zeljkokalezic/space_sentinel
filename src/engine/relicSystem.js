@@ -8,6 +8,7 @@
 import { RELIC_DATA } from '../constants/relics';
 import { SoundManager } from './audio';
 import { spawnEffect } from './pool';
+import { getViewportSize } from './combat';
 
 /** Get relic definition by ID */
 export function getRelicById(relicId) {
@@ -236,8 +237,7 @@ export function triggerRelicAcquired(g, relicId) {
   SoundManager.play('relic_acquired');
 
   // Create visual notification effect
-  const w = typeof window !== 'undefined' ? window.innerWidth : 1920;
-  const h = typeof window !== 'undefined' ? window.innerHeight : 1080;
+  const { vw: w, vh: h } = getViewportSize();
   spawnEffect(g, {
     type: 'relic_acquired',
     x: w / 2,

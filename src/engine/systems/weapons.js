@@ -1,7 +1,7 @@
 /**
  * systems/weapons.js — Player weapon firing logic (autocannon, plasma, missiles, pointDefense).
  */
-import { fireProjectile, killEnemy, checkShieldBreak, spawnDamageNumber, triggerShieldRestoration } from '../combat';
+import { fireProjectile, killEnemy, applyDamageWithShield, spawnDamageNumber, triggerShieldRestoration } from '../combat';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { SoundManager } from '../audio';
 import { getNearestHostileTarget } from '../targeting';
@@ -126,14 +126,8 @@ export const updateWeapons = (dt, g, completeMission) => {
       for (let e of g.enemies) {
         if (!e.active) continue;
         if (Math.hypot(e.x - g.player.x, e.y - g.player.y) < range) {
-          let ad = dmg;
-          let shieldAbsorbed = 0;
-          const pdShieldWasFull = e.shield > 0 && e.maxShield > 0;
-          if (e.shield > 0) { shieldAbsorbed = Math.min(e.shield, ad); e.shield -= shieldAbsorbed; ad -= shieldAbsorbed; }
-          e.hp -= ad; hit = true;
-          if (pdShieldWasFull && e.shield <= 0) {
-            checkShieldBreak(g, e, e.x, e.y);
-          }
+          const { actualDmg: ad, shieldAbsorbed } = applyDamageWithShield(g, e, dmg, e.x, e.y);
+          hit = true;
           spawnEffect(g, { type: 'laser', source: g.player, target: e, life: 0.1 });
           spawnDamageNumber(g, e.x, e.y, ad, { shieldDamage: shieldAbsorbed, isCrit: true });
           hits++;

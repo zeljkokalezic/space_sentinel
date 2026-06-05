@@ -2,7 +2,7 @@
  * systems/projectiles.js — Projectile movement, homing, collision detection.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, triggerScreenShake, triggerPlayerIFrames, checkShieldBreak, spawnDamageNumber, checkDirectionalShield, isShieldBypassedByArmorPierce } from '../combat';
+import { createParticles, triggerScreenShake, triggerPlayerIFrames, applyDamageWithShield, spawnDamageNumber, checkDirectionalShield, isShieldBypassedByArmorPierce } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovHit } from './dynamicFov';
 import { onBossDamaged } from './bossSignatureMechanics';
@@ -132,16 +132,10 @@ export const updateProjectiles = (dt, g, setGameState) => {
           p.active = false;
           continue;
         }
-        let dmg = p.damage;
-        let shieldAbsorbed = 0;
-        if (g.player.shield > 0) {
-          shieldAbsorbed = Math.min(g.player.shield, dmg);
-          g.player.shield -= shieldAbsorbed; dmg -= shieldAbsorbed;
-        }
-        g.player.hp -= dmg;
+        const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, g.player, p.damage, g.player.x, g.player.y);
         createParticles(g, p.x, p.y, 0xef4444, 5);
         p.active = false;
-        spawnDamageNumber(g, g.player.x, g.player.y - 10, dmg, { hitType: 'playerHit', shieldDamage: shieldAbsorbed });
+        spawnDamageNumber(g, g.player.x, g.player.y - 10, actualDmg, { hitType: 'playerHit', shieldDamage: shieldAbsorbed });
         triggerScreenShake(g, p.type === 'enemy_missile' ? 'bigExplosion' : 'playerHit');
         triggerPlayerIFrames(g);
         if (g.player.hp <= 0) { setGameState('gameover'); return; }
@@ -159,25 +153,13 @@ export const updateProjectiles = (dt, g, setGameState) => {
             break;
           }
           SoundManager.play('hit');
-          let actualDmg = p.damage;
-          let shieldAbsorbed = 0;
-          const shieldWasFull = e.shield > 0 && e.maxShield > 0;
 
           // Armor-pierce: mark enemy and skip shield absorption
           if (p.armorPierce) {
             applyArmorPierceMark(e, p.shieldBypassHits ?? 3);
           }
 
-          // Check if shield should be bypassed (armor-pierced enemy)
-          if (!isShieldBypassedByArmorPierce(e) && e.shield > 0) {
-            shieldAbsorbed = Math.min(e.shield, actualDmg);
-            e.shield -= shieldAbsorbed;
-            actualDmg -= shieldAbsorbed;
-          }
-          e.hp -= actualDmg;
-          if (shieldWasFull && e.shield <= 0) {
-            checkShieldBreak(g, e, e.x, e.y);
-          }
+          const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, e, p.damage, e.x, e.y, { skipShield: isShieldBypassedByArmorPierce(e) });
           spawnDamageNumber(g, e.x, e.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerScreenShake(g, p.type === 'plasma' || p.type === 'missile' ? 'explosion' : 2);
@@ -193,24 +175,13 @@ export const updateProjectiles = (dt, g, setGameState) => {
       if (g.miniboss && g.miniboss.active && !p.hitList.includes('miniboss')) {
         if (Math.hypot(p.x - g.miniboss.x, p.y - g.miniboss.y) < g.miniboss.radius + p.radius) {
           SoundManager.play('hit');
-          let actualDmg = p.damage;
-          let shieldAbsorbed = 0;
-          const mbShieldWasFull = g.miniboss.shield > 0 && g.miniboss.maxShield > 0;
 
           // Armor-pierce: mark miniboss and skip shield absorption
           if (p.armorPierce) {
             applyArmorPierceMark(g.miniboss, p.shieldBypassHits ?? 3);
           }
 
-          if (!isShieldBypassedByArmorPierce(g.miniboss) && g.miniboss.shield > 0) {
-            shieldAbsorbed = Math.min(g.miniboss.shield, actualDmg);
-            g.miniboss.shield -= shieldAbsorbed;
-            actualDmg -= shieldAbsorbed;
-          }
-          g.miniboss.hp -= actualDmg;
-          if (mbShieldWasFull && g.miniboss.shield <= 0) {
-            checkShieldBreak(g, g.miniboss, g.miniboss.x, g.miniboss.y);
-          }
+          const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, g.miniboss, p.damage, g.miniboss.x, g.miniboss.y, { skipShield: isShieldBypassedByArmorPierce(g.miniboss) });
           spawnDamageNumber(g, g.miniboss.x, g.miniboss.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('miniboss'); }
@@ -224,25 +195,14 @@ export const updateProjectiles = (dt, g, setGameState) => {
       if (g.boss && g.boss.active && !p.hitList.includes('boss')) {
         if (Math.hypot(p.x - g.boss.x, p.y - g.boss.y) < g.boss.radius + p.radius) {
           SoundManager.play('hit');
-          let actualDmg = p.damage;
-          let shieldAbsorbed = 0;
-          const bossShieldWasFull = g.boss.shield > 0 && g.boss.maxShield > 0;
 
           // Armor-pierce: mark boss and skip shield absorption
           if (p.armorPierce) {
             applyArmorPierceMark(g.boss, p.shieldBypassHits ?? 3);
           }
 
-          if (!isShieldBypassedByArmorPierce(g.boss) && g.boss.shield > 0) {
-            shieldAbsorbed = Math.min(g.boss.shield, actualDmg);
-            g.boss.shield -= shieldAbsorbed;
-            actualDmg -= shieldAbsorbed;
-          }
-          g.boss.hp -= actualDmg;
+          const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, g.boss, p.damage, g.boss.x, g.boss.y, { skipShield: isShieldBypassedByArmorPierce(g.boss) });
           onBossDamaged(g.boss);
-          if (bossShieldWasFull && g.boss.shield <= 0) {
-            checkShieldBreak(g, g.boss, g.boss.x, g.boss.y);
-          }
           spawnDamageNumber(g, g.boss.x, g.boss.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerFovHit(g);

@@ -811,6 +811,7 @@ class SoundManagerClass {
     this._sfxVolume = 1;
     this._musicVolume = 1;
     this._continuous = {}; // name -> { nodes, stopFn }
+    this._pendingTimeouts = []; // Track disconnect timeouts for cleanup
     this._soundtrackIntensity = 'calm'; // 'calm' | 'tense' | 'triumphant'
     this._soundtrackActive = false;
   }
@@ -970,9 +971,9 @@ class SoundManagerClass {
       if (fadeDuration > 0 && this.ctx) {
         entry.gainNode.gain.setValueAtTime(entry.gainNode.gain.value, now);
         entry.gainNode.gain.linearRampToValueAtTime(0, now + fadeDuration);
-        setTimeout(() => {
+        this._pendingTimeouts.push(setTimeout(() => {
           this._stopContinuous(name);
-        }, fadeDuration * 1000 + 100);
+        }, fadeDuration * 1000 + 100));
       } else {
         this._stopContinuous(name);
       }
@@ -1022,12 +1023,12 @@ class SoundManagerClass {
       } else {
         // One-shot: disconnect gain after envelope finishes
         const disconnectTime = ((result.duration || 0.1) + 0.1) * 1000;
-        setTimeout(() => {
+        this._pendingTimeouts.push(setTimeout(() => {
           try { gainNode.disconnect(); } catch { /* already disconnected */ }
           result.nodes.forEach(node => {
             try { node.disconnect(); } catch { /* already disconnected */ }
           });
-        }, disconnectTime);
+        }, disconnectTime));
       }
     } catch {
       // Silently ignore audio errors (e.g. context issues)
@@ -1110,6 +1111,10 @@ class SoundManagerClass {
    * Destroy the audio system. Stops continuous sounds and closes AudioContext.
    */
   destroy() {
+    for (const timeoutId of this._pendingTimeouts) {
+      clearTimeout(timeoutId);
+    }
+    this._pendingTimeouts = [];
     for (const name of Object.keys(this._continuous)) {
       this._stopContinuous(name);
     }

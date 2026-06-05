@@ -30,6 +30,11 @@ vi.mock('../engine/combat', () => ({
   triggerScreenShake: vi.fn(),
   triggerHitStop: vi.fn(),
   checkShieldBreak: vi.fn(),
+  applyDamageWithShield: vi.fn((g, entity, damage) => {
+    entity.hp -= damage;
+    return { actualDmg: damage, shieldAbsorbed: 0 };
+  }),
+  getViewportSize: vi.fn(() => ({ vw: 1920, vh: 1080 })),
 }));
 
 vi.mock('../engine/audio', () => ({

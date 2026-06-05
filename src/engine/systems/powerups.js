@@ -33,8 +33,8 @@ export const updatePowerups = (dt, g, completeMission) => {
     // Auto-attract
     if (dist < g.player.magnetRadius * 1.5) {
       const angle = Math.atan2(g.player.y - pu.y, g.player.x - pu.x);
-      pu.x += Math.cos(angle) * 400 * dt;
-      pu.y += Math.sin(angle) * 400 * dt;
+      pu.x += Math.cos(angle) * C.powerups.attractSpeed * dt;
+      pu.y += Math.sin(angle) * C.powerups.attractSpeed * dt;
     }
 
     // Collect on contact

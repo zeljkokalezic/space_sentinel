@@ -54,7 +54,7 @@ export const updatePhysics = (dt, g, cbs) => {
   if (updateTransition(dt, g, cbs)) return;
 
   // ─── Mission completion factory ───────────────────────────────────────────────
-  const completeMission = createCompleteMission(g);
+  const completeMission = createCompleteMission(g, cbs);
 
   // ─── Mission progress check (survive type) ────────────────────────────────────
   checkMissionProgress(dt, g, completeMission);
@@ -129,7 +129,7 @@ export const updatePhysics = (dt, g, cbs) => {
   if (g.player.hp <= 0) return;
 
   // ─── Gauntlet wave management ──────────────────────────────────────────
-  if (g.gauntlet?.active) {
+  if (g.gauntlet?.active && g.mission) {
     // Check if current wave is complete (all enemies in wave dead)
     if (!g.gauntlet.betweenWaves && g.enemies.length === 0 && g.gauntlet.enemiesSpawnedInWave >= g.gauntlet.enemiesPerWave) {
       // Wave cleared — check if more waves remain

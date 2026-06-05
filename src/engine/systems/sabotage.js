@@ -16,7 +16,7 @@ import { spawnEffect, spawnPickup, spawnProjectileEntity } from '../pool';
  * @returns {boolean} true if game should stop (gameover triggered)
  */
 export const updateSabotage = (dt, g, currentDiffMult, completeMission) => {
-  if (!g.sabotage.active || g.mission?.completed) return false;
+  if (!g.sabotage.active || !g.mission || g.mission.completed) return false;
 
   const cfg = GAME_CONFIG.sabotage;
   const structures = g.sabotage.structures;

@@ -12,6 +12,7 @@ import { getScrapMultiplier } from '../difficulty';
 import { tryAddRelic, getRandomRelic } from '../relicSystem';
 import { clearMissionState } from '../stateCleanup';
 import { spawnEffect } from '../pool';
+import { getViewportSize } from '../combat';
 
 /**
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.
@@ -66,8 +67,9 @@ export const checkMissionProgress = (dt, g, completeMission) => {
  * The actual mission completion logic: award scrap, update map, advance level.
  * Also tracks persistent stats and checks achievements.
  * @param {object} g — Game state
+ * @param {object} [cbs] — Optional callbacks { setMapStateVersion } for React state sync
  */
-export const createCompleteMission = (g) => {
+export const createCompleteMission = (g, cbs) => {
   const C = GAME_CONFIG;
   return () => {
     if (g.mission.completed) return;
@@ -125,8 +127,7 @@ export const createCompleteMission = (g) => {
       saveAchievements(g.achievements.unlocked);
     }
 
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    const { vw, vh } = getViewportSize();
     spawnEffect(g, {
       type: 'mission_complete',
       x: vw / 2,
@@ -136,6 +137,9 @@ export const createCompleteMission = (g) => {
     });
     g.mission.completed = true;
     g.transitionTimer = C.transition.duration;
+
+    // Signal React to re-render so PostMissionSummary shows
+    if (cbs?.setMapStateVersion) cbs.setMapStateVersion(v => v + 1);
 
     // Auto-save on mission completion
     autoSave(g);

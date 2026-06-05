@@ -244,6 +244,7 @@ export const GAME_CONFIG = {
 
   powerups: {
     dropChance: 0.05,
+    attractSpeed: 400,
     types: {
       rapidFire:    { duration: 10, color: '#fbbf24', icon: '⚡' },
       shieldBoost:  { duration: 15, color: '#3b82f6', icon: '🛡' },
@@ -273,6 +274,10 @@ export const GAME_CONFIG = {
     scrapReward: 500,
     guaranteedDrops: ['shieldBoost', 'damageSurge'],
     color: '#dc2626',
+    spawnDistance: 1200,
+    orbitOuterRadius: 400,
+    orbitInnerRadius: 300,
+    chargeArrivalThreshold: 10,
 
     // Boss rage mode: activated when entering phase 3 (final phase)
     rage: {
@@ -317,6 +322,7 @@ export const GAME_CONFIG = {
     spawnInterval: 3,
     color: 0xf97316,
     colorHex: '#f97316',
+    spawnDistance: 800,
   },
 
   waveAnnouncer: {

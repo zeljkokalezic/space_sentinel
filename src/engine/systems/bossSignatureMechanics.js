@@ -165,6 +165,7 @@ function spawnVoidZone(boss, g) {
   const dist = minDist + Math.random() * (maxDist - minDist);
 
   const zone = {
+    id: `vz_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     x: player.x + Math.cos(angle) * dist,
     y: player.y + Math.sin(angle) * dist,
     radius: 60,

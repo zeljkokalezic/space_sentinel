@@ -244,7 +244,7 @@ export default function App() {
   });
 
   const { onPointerDown, onPointerMove, onPointerUp } = useInput({
-    game, threeRef, gameState, statusRef, devMode, setGameState, setDevMode, startGame, paused, setPaused,
+    game, threeRef, gameState, statusRef, devMode, setGameState, setDevMode, startGame, paused, setPaused, setUiEmergencyBeacon,
   });
 
   // ─── Render ────────────────────────────────────────────────────────────────

@@ -12,6 +12,15 @@ import { getExtraScrapPerKill } from './relicSystem';
 import { spawnEffect, spawnParticle, spawnPickup, spawnPowerup, spawnProjectileEntity } from './pool';
 
 /**
+ * Get viewport dimensions with fallback for SSR/non-browser environments.
+ * @returns {{ vw: number, vh: number }}
+ */
+export const getViewportSize = () => ({
+  vw: typeof window !== 'undefined' ? window.innerWidth : 1920,
+  vh: typeof window !== 'undefined' ? window.innerHeight : 1080,
+});
+
+/**
  * Check if a directional shield on the enemy absorbs the hit.
  * Calculates which side the projectile hits based on the angle from
  * enemy center to projectile position, and depletes that shield side.
@@ -352,7 +361,7 @@ export const checkShieldBreak = (g, entity, x, y) => {
   for (let i = 0; i < C.particleCount; i++) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 80 + Math.random() * 160;
-    (g.particles || []).push({
+    spawnParticle(g, {
       x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
@@ -383,6 +392,36 @@ export const checkShieldBreak = (g, entity, x, y) => {
 
   // Audio feedback
   SoundManager.play('shield_break');
+};
+
+/**
+ * Apply damage to an entity with shield-first absorption.
+ * Deducts shield first, then HP. Triggers shield break if shield depleted.
+ * @param {object} g — Game state
+ * @param {object} entity — Entity with shield, maxShield, hp
+ * @param {number} damage — Raw damage to apply
+ * @param {number} x — X position for effects
+ * @param {number} y — Y position for effects
+ * @param {object} [opts] — Options
+ * @param {boolean} [opts.skipShield] — Skip shield absorption (armor-pierce)
+ * @returns {{ actualDmg: number, shieldAbsorbed: number }}
+ */
+export const applyDamageWithShield = (g, entity, damage, x, y, opts = {}) => {
+  let actualDmg = damage;
+  let shieldAbsorbed = 0;
+  const shieldWasFull = entity.shield > 0 && entity.maxShield > 0;
+
+  if (!opts.skipShield && entity.shield > 0) {
+    shieldAbsorbed = Math.min(entity.shield, actualDmg);
+    entity.shield -= shieldAbsorbed;
+    actualDmg -= shieldAbsorbed;
+  }
+  entity.hp -= actualDmg;
+
+  if (shieldWasFull && entity.shield <= 0) {
+    checkShieldBreak(g, entity, x, y);
+  }
+  return { actualDmg, shieldAbsorbed };
 };
 
 /**

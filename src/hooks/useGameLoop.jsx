@@ -27,6 +27,8 @@ export const useGameLoop = ({
   const statusRef = useRef(gameState);
   const devModeRef = useRef(devMode);
 
+  const physicsCbsRef = useRef(null);
+
   // Keep refs in sync with React state
   useEffect(() => { statusRef.current = gameState; }, [gameState]);
   useEffect(() => { devModeRef.current = devMode; }, [devMode]);
@@ -39,7 +41,10 @@ export const useGameLoop = ({
       setGameState(state);
     }
   };
-  const physicsCbs = { setGameState: devAwareSetState, setMapStateVersion, setNotificationVersion };
+
+  // Update physicsCbs ref on every render so the loop closure always sees latest
+  physicsCbsRef.current = { setGameState: devAwareSetState, setMapStateVersion, setNotificationVersion };
+  const physicsCbs = physicsCbsRef.current;
 
   useEffect(() => {
     const containerEl = containerRef.current;
@@ -55,7 +60,7 @@ export const useGameLoop = ({
       if (dt > 0.1) dt = 0.1;
 
       if (statusRef.current === 'playing' && !game.current?.paused) {
-        updatePhysics(dt, game.current, physicsCbs);
+        updatePhysics(dt, game.current, physicsCbsRef.current);
       }
 
       if (threeRef.current) {
