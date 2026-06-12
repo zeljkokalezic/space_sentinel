@@ -2,7 +2,8 @@
  * systems/escort.js — Escort drone movement, evasion, collision, and mission checks.
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
-import { createParticles, getViewportSize, spawnDamageNumber } from '../combat';
+import { createParticles, spawnDamageNumber } from '../combat';
+import { getViewportSize } from '../viewport';
 import { tryFireEnemyWeapon } from './enemyFire';
 import { spawnEffect } from '../pool';
 

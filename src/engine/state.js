@@ -225,7 +225,8 @@ export const createGameState = () => {
   map: generateMap(),
   spawnCooldown: 2,
   enemies: [], projectiles: [], particles: [], pickups: [], effects: [],
-  stars: Array.from({ length: 800 }, () => ({
+  stars: Array.from({ length: 800 }, (_, i) => ({
+    id: `star_${i}`,
     x: (Math.random() - 0.5) * 8000,
     y: (Math.random() - 0.5) * 8000,
     z: -Math.random() * 500,
@@ -362,6 +363,7 @@ export const createDefaultBoss = () => ({
   regenActive: false,
   phaseShiftTimer: 0,
   decoy: null,
+  _originalSpeed: undefined,
 });
 
 /**

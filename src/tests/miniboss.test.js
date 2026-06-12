@@ -29,6 +29,8 @@ vi.mock('../engine/combat', () => ({
   fireProjectile: vi.fn(),
   triggerScreenShake: vi.fn(),
   triggerHitStop: vi.fn(),
+  triggerPlayerIFrames: vi.fn(),
+  spawnDamageNumber: vi.fn(),
   checkShieldBreak: vi.fn(),
   applyDamageWithShield: vi.fn((g, entity, damage) => {
     entity.hp -= damage;

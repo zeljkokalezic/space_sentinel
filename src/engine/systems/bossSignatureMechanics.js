@@ -188,8 +188,9 @@ function updateVoidZones(dt, boss, g) {
   const config = boss.signatureMechanic;
   if (!config) return;
 
-  // Update original speed every frame to track current player speed (including buffs)
-  if (g.player) {
+  // Snapshot player speed only when outside a void zone so the slow factor
+  // is applied against the true base speed and never compounds.
+  if (g.player && !g.player._inVoidZone) {
     boss._originalSpeed = g.player.speed;
   }
 

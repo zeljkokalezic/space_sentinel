@@ -15,10 +15,7 @@ import { spawnEffect, spawnParticle, spawnPickup, spawnPowerup, spawnProjectileE
  * Get viewport dimensions with fallback for SSR/non-browser environments.
  * @returns {{ vw: number, vh: number }}
  */
-export const getViewportSize = () => ({
-  vw: typeof window !== 'undefined' ? window.innerWidth : 1920,
-  vh: typeof window !== 'undefined' ? window.innerHeight : 1080,
-});
+export { getViewportSize } from './viewport';
 
 /**
  * Check if a directional shield on the enemy absorbs the hit.
@@ -149,8 +146,9 @@ export const createParticles = (g, x, y, color, count, type = 'spark') => {
  * @param {object} g              - Live game state
  * @param {object} e              - Enemy being killed
  * @param {function} [completeMission] - Optional callback to complete the current mission
+ * @param {string} [killSource]   - Source of the killing blow (e.g. 'missile')
  */
-export const killEnemy = (g, e, completeMission) => {
+export const killEnemy = (g, e, completeMission, killSource) => {
   if (!e.active) return;
   const C = GAME_CONFIG;
 
@@ -235,7 +233,7 @@ export const killEnemy = (g, e, completeMission) => {
 
   // Chain Reaction synergy: missile kills trigger point defense at nearby enemies
   const activeSynergies = getActiveSynergies(g.levels);
-  const chainTargets = applyMissileKillSynergy(e, g, activeSynergies);
+  const chainTargets = killSource === 'missile' ? applyMissileKillSynergy(e, g, activeSynergies) : [];
   if (chainTargets.length > 0) {
     const pdDmg = (C.weapons.pointDefense.baseDamage + g.levels.pointDefense * C.weapons.pointDefense.damagePerLevel);
     for (const t of chainTargets) {

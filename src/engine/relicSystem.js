@@ -8,7 +8,7 @@
 import { RELIC_DATA } from '../constants/relics';
 import { SoundManager } from './audio';
 import { spawnEffect } from './pool';
-import { getViewportSize } from './combat';
+import { getViewportSize } from './viewport';
 
 /** Get relic definition by ID */
 export function getRelicById(relicId) {

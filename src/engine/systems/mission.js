@@ -12,7 +12,7 @@ import { getScrapMultiplier } from '../difficulty';
 import { tryAddRelic, getRandomRelic } from '../relicSystem';
 import { clearMissionState } from '../stateCleanup';
 import { spawnEffect } from '../pool';
-import { getViewportSize } from '../combat';
+import { getViewportSize } from '../viewport';
 
 /**
  * Handle the post-mission transition timer. If active, counts down and switches to map/victory.

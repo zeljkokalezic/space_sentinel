@@ -9,6 +9,7 @@ import { BOSS_ROSTER } from '../constants/bosses';
 import { createParticles } from './combat';
 import { SoundManager } from './audio';
 import { spawnEffect } from './pool';
+import { createDefaultBoss } from './state';
 
 /**
  * Shared boss/miniboss setup logic.
@@ -94,10 +95,5 @@ export const setupBoss = (g, level) => {
  * @param {object} g — Game state
  */
 export const resetBoss = (g) => {
-  g.boss = {
-    active: false, x: 0, y: 0, hp: 0, maxHp: 0,
-    phase: 1, attackTimer: 0, chargeTimer: 0,
-    chargeTarget: { x: 0, y: 0 }, isCharging: false,
-    radius: 60, speed: 60, fireCooldown: 1.5, spiralAngle: 0,
-  };
+  g.boss = createDefaultBoss();
 };

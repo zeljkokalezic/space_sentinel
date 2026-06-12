@@ -57,8 +57,15 @@ export function triggerScrapCollection(g, x, y, value) {
   }
 
   // Screen flash for larger pickups
-  if (value >= C.flashMinValue && g.screenFlash === undefined) {
-    g.screenFlash = { active: true, remaining: C.flashDuration, opacity: C.flashOpacity };
+  if (value >= C.flashMinValue) {
+    if (!g.screenFlash) {
+      g.screenFlash = { active: true, remaining: C.flashDuration, opacity: C.flashOpacity, alpha: C.flashOpacity };
+    } else {
+      g.screenFlash.active = true;
+      g.screenFlash.remaining = C.flashDuration;
+      g.screenFlash.opacity = C.flashOpacity;
+      g.screenFlash.alpha = C.flashOpacity;
+    }
   }
 
   // Audio feedback

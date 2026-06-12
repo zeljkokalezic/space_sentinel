@@ -331,7 +331,8 @@ export const updateEnemies = (dt, g, currentDiffMult, completeMission, setGameSt
 
     // ── Enemy dies ──
     if (e.hp <= 0) {
-      killEnemy(g, e, completeMission);
+      killEnemy(g, e, completeMission, e.lastHitBy);
+      e.lastHitBy = undefined;
       triggerScreenShake(g, e.type === 'heavy' || e.type === 'missile_boat' || e.type === 'shielded' ? 'bigExplosion' : 'explosion');
     }
   }

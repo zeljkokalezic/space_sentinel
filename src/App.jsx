@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { createGameState }      from './engine/state';
 import { generateMap }          from './engine/mapGenerator';
@@ -58,7 +58,7 @@ export default function App() {
     SoundManager.setMuted(game.current.audio?.muted ?? false);
   };
 
-  const startGame = () => { resetGame(); setGameState(devMode ? 'dev' : 'relicChoice'); };
+  const startGame = useCallback(() => { resetGame(); setGameState(devMode ? 'dev' : 'relicChoice'); }, [devMode]);
 
   const selectStartingRelic = (relicId) => {
     tryAddRelic(game.current, relicId);

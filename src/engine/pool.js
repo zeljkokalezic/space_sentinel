@@ -9,6 +9,12 @@ import { GAME_CONFIG } from '../constants/gameConfig';
 
 const ENTITY_TYPES = ['enemies', 'projectiles', 'particles', 'pickups', 'powerups', 'effects'];
 
+let _nextEntityId = 0;
+
+function nextEntityId() {
+  return ++_nextEntityId;
+}
+
 export class ObjectPool {
   constructor(createFn, maxSize) {
     this.pool = new Array(maxSize);
@@ -45,6 +51,7 @@ export class ObjectPool {
     const obj = this.acquire();
     if (!obj) return null;
     Object.assign(obj, values);
+    if (values.id === undefined) obj.id = nextEntityId();
     if (values.active === undefined) obj.active = true;
     return obj;
   }
@@ -117,6 +124,7 @@ export function spawnPooled(g, type, values) {
 
   if (!g[type]) g[type] = [];
   const obj = { ...values };
+  if (obj.id === undefined) obj.id = nextEntityId();
   if (obj.active === undefined) obj.active = true;
   g[type][g[type].length] = obj;
   return obj;

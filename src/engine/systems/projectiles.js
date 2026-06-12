@@ -160,6 +160,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           }
 
           const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, e, p.damage, e.x, e.y, { skipShield: isShieldBypassedByArmorPierce(e) });
+          e.lastHitBy = p.type;
           spawnDamageNumber(g, e.x, e.y, actualDmg, { shieldDamage: shieldAbsorbed });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerScreenShake(g, p.type === 'plasma' || p.type === 'missile' ? 'explosion' : 2);

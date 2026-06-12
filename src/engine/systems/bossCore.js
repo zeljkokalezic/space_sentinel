@@ -7,7 +7,7 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { ATTACK_PATTERNS } from '../../constants/attackPatterns';
-import { createParticles, applyDamageWithShield, triggerScreenShake, triggerHitStop } from '../combat';
+import { createParticles, applyDamageWithShield, triggerScreenShake, triggerHitStop, triggerPlayerIFrames, spawnDamageNumber } from '../combat';
 import { SoundManager } from '../audio';
 import { triggerFovBossDeath } from './dynamicFov';
 import { updateBossSignatureMechanics, checkVoidZoneCollision } from './bossSignatureMechanics';
@@ -168,8 +168,12 @@ export const updateBossCore = (dt, boss, g, currentDiffMult, damageMult, onDeath
 
   // ── Boss rams player ──
   const scaledRamDamage = C.boss.ramDamage * damageMult;
-  if (dist < boss.radius + player.radius) {
-    applyDamageWithShield(g, player, scaledRamDamage * currentDiffMult, player.x, player.y);
+  if (dist < boss.radius + player.radius && !(g.playerIFrames && g.playerIFrames.isInvincible)) {
+    const { actualDmg: playerDmg, shieldAbsorbed: playerShieldDmg } = applyDamageWithShield(g, player, scaledRamDamage * currentDiffMult, player.x, player.y);
+    triggerScreenShake(g, 'playerHit');
+    triggerHitStop(g, 'playerHit');
+    triggerPlayerIFrames(g);
+    spawnDamageNumber(g, player.x, player.y - 10, playerDmg, { hitType: 'playerHit', shieldDamage: playerShieldDmg });
     if (player.hp <= 0) {
       setGameState('gameover');
       return true;

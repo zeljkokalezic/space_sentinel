@@ -596,7 +596,7 @@ describe('chain reaction in killEnemy', () => {
     g.enemies = [killed, near];
     g.projectiles = [];
 
-    killEnemy(g, killed, null);
+    killEnemy(g, killed, null, 'missile');
 
     // Chain reaction should have fired a projectile
     expect(g.projectiles.length).toBeGreaterThan(0);
@@ -611,7 +611,7 @@ describe('chain reaction in killEnemy', () => {
     g.enemies = [killed, near, far];
     g.projectiles = [];
 
-    killEnemy(g, killed, null);
+    killEnemy(g, killed, null, 'missile');
 
     // Only near enemy should be targeted (within 200 radius)
     expect(g.projectiles.length).toBe(1);
@@ -625,9 +625,20 @@ describe('chain reaction in killEnemy', () => {
     g.enemies = [killed, near];
     g.projectiles = [];
 
-    killEnemy(g, killed, null);
+    killEnemy(g, killed, null, 'missile');
 
     // No chain reaction since missiles/pointDefense < 3
+    expect(g.projectiles.length).toBe(0);
+  });
+
+  it('chain reaction does not trigger on non-missile kills', () => {
+    const killed = createTestEnemy(0, 0);
+    const near = createTestEnemy(100, 100);
+    g.enemies = [killed, near];
+    g.projectiles = [];
+
+    killEnemy(g, killed, null, 'autocannon');
+
     expect(g.projectiles.length).toBe(0);
   });
 
@@ -638,7 +649,7 @@ describe('chain reaction in killEnemy', () => {
     g.projectiles = [];
     g.effects = [];
 
-    killEnemy(g, killed, null);
+    killEnemy(g, killed, null, 'missile');
 
     const laserEffect = g.effects.find(e => e.type === 'laser');
     expect(laserEffect).toBeDefined();

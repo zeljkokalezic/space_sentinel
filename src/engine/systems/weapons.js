@@ -10,6 +10,12 @@ import { areWeaponsDisabled } from './weather';
 import { getDamageMult, getFireRateMult, getPlasmaDamageMult, getCritChance, getMissileSplitCount, getSelfDamageChance } from '../relicSystem';
 import { spawnEffect } from '../pool';
 
+function rollUnstableReactorSelfDamage(g, chance) {
+  if (chance > 0 && Math.random() < chance) {
+    g.player.hp -= 1;
+  }
+}
+
 /**
  * @param {number} dt — Delta time
  * @param {object} g — Game state
@@ -56,11 +62,7 @@ export const updateWeapons = (dt, g, completeMission) => {
       fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', 0, pConfig);
     }
     g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, (C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction) * fireMult * relicFireMult);
-  }
-
-  // Self-damage from Unstable Reactor (autocannon)
-  if (relicSelfDmgChance > 0 && g.levels.autocannon > 0 && g.cooldowns.autocannon > 0 && Math.random() < relicSelfDmgChance) {
-    g.player.hp -= 1;
+    rollUnstableReactorSelfDamage(g, relicSelfDmgChance);
   }
 
   // ── Plasma Piercer ──
@@ -79,11 +81,7 @@ export const updateWeapons = (dt, g, completeMission) => {
       fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult * relicDmgMult * relicPlasmaMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2), pConfig);
     }
     g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, (C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction) * fireMult * relicFireMult);
-  }
-
-  // Self-damage from Unstable Reactor (plasma)
-  if (relicSelfDmgChance > 0 && g.levels.plasma > 0 && g.cooldowns.plasma > 0 && Math.random() < relicSelfDmgChance) {
-    g.player.hp -= 1;
+    rollUnstableReactorSelfDamage(g, relicSelfDmgChance);
   }
 
   // ── Missiles (360-degree ring) ──
@@ -95,11 +93,7 @@ export const updateWeapons = (dt, g, completeMission) => {
       fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, (C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel) * dmgMult * relicDmgMult, 'missile', 0);
     }
     g.cooldowns.missiles = Math.max(C.weapons.missiles.minCooldown, (C.weapons.missiles.baseCooldown - g.levels.missiles * C.weapons.missiles.cooldownReduction) * fireMult * relicFireMult);
-  }
-
-  // Self-damage from Unstable Reactor (missiles)
-  if (relicSelfDmgChance > 0 && g.levels.missiles > 0 && g.cooldowns.missiles > 0 && Math.random() < relicSelfDmgChance) {
-    g.player.hp -= 1;
+    rollUnstableReactorSelfDamage(g, relicSelfDmgChance);
   }
 
   // ── Point Defense (auto-targets nearby enemy missiles, then enemies) ──

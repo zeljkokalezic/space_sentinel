@@ -129,12 +129,14 @@ export const draw3DFrame = (threeObj, g) => {
   }
 
   camera.updateMatrixWorld(false);
-  const freshWM = raycastToPlane(g.mouse.x || window.innerWidth / 2, g.mouse.y || window.innerHeight / 2, camera);
-  if (freshWM) g.worldMouse = freshWM;
+  if (g.mouse && g.mouse.active) {
+    const freshWM = raycastToPlane(g.mouse.x || window.innerWidth / 2, g.mouse.y || window.innerHeight / 2, camera);
+    if (freshWM) g.worldMouse = freshWM;
+  }
 
   // Stars (static — set position once on creation)
   for (let s of g.stars) {
-    getMesh(`star_${s.id ?? s}`, meshes, scene, () => {
+    getMesh(`star_${s.id}`, meshes, scene, () => {
       const m = new THREE.Mesh(geoms.sphere, new THREE.MeshBasicMaterial({ color: 0x006400, wireframe: true, transparent: true, opacity: s.size / 3 }));
       m.scale.set(s.size, s.size, s.size);
       m.position.set(s.x, s.y, s.z);
@@ -273,7 +275,7 @@ export const draw3DFrame = (threeObj, g) => {
     const dx = p.x - g.player.x;
     const dy = p.y - g.player.y;
     if (dx * dx + dy * dy > renderDistSq) continue;
-    const m = getMesh(`pickup_${p.id ?? p}`, meshes, scene, () => { const m = new THREE.Mesh(geoms.tetra, mats.pickup); m.scale.set(p.radius, p.radius, p.radius); return m; });
+    const m = getMesh(`pickup_${p.id}`, meshes, scene, () => { const m = new THREE.Mesh(geoms.tetra, mats.pickup); m.scale.set(p.radius, p.radius, p.radius); return m; });
     m.position.set(p.x, p.y, 0); m.rotation.x += 0.05; m.rotation.y += 0.05;
   }
 
@@ -284,7 +286,7 @@ export const draw3DFrame = (threeObj, g) => {
       const dx = pu.x - g.player.x;
       const dy = pu.y - g.player.y;
       if (dx * dx + dy * dy > renderDistSq) continue;
-      const m = getMesh(`pu_${pu.id ?? pu}`, meshes, scene, () => {
+      const m = getMesh(`pu_${pu.id}`, meshes, scene, () => {
         const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: pu.color ? parseInt(pu.color.slice(1), 16) : 0xfbbf24, wireframe: true }));
         m.scale.set(pu.radius, pu.radius, pu.radius);
         return m;
@@ -325,7 +327,7 @@ export const draw3DFrame = (threeObj, g) => {
     const dx = p.x - g.player.x;
     const dy = p.y - g.player.y;
     if (dx * dx + dy * dy > renderDistSq) continue;
-    const m = getMesh(`proj_${p.id ?? p}`, meshes, scene, () => {
+    const m = getMesh(`proj_${p.id}`, meshes, scene, () => {
       let col, mat;
       if (p.type === 'enemy_cannon') {
         col = 0xf97316;
@@ -348,7 +350,7 @@ export const draw3DFrame = (threeObj, g) => {
     const dy = e.y - g.player.y;
     const distSq = dx * dx + dy * dy;
     if (distSq > renderDistSq) continue;
-    const m = getMesh(`enemy_${e.id ?? e}`, meshes, scene, () => {
+    const m = getMesh(`enemy_${e.id}`, meshes, scene, () => {
       const heavy = e.type === 'heavy';
       let geo = heavy ? new THREE.BoxGeometry(1,1,1) : geoms.cone;
       if (e.type==='shooter') geo = new THREE.BoxGeometry(1,0.5,1);
@@ -665,6 +667,7 @@ export const draw3DFrame = (threeObj, g) => {
           scene.add(ring);
           meshes.set(auraKey, ring);
         }
+        _activeKeys.add(auraKey);
         const auraMesh = meshes.get(auraKey);
         auraMesh.position.set(boss.x, boss.y, 0.5);
         const pulse = (Math.sin(boss.rageAuraTimer * (Math.PI * 2 / rageCfg.auraPulsePeriod)) + 1) / 2;
@@ -685,6 +688,7 @@ export const draw3DFrame = (threeObj, g) => {
           scene.add(ring);
           meshes.set(regenKey, ring);
         }
+        _activeKeys.add(regenKey);
         const regenMesh = meshes.get(regenKey);
         regenMesh.position.set(boss.x, boss.y, 1);
         const regenPulse = (Math.sin(g.totalTime * 4) + 1) / 2;
@@ -822,6 +826,7 @@ export const draw3DFrame = (threeObj, g) => {
           scene.add(ring);
           meshes.set(auraKey, ring);
         }
+        _activeKeys.add(auraKey);
         const auraMesh = meshes.get(auraKey);
         auraMesh.position.set(mb.x, mb.y, 0.5);
         const pulse = (Math.sin(mb.rageAuraTimer * (Math.PI * 2 / rageCfg.auraPulsePeriod)) + 1) / 2;
@@ -856,7 +861,7 @@ export const draw3DFrame = (threeObj, g) => {
   // Particles
   for (let p of g.particles) {
     if (!p.active) continue;
-    const m = getMesh(`part_${p.id ?? p}`, meshes, scene, () => { const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: p.color ?? 0x39ff14, wireframe: true, transparent: true })); m.scale.set(3,3,3); return m; });
+    const m = getMesh(`part_${p.id}`, meshes, scene, () => { const m = new THREE.Mesh(geoms.box, new THREE.MeshBasicMaterial({ color: p.color ?? 0x39ff14, wireframe: true, transparent: true })); m.scale.set(3,3,3); return m; });
     if (m.material && p.color !== undefined) m.material.color.set(p.color);
     m.position.set(p.x, p.y, p.z||0); m.material.opacity = p.maxLife ? p.life / p.maxLife : Math.min(1, p.life);
   }
@@ -963,7 +968,7 @@ export const draw3DFrame = (threeObj, g) => {
   // Laser effects
   for (let e of g.effects) {
     if (e.type !== 'laser') continue;
-    const m = getMesh(`fx_${e.id ?? e}`, meshes, scene, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser.clone()));
+    const m = getMesh(`fx_${e.id}`, meshes, scene, () => new THREE.Line(new THREE.BufferGeometry(), mats.laser.clone()));
     if (e.source && e.target) {
       _laserV1.set(e.source.x, e.source.y, 0);
       _laserV2.set(e.target.x, e.target.y, 0);
@@ -1021,6 +1026,7 @@ export const draw3DFrame = (threeObj, g) => {
       scene.add(plane);
       meshes.set(flashKey, plane);
     }
+    _activeKeys.add(flashKey);
     const flashMesh = meshes.get(flashKey);
     // Always face camera
     flashMesh.position.set(g.player.x, g.player.y, 1);
@@ -1116,6 +1122,7 @@ export const draw3DFrame = (threeObj, g) => {
       scene.add(plane);
       meshes.set(emiKey, plane);
     }
+    _activeKeys.add(emiKey);
     const emiMesh = meshes.get(emiKey);
     emiMesh.position.set(g.player.x, g.player.y, 0.5);
     emiMesh.material.opacity = emiAlpha;

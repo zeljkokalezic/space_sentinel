@@ -12,6 +12,8 @@
  */
 import { GAME_CONFIG } from '../../constants/gameConfig';
 
+let _warningId = 0;
+
 /**
  * Spawn an attack warning indicator at a predicted impact location.
  * When the warning timer expires, the fireCallback is invoked to
@@ -29,6 +31,7 @@ export const spawnAttackWarning = (g, x, y, duration, radius, fireCallback) => {
   const C = GAME_CONFIG.attackWarning;
 
   g.attackWarnings.push({
+    id: ++_warningId,
     x,
     y,
     radius,
