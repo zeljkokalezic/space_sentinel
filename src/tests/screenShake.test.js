@@ -6,7 +6,7 @@
  * Run:  npm test -- --run
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getScreenShakeOffset } from '../engine/screenShake.js';
+import { getScreenShakeOffset } from '../engine/screenShake';
 import { triggerScreenShake } from '../engine/combat.js';
 import { updateScreenShake } from '../engine/systems/particles.js';
 import { GAME_CONFIG } from '../constants/gameConfig';

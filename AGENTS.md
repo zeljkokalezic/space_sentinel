@@ -4,7 +4,11 @@
 > This file (`AGENTS.md`) serves as the core architectural map for this project. If you (the AI) make **any** structural changes to the codebase (such as creating new files, extracting major components, or adding new root dependencies), you MUST immediately update this document to reflect those changes.
 
 ## Codebase Overview
-"Space Sentinel" is a Vite + React application wrapping a vanilla Three.js engine. The source code has been broken out into isolated directories to prevent main-loop engine cross-contamination. The engine has been refactored into a modular system architecture: `physics.js` delegates to individual system modules in `systems/`, and the renderer is split into 3D (Three.js) and 2D (Canvas HUD) concerns.
+"Space Sentinel" is a Vite + React application wrapping a vanilla Three.js engine. The JavaScript-to-TypeScript migration is **complete**: all application source under `src/` (the engine, constants, React components, hooks, and `App.tsx`/`main.tsx`) is now TypeScript, type-checked under `strict` mode via `npm run typecheck`. The only remaining `.js` files are the `src/tests/**` suite (Vitest specs), which `allowJs` keeps running unchanged. Note: file references in this document use the original `.js`/`.jsx` names as a stable architectural map; on disk these modules now have `.ts`/`.tsx` extensions (imports are extensionless so they resolve transparently). The source code has been broken out into isolated directories to prevent main-loop engine cross-contamination. The engine has been refactored into a modular system architecture: `physics.ts` delegates to individual system modules in `systems/`, and the renderer is split into 3D (Three.js) and 2D (Canvas HUD) concerns. Because the installed `three` build ships no type declarations and `@types/three` is not a dependency, `src/types/three-shim.d.ts` declares the `three` and `three/addons/*` modules as ambient `any` (and `src/types/assets.d.ts` declares `*.css` side-effect imports); `renderer3d.ts` keeps its public API (`ThreeScene`, exported functions) explicitly typed while treating per-frame mesh objects loosely. Shared React prop types live in `src/components/types.ts` (`GameRef`, `GameStateName`).
+
+### Root TypeScript Tooling
+- `tsconfig.json`: Incremental strict TypeScript configuration (`allowJs: true`, `checkJs: false`, `moduleResolution: Bundler`, `jsx: react-jsx`) used by `npm run typecheck`.
+- `package.json`: Includes `typescript` and the `typecheck` script (`tsc --noEmit`). Keep converted files extensionless in imports where possible so Vite/TypeScript resolve `.ts` and `.tsx` modules cleanly.
 
 ### `/src`
 The core directory containing the React-Three.js bridge.
@@ -45,12 +49,12 @@ Standalone simulation and rendering algorithms detached from React state.
 #### Core modules
 - `state.js`: Game state factory — `createGameState()` returns a fresh game state object with all defaults (player, scrap, wave, level, mission, lastMissionSummary, missionStartStats, map, arrays for enemies/projectiles/particles/pickups/effects/stars, levels, cooldowns, escort, beacon, sabotage, gauntlet, waveSurge, hazards, weather, emergencyBeacon, adaptiveDifficulty, keys, mouse, worldMouse). Defines the `GameState` typedef.
 - `mapGenerator.js`: Defines `generateMap()`. Uses a 15x5 grid with 4 independent paths starting from columns [0, 1, 3, 4], each step moving up with possible diagonal drift, all converging on a boss node at the center of the final row. Assigns mission node types, hazard metadata, mini-boss nodes, and sector-level weather.
-- `combat.js`: Low-level combat utilities — targeting helpers, projectile creation, particle creation, enemy death handling, directional shield checks, screen shake/hit stop triggers, shield restoration, player i-frames, combo milestones, damage numbers, power-up aura triggers, `applyDamageWithShield()` (shared shield-first damage absorption). Re-exports `getViewportSize()` from `viewport.js`. No React imports.
-- `viewport.js`: Screen/world coordinate helpers — `getViewportSize()` with SSR fallbacks. Extracted from `combat.js` to avoid an import cycle with `relicSystem.js`.
+- `combat.js`: Low-level combat utilities — targeting helpers, projectile creation, particle creation, enemy death handling, directional shield checks, screen shake/hit stop triggers, shield restoration, player i-frames, combo milestones, damage numbers, power-up aura triggers, `applyDamageWithShield()` (shared shield-first damage absorption). Re-exports `getViewportSize()` from `viewport.ts`. No React imports.
+- `viewport.ts`: Screen/world coordinate helpers — `getViewportSize()` with SSR fallbacks and `ViewportSize` type. Extracted from `combat.js` to avoid an import cycle with `relicSystem.js`.
 - `pool.js`: Fixed-capacity object pool infrastructure for high-churn entities. `createPools(g)` attaches `g.entityPools` and active array views for enemies, projectiles, particles, pickups, powerups, and effects. Spawn helpers (`spawnProjectileEntity`, `spawnParticle`, `spawnPickup`, `spawnPowerup`, `spawnEffect`, `spawnEnemy`) recycle objects and fall back to plain arrays for isolated tests.
 - `targeting.js`: Shared hostile target selection for enemies, bosses, mini-bosses, and sabotage structures. Provides target collection, nearest-target helpers, and `getEnemyTarget(g)` (returns escort position if active, else player) used by auto-aim, missiles, enemy fire, and HUD indicators.
 - `spawner.js`: Enemy and mission generation — `spawnEnemy(g, level)` / wave formation spawning (pushes to `g.enemies`), `spawnMiniInterceptors()`, and `generateMission(level, nodeType)` (pure — returns mission descriptor for boss/elite/kill/collect/survive/escort/defend/sabotage/gauntlet/wave_surge/miniboss types). No React imports.
-- `settings.js`: Persistent settings helpers (`getDefaultSettings`, `normalizeSettings`, `loadSettings`, `saveSettings`) backed by localStorage (`space_sentinel_settings`). Used by `createGameState()` and `SettingsOverlay.jsx`.
+- `settings.ts`: Persistent settings helpers (`getDefaultSettings`, `normalizeSettings`, `loadSettings`, `saveSettings`) backed by localStorage (`space_sentinel_settings`). Exports `GameSettings`, difficulty, particle-quality, and colorblind-mode types. Used by `createGameState()` and `SettingsOverlay.jsx`.
 - `escortSetup.js`: Reusable escort mission initialization — `setupEscort(g, level)` initializes escort drone state; `resetEscort(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `beaconSetup.js`: Reusable defend mission beacon initialization — `setupBeacon(g, level)` initializes beacon state; `resetBeacon(g)` clears it. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
 - `sabotageSetup.js`: Reusable sabotage mission structure initialization — `setupSabotage(g, level)` spawns turret structures; `resetSabotage(g)` clears them. Used by both App.jsx (dev mode) and MapOverlay.jsx (normal play).
@@ -59,7 +63,7 @@ Standalone simulation and rendering algorithms detached from React state.
 - `minibossSetup.js`: Mini-boss fight initialization — `setupMiniboss(g, level)`, `resetMiniboss(g)`. Delegates to `setupBossCore` from `bossSetup.js` with `MINIBOSS_ROSTER` and scaled HP config.
 - `missionSetup.js`: Shared combat mission initialization — `setupCombatMission(g, mission, level)` resets per-mission state (player position, arrays, cooldowns); `enterNodeMission(g, level, nodeType, node)` generates + sets up a mission in one call, copying node hazards and sector weather. Uses reset-all-then-setup pattern to avoid per-branch duplication. Used by both MapOverlay and App.jsx to avoid duplication.
 - `sectorRank.js`: End-of-sector score/rank system, veteran-mode rewards, next-sector reset, and selected rank buffs.
-- `screenShake.js`, `adaptiveDifficulty.js`, `difficulty.js`, `weaponSynergies.js`: Shared support systems for combat feedback, difficulty scaling, difficulty multipliers, and weapon synergy modifiers.
+- `screenShake.ts`, `adaptiveDifficulty.ts`, `difficulty.ts`, `lowHpWarning.ts`, `weaponSynergies.js`: Shared support systems for combat feedback, difficulty scaling, difficulty multipliers, low-hull warning state, and weapon synergy modifiers.
 
 #### Physics (simulation)
 - `physics.js`: Main simulation step orchestrator — `updatePhysics(dt, g, cbs)`. Delegates to individual system modules below. Handles transition timer (post-mission countdown), mission completion detection, and ties all systems together. React state changes delivered via callbacks `{ setGameState, setMapStateVersion }`.
@@ -178,7 +182,7 @@ Each system receives explicit parameters (not reading from global state) and mut
 
 ## Adaptive Difficulty
 - **Purpose:** Adjust pressure based on recent player performance without replacing the explicit difficulty setting
-- **Module:** `engine/adaptiveDifficulty.js`
+- **Module:** `engine/adaptiveDifficulty.ts`
 - **State:** `g.adaptiveDifficulty` tracks pressure history, low/high pressure timers, rampage mode, high-HP mission streaks, spawn-rate multiplier, and enemy-aggression multiplier
 - **Physics wiring:** `physics.js` updates pressure and passes adaptive aggression into enemy behavior; mission completion records high-HP streaks
 
@@ -235,7 +239,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 
 ## Settings System
 - **Component:** `SettingsOverlay.jsx` — Accessed from Pause Menu
-- **Module:** `engine/settings.js` — settings defaults, normalization, load/save helpers
+- **Module:** `engine/settings.ts` — settings defaults, normalization, load/save helpers
 - **Persistence:** localStorage (`space_sentinel_settings`)
 - **Audio:** Master volume, SFX volume, music volume sliders
 - **Gameplay:** Difficulty (easy/normal/hard)
@@ -357,7 +361,7 @@ The project uses `gh-pages` for GitHub Pages hosting. Run `npm run deploy` to bu
 - **Purpose:** Visual and audio feedback when player HP drops below safe thresholds, creating tension and urgency
 - **State:** `g.lowHpWarning { active, intensity (0-1), isCritical, pulseTimer, heartbeatTimer }`
 - **Config:** `GAME_CONFIG.lowHpWarning` — `warningThreshold: 0.3` (30% HP), `criticalThreshold: 0.15` (15% HP), `pulsePeriod: 1.5` (seconds), `heartbeatInterval: 1.0` (seconds)
-- **Module:** `lowHpWarning.js` — `getLowHpWarningLevel(hp, maxHp)` (pure), `updateLowHpWarning(dt, g)` (game loop)
+- **Module:** `lowHpWarning.ts` — `getLowHpWarningLevel(hp, maxHp)` (pure), `updateLowHpWarning(dt, g)` (game loop)
 - **Visual:** Red radial gradient vignette from screen edges (transparent at center). Pulsing via sine wave on `pulseTimer`. Intensity maps to alpha (0-0.7). Thicker border at critical (4px vs 2px). "⚠ LOW HULL" text at critical.
 - **Audio:** Heartbeat sound (`SoundManager.play('heartbeat')`) — dual-layer sine oscillators (low thump + higher click). Interval halves when critical (1.0s → 0.5s).
 - **Physics wiring:** Called in `physics.js` after screen shake decay, before escort/beacon/sabotage/boss systems. Null-guarded for test mocks.

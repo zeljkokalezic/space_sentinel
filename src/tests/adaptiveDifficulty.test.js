@@ -1,5 +1,5 @@
 /**
- * Unit tests for adaptiveDifficulty.js — pressure calculation, spawn rate reduction,
+ * Unit tests for adaptiveDifficulty.ts — pressure calculation, spawn rate reduction,
  * aggression increase, and rampage mode activation.
  *
  * Run:  npm test -- --run
