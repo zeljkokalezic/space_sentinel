@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { updateBeacon } from '../../engine/systems/beacon';
+import { updateBeacon } from '../../engine/systems/beaconSystem';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { createTestState, createTestEnemy, createTestProjectile } from '../helpers';
 import { setupLocalStorageMock, clearLocalStorageMock } from '../helpers';

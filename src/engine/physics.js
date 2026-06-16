@@ -22,7 +22,7 @@ import { updatePickups } from './systems/pickups';
 import { updatePowerups } from './systems/powerups';
 import { updateParticles, updateEffects, updateScreenShake, updateHitStop, updatePlayerIFrames, updatePowerupAuras } from './systems/particles';
 import { updateEscort } from './systems/escort';
-import { updateBeacon } from './systems/beacon';
+import { updateBeacon } from './systems/beaconSystem';
 import { updateSabotage } from './systems/sabotage';
 import { updateBoss } from './systems/boss';
 import { updateMiniboss } from './systems/miniboss';
