@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { SHIP_SKINS } from '../constants/skins';
 import { GAME_CONFIG } from '../constants/gameConfig';
 import { getScreenShakeOffset } from './screenShake';
+import { getAsteroidTemplate, getModelSharedResources } from './modelLoader';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,11 +23,14 @@ const _camLookAt = new THREE.Vector3();
 const _activeKeys = new Set();
 const _sharedGeos = new Set();
 const _sharedMats = new Set();
-function initSharedSets(geoms, mats) {
+function initSharedSets(geoms, mats, extraGeos, extraMats) {
   _sharedGeos.clear();
   _sharedMats.clear();
   for (const geo of Object.values(geoms)) _sharedGeos.add(geo);
   for (const mat of Object.values(mats)) _sharedMats.add(mat);
+  // Preserve model resources across frames (initSharedSets is called every draw)
+  for (const geo of extraGeos || []) _sharedGeos.add(geo);
+  for (const mat of extraMats || []) _sharedMats.add(mat);
 }
 
 // Reusable vectors for laser line geometry
@@ -108,7 +112,7 @@ export const initThreeScene = (containerEl) => {
 export const draw3DFrame = (threeObj, g) => {
   const { scene, camera, renderer, meshes, g: geoms, m: mats } = threeObj;
   _activeKeys.clear();
-  initSharedSets(geoms, mats);
+  initSharedSets(geoms, mats, getModelSharedResources().geometries, getModelSharedResources().materials);
 
   // Chase camera
   const playerYaw = g.player.yaw ?? Math.PI / 2;
@@ -516,10 +520,13 @@ export const draw3DFrame = (threeObj, g) => {
 
       if (h.type === 'asteroid') {
         const am = getMesh(h.id, meshes, scene, () => {
-          const m = new THREE.Mesh(
-            new THREE.IcosahedronGeometry(1, 0),
-            new THREE.MeshBasicMaterial({ color: 0x6b7280, wireframe: true })
-          );
+          const tpl = getAsteroidTemplate();
+          const m = tpl
+            ? tpl.clone()
+            : new THREE.Mesh(
+                new THREE.IcosahedronGeometry(1, 0),
+                new THREE.MeshBasicMaterial({ color: 0x6b7280, wireframe: true })
+              );
           m.scale.set(h.radius, h.radius, h.radius);
           return m;
         });

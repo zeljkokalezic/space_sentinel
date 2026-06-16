@@ -11,6 +11,7 @@
 import { useRef, useEffect } from 'react';
 import { initThreeScene, drawFrame } from '../engine/renderer';
 import { updatePhysics } from '../engine/physics';
+import { loadGameModels } from '../engine/modelLoader';
 
 export const useGameLoop = ({
   containerRef,
@@ -51,6 +52,8 @@ export const useGameLoop = ({
     // Init Three.js scene
     if (!threeRef.current) {
       threeRef.current = initThreeScene(containerEl);
+      // Kick off model loading (non-blocking); asteroids fall back to wireframe until ready
+      loadGameModels().catch(() => {});
     }
 
     const loop = (time) => {

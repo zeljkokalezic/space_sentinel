@@ -54,3 +54,6 @@ npm run deploy
 This runs `vite build` (via `predeploy`) then pushes the `dist/` folder to the `gh-pages` branch.
 
 **Play it live here:** [https://zeljkokalezic.github.io/space_sentinel/](https://zeljkokalezic.github.io/space_sentinel/)
+
+## 3D Model Credits
+- Asteroid model: Quaternius (CC0 Public Domain), via Poly Pizza.
