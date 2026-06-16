@@ -586,6 +586,8 @@ export const GAME_CONFIG = {
     lifetime: 0.9,
   },
 
+  critMultiplier: 2.0,
+
  dynamicFov: {
     // Base FOV (degrees) — normal gameplay
     baseFov: 75,

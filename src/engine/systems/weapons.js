@@ -41,7 +41,7 @@ export const updateWeapons = (dt, g, completeMission) => {
   const relicDmgMult = getDamageMult(g);
   const relicFireMult = getFireRateMult(g);
   const relicPlasmaMult = getPlasmaDamageMult(g);
-  const _relicCritChance = getCritChance(g); // TODO: wire into projectile crit logic
+  const relicCritChance = getCritChance(g);
   const relicMissileSplit = getMissileSplitCount(g);
   const relicSelfDmgChance = getSelfDamageChance(g);
 
@@ -59,7 +59,9 @@ export const updateWeapons = (dt, g, completeMission) => {
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
       const pConfig = {};
       applyAutocannonSynergy(pConfig, activeSynergies);
-      fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), dmg, 'autocannon', 0, pConfig);
+      const isCrit = relicCritChance > 0 && Math.random() < relicCritChance;
+      const shotDmg = isCrit ? dmg * C.critMultiplier : dmg;
+      fireProjectile(g, bx, by, angle, C.weapons.autocannon.speed + (Math.random() * C.weapons.autocannon.speedVariance), shotDmg, 'autocannon', 0, { ...pConfig, isCrit });
     }
     g.cooldowns.autocannon = Math.max(C.weapons.autocannon.minCooldown, (C.weapons.autocannon.baseCooldown - g.levels.autocannon * C.weapons.autocannon.cooldownReduction) * fireMult * relicFireMult);
     rollUnstableReactorSelfDamage(g, relicSelfDmgChance);
@@ -72,13 +74,16 @@ export const updateWeapons = (dt, g, completeMission) => {
     const shots = 1 + Math.floor(g.levels.plasma / C.weapons.plasma.shotsPerExtraLevels);
     const perpX = -Math.sin(angle);
     const perpY =  Math.cos(angle);
+    const baseDmg = (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult * relicDmgMult * relicPlasmaMult;
     for (let i = 0; i < shots; i++) {
       const lateralOff = (i - (shots - 1) / 2) * 22;
       const bx = g.player.x + Math.cos(angle) * 50 + perpX * lateralOff;
       const by = g.player.y + Math.sin(angle) * 50 + perpY * lateralOff;
       const pConfig = {};
       applyPlasmaSynergy(pConfig, activeSynergies);
-      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, (C.weapons.plasma.baseDamage + g.levels.plasma * C.weapons.plasma.damagePerLevel) * dmgMult * relicDmgMult * relicPlasmaMult, 'plasma', 1 + Math.floor(g.levels.plasma / 2), pConfig);
+      const isCrit = relicCritChance > 0 && Math.random() < relicCritChance;
+      const shotDmg = isCrit ? baseDmg * C.critMultiplier : baseDmg;
+      fireProjectile(g, bx, by, angle, C.weapons.plasma.baseSpeed, shotDmg, 'plasma', 1 + Math.floor(g.levels.plasma / 2), { ...pConfig, isCrit });
     }
     g.cooldowns.plasma = Math.max(C.weapons.plasma.minCooldown, (C.weapons.plasma.baseCooldown - g.levels.plasma * C.weapons.plasma.cooldownReduction) * fireMult * relicFireMult);
     rollUnstableReactorSelfDamage(g, relicSelfDmgChance);
@@ -88,9 +93,12 @@ export const updateWeapons = (dt, g, completeMission) => {
   if (g.levels.missiles > 0 && g.cooldowns.missiles <= 0) {
     SoundManager.play('shoot_missile');
     const count = g.levels.missiles * relicMissileSplit;
+    const baseDmg = (C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel) * dmgMult * relicDmgMult;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i;
-      fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, (C.weapons.missiles.baseDamage + g.levels.missiles * C.weapons.missiles.damagePerLevel) * dmgMult * relicDmgMult, 'missile', 0);
+      const isCrit = relicCritChance > 0 && Math.random() < relicCritChance;
+      const shotDmg = isCrit ? baseDmg * C.critMultiplier : baseDmg;
+      fireProjectile(g, g.player.x, g.player.y, angle, C.weapons.missiles.baseSpeed, shotDmg, 'missile', 0, { isCrit });
     }
     g.cooldowns.missiles = Math.max(C.weapons.missiles.minCooldown, (C.weapons.missiles.baseCooldown - g.levels.missiles * C.weapons.missiles.cooldownReduction) * fireMult * relicFireMult);
     rollUnstableReactorSelfDamage(g, relicSelfDmgChance);

@@ -121,6 +121,9 @@ export const fireProjectile = (g, x, y, angle, speed, damage, type, pierceCount 
     proj.guided = true;
     proj.steerAngle = synergyFlags.steerAngle ?? (Math.PI / 6);
   }
+  if (synergyFlags && synergyFlags.isCrit) {
+    proj.isCrit = true;
+  }
 
 };
 

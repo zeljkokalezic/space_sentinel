@@ -270,6 +270,22 @@ describe('fireProjectile', () => {
     expect(g.projectiles[0].x).toBe(0);
     expect(g.projectiles[1].x).toBe(50);
   });
+
+  it('sets proj.isCrit when synergyFlags.isCrit is true', () => {
+    fireProjectile(g, 0, 0, 0, 500, 10, 'autocannon', 0, { isCrit: true });
+    expect(g.projectiles[0].isCrit).toBe(true);
+  });
+
+  it('does not set proj.isCrit when synergyFlags is undefined', () => {
+    fireProjectile(g, 0, 0, 0, 500, 10, 'autocannon');
+    expect(g.projectiles[0].isCrit).toBeUndefined();
+  });
+
+  it('does not set proj.isCrit when synergyFlags.isCrit is false', () => {
+    fireProjectile(g, 0, 0, 0, 500, 10, 'autocannon', 0, { isCrit: false });
+    // Only truthy isCrit is stamped; false/undefined leaves it unset
+    expect(g.projectiles[0].isCrit).toBeUndefined();
+  });
 });
 
 /* ──────────────────────────────────────────────

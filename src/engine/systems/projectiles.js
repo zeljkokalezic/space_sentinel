@@ -161,7 +161,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
 
           const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, e, p.damage, e.x, e.y, { skipShield: isShieldBypassedByArmorPierce(e) });
           e.lastHitBy = p.type;
-          spawnDamageNumber(g, e.x, e.y, actualDmg, { shieldDamage: shieldAbsorbed });
+          spawnDamageNumber(g, e.x, e.y, actualDmg, { shieldDamage: shieldAbsorbed, isCrit: p.isCrit });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerScreenShake(g, p.type === 'plasma' || p.type === 'missile' ? 'explosion' : 2);
           if (p.pierce > 0) { p.pierce--; p.hitList.push(e.id); }
@@ -183,7 +183,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
           }
 
           const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, g.miniboss, p.damage, g.miniboss.x, g.miniboss.y, { skipShield: isShieldBypassedByArmorPierce(g.miniboss) });
-          spawnDamageNumber(g, g.miniboss.x, g.miniboss.y, actualDmg, { shieldDamage: shieldAbsorbed });
+          spawnDamageNumber(g, g.miniboss.x, g.miniboss.y, actualDmg, { shieldDamage: shieldAbsorbed, isCrit: p.isCrit });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('miniboss'); }
           else               p.active = false;
@@ -204,7 +204,7 @@ export const updateProjectiles = (dt, g, setGameState) => {
 
           const { actualDmg, shieldAbsorbed } = applyDamageWithShield(g, g.boss, p.damage, g.boss.x, g.boss.y, { skipShield: isShieldBypassedByArmorPierce(g.boss) });
           onBossDamaged(g.boss);
-          spawnDamageNumber(g, g.boss.x, g.boss.y, actualDmg, { shieldDamage: shieldAbsorbed });
+          spawnDamageNumber(g, g.boss.x, g.boss.y, actualDmg, { shieldDamage: shieldAbsorbed, isCrit: p.isCrit });
           createParticles(g, p.x, p.y, p.type === 'plasma' ? 0x22d3ee : 0xfde047, 5);
           triggerFovHit(g);
           if (p.pierce > 0) { p.pierce--; p.hitList.push('boss'); }
